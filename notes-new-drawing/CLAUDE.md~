@@ -1,54 +1,135 @@
+# CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Rules
-When writing code try and stick to the following parameters:
-1. Be very object oriented and use inheritence when it helps keep things organized and classes short and purposeful
-2. Keep classes to 150 lines or less (don't count comment lines)
-3. When writing a new function add a comment to the top describing the purpose of the function
-4. If you created a new file, change a file significantly, or it is missing from Project.md then create an entry in Project.md describing the purpose of the file, the major functions, important variables, and how it ineracts with other files.
-5. After I give instructions to complete a task ask any clarifying questions, wait for the answers, then consider the answers and only then implement.
-6. If you figured out anything that may be helpful for you in the futre inclulde it in claude_hints.md
-7. The canvas starts at (0,0) in the top left corner. Moving right and downward both increase the x-coordinate and y-coordinate.
-8. When a major feature is implemented and the application compiles, always prompt the user if they want to refactor.
-9. When any dialog is shown in the drawing/editor view, disable stylus drawing to allow the stylus to interact with the dialog.
-10. When doing a refactor, automatically include a lot of logging for easier debugging of the refactor.
-   Implementation:
-   - Use EditorState.isAnyDialogOpen SharedFlow to communicate dialog state
-   - In the activity/composable showing the dialog, use LaunchedEffect to emit the dialog state:
-     ```kotlin
-     LaunchedEffect(showDialog) {
-         EditorState.isAnyDialogOpen.emit(showDialog)
-     }W
-     ```
-   - BaseDrawingActivity automatically observes this state and calls disableDrawing()/enableDrawing()
-   - This prevents accidental drawing on the canvas while interacting with dialogs
-11. Toolbar buttons and UI elements can be selected with both finger touches and stylus.
-   Implementation:
-   - EditorState.getCurrentExclusionRects() defines areas where drawing is excluded (like the toolbar)
-   - BaseDrawingActivity.dispatchTouchEvent() checks if touches are in exclusion areas
-   - Touches in exclusion areas are passed directly to the UI, bypassing the Onyx SDK
-   - This allows finger touches on toolbar buttons even when raw drawing is disabled for the canvas
-12. Checklist for writing new code:
-   - [ ] Classes under 150 lines
-   - [ ] Single responsibility per class
-   - [ ] Constructor dependency injection
-   - [ ] Clear, descriptive naming
-   - [ ] Unidirectional data flow
-   - [ ] Explicit error handling
-   - [ ] No circular dependencies
-   - [ ] Testable design
-   - [ ] Proper documentation
-   - [ ] Feature-based organization
-13. Follow the architecture plan in ~/AndroidStudioProjects/CURRENT/hands-on-jul16/architecture-plan.md       If adding a new feature that is not in architecture-plan.md ask me and we will figure out where to put it.
-14. After making major changes (such as implementing a new feature) run the commands "git add \*.kt \*.java"  followed by a "git commit -am " with a commit message that describes the changes. Then make sure the code compiles. If you had to make changes to make the code compile then also do a git commit -am whose message just says that "it now compiles after the latest changes <description of changes>"
+## Project Overview
+This is an Android note-taking application with advanced drawing capabilities, built specifically for Onyx e-ink devices. The app uses Jetpack Compose for UI and integrates with the Onyx SDK for stylus and drawing support.
 
+## Build Commands
 
-ULTRATHINK MODE
-Think HARD and activate ULTRATHINK for this task:
-1. ULTRATHINK Clarification -- is there anything Claude needs to ask the human?
-2. ULTRATHINK Analysis -- what's really required?
-3. ULTRATHINK Planning -- break it down into clear steps
-4. ULTRATHINK Execution -- follow each step with precision
-5. ULTRATHINK Review -- is this the best solution Think hard before doing anything. Structure everything. Max quality only. ULTRATHINK MODE
+### Build the app
+```bash
+# Debug build
+./gradlew assembleDebug
 
-ALWAYS BE IN ULTRATHINK MODE 
+# Release build
+./gradlew assembleRelease
+
+# Clean build
+./gradlew clean assembleDebug
+```
+
+### Run tests
+```bash
+# Run all unit tests
+./gradlew test
+
+# Run instrumented tests (requires device/emulator)
+./gradlew connectedAndroidTest
+
+# Run a specific test class
+./gradlew test --tests "com.wyldsoft.notes.ExampleUnitTest"
+```
+
+### Code quality
+```bash
+# Run lint checks
+./gradlew lint
+
+# Check for dependency updates
+./gradlew dependencyUpdates
+```
+
+### Development tasks
+```bash
+# Install debug APK on connected device
+./gradlew installDebug
+
+# Print version name
+./gradlew printVersionName
+
+# Generate database schemas
+./gradlew generateSchemas
+```
+
+## Architecture Overview
+
+### Core Architecture
+The application follows a layered architecture with clear separation of concerns:
+
+1. **Presentation Layer** (`presentation/`)
+   - ViewModels: `EditorViewModel`, `HomeViewModel` - Handle UI state and business logic
+   - Compose UI: `EditorView.kt`, `HomeView.kt` - Declarative UI components
+   - State management: `EditorState.kt` - Centralized state for the drawing editor
+
+2. **Domain Layer** (`domain/`)
+   - Models: `Note.kt`, `Shape.kt` - Core business entities
+   - Business logic interfaces
+
+3. **Data Layer** (`data/`)
+   - Database: Room database with entities, DAOs, and converters
+   - Repository pattern: `NoteRepository`, `FolderRepository`, `NotebookRepository`
+
+4. **SDK Integration Layer** (`sdkintegration/`)
+   - Base abstractions: `BaseDrawingActivity`, `BaseDeviceReceiver`
+   - Onyx-specific implementations: `OnyxDrawingActivity`, `OnyxStylusHandler`
+   - Designed for multi-SDK support (future expansion to other devices)
+
+### Key Components
+
+**Drawing System**
+- `DrawingManager.kt` - Coordinates drawing operations
+- `rendering/` package - Different renderers for various drawing modes
+- `shapemanagement/` - Shape creation and management
+- `gestures/GestureHandler.kt` - Touch and gesture processing
+
+**Screen Refresh Management**
+- `refreshingscreen/` - Handles e-ink screen refresh strategies
+- `ScreenRefreshManager.kt` - Coordinates partial and full refreshes
+- `RefreshCoordinator.kt` - Manages refresh timing and regions
+
+**Stylus Integration**
+- `OnyxStylusHandler.kt` - Onyx SDK stylus event handling
+- `pen/` - Pen profiles and types configuration
+- Raw input processing for low-latency drawing
+
+**UI Components**
+- Compose-based UI with Material 3 design
+- `Toolbar.kt` - Drawing tools and options
+- `StrokeOptionsPanel.kt` - Stroke customization
+- `ViewportInfo.kt` - Canvas viewport management
+
+### Data Flow
+1. Stylus/touch events → SDK layer → Drawing Manager
+2. Drawing Manager → Shape creation → Renderer
+3. Renderer → Canvas update → Screen refresh
+4. UI actions → ViewModel → State update → Compose recomposition
+
+### Important Patterns
+- **Repository Pattern**: All data access goes through repositories
+- **MVVM**: ViewModels manage UI state and coordinate with repositories
+- **State Management**: Centralized state with SharedFlow/StateFlow
+- **SDK Abstraction**: Base classes allow easy addition of new device SDKs
+
+## Development Guidelines
+
+### When modifying the drawing system:
+1. Check `BaseDrawingActivity` for the drawing lifecycle
+2. Review `EditorState` for state management
+3. Test on actual Onyx hardware for stylus responsiveness
+
+### When adding new features:
+1. Follow the existing package structure
+2. Use dependency injection via constructor parameters
+3. Keep classes under 150 lines (excluding comments)
+4. Add proper documentation for new components
+
+### Database migrations:
+- Schema versions are tracked in `NotesDatabase.kt`
+- Always increment version and provide migration when changing entities
+- Test migrations thoroughly before release
+
+### Environment variables:
+- `STORE_FILE`, `STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` - For release signing
+- `SHIPBOOK_APP_ID`, `SHIPBOOK_APP_KEY` - For crash reporting
+- `IS_NEXT` - For development builds versioning
