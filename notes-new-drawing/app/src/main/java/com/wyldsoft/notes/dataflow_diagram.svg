@@ -1,0 +1,950 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 1600 1400"
+   version="1.1"
+   id="svg88"
+   sodipodi:docname="dataflow_diagram.svg"
+   inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview88"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.0695308"
+     inkscape:cx="1082.7178"
+     inkscape:cy="504.42682"
+     inkscape:window-width="1472"
+     inkscape:window-height="890"
+     inkscape:window-x="0"
+     inkscape:window-y="38"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg88" />
+  <defs
+     id="defs4">
+    <marker
+       id="arrow"
+       markerWidth="10"
+       markerHeight="10"
+       refX="9"
+       refY="3"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L0,6 L9,3 z"
+         fill="#333"
+         id="path1" />
+    </marker>
+    <marker
+       id="arrow-blue"
+       markerWidth="10"
+       markerHeight="10"
+       refX="9"
+       refY="3"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L0,6 L9,3 z"
+         fill="#1976d2"
+         id="path2" />
+    </marker>
+    <marker
+       id="arrow-green"
+       markerWidth="10"
+       markerHeight="10"
+       refX="9"
+       refY="3"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L0,6 L9,3 z"
+         fill="#388e3c"
+         id="path3" />
+    </marker>
+    <marker
+       id="arrow-red"
+       markerWidth="10"
+       markerHeight="10"
+       refX="9"
+       refY="3"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L0,6 L9,3 z"
+         fill="#d32f2f"
+         id="path4" />
+    </marker>
+  </defs>
+  <!-- Title -->
+  <text
+     x="800"
+     y="40"
+     font-family="Arial, sans-serif"
+     font-size="24"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text4">Note-Taking App Data Flow Diagram</text>
+  <!-- Legend -->
+  <rect
+     x="50"
+     y="70"
+     width="400"
+     height="150"
+     fill="#f9f9f9"
+     stroke="#ccc"
+     id="rect4" />
+  <text
+     x="60"
+     y="90"
+     font-family="Arial, sans-serif"
+     font-size="14"
+     font-weight="bold"
+     id="text5">Legend:</text>
+  <line
+     x1="70"
+     y1="110"
+     x2="120"
+     y2="110"
+     stroke="#1976d2"
+     stroke-width="2"
+     marker-end="url(#arrow-blue)"
+     id="line5" />
+  <text
+     x="130"
+     y="115"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text6">Touch/Drawing Data</text>
+  <line
+     x1="70"
+     y1="130"
+     x2="120"
+     y2="130"
+     stroke="#388e3c"
+     stroke-width="2"
+     marker-end="url(#arrow-green)"
+     id="line6" />
+  <text
+     x="130"
+     y="135"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text7">Shape/Note Data</text>
+  <line
+     x1="70"
+     y1="150"
+     x2="120"
+     y2="150"
+     stroke="#d32f2f"
+     stroke-width="2"
+     marker-end="url(#arrow-red)"
+     id="line7" />
+  <text
+     x="130"
+     y="155"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text8">UI Events/States</text>
+  <line
+     x1="70"
+     y1="170"
+     x2="120"
+     y2="170"
+     stroke="#333"
+     stroke-width="2"
+     marker-end="url(#arrow)"
+     id="line8" />
+  <text
+     x="130"
+     y="175"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text9">Control Flow</text>
+  <rect
+     x="70"
+     y="190"
+     width="50"
+     height="20"
+     fill="#e3f2fd"
+     stroke="#1976d2"
+     id="rect9" />
+  <text
+     x="130"
+     y="205"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text10">View Layer</text>
+  <!-- Main Components -->
+  <!-- User Input Layer -->
+  <rect
+     x="100"
+     y="280"
+     width="200"
+     height="80"
+     fill="#ffebee"
+     stroke="#d32f2f"
+     stroke-width="2"
+     id="rect10" />
+  <text
+     x="200"
+     y="310"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text11">User Input</text>
+  <text
+     x="200"
+     y="330"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text12">• Stylus (Drawing)</text>
+  <text
+     x="200"
+     y="350"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text13">• Finger (Gestures)</text>
+  <!-- Onyx SDK Layer -->
+  <rect
+     x="400"
+     y="280"
+     width="200"
+     height="80"
+     fill="#f3e5f5"
+     stroke="#7b1fa2"
+     stroke-width="2"
+     id="rect13" />
+  <text
+     x="500"
+     y="310"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text14">Onyx SDK</text>
+  <text
+     x="500"
+     y="330"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text15">• TouchHelper</text>
+  <text
+     x="500"
+     y="350"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text16">• RawInputCallback</text>
+  <!-- GestureHandler -->
+  <rect
+     x="700"
+     y="280"
+     width="200"
+     height="80"
+     fill="#f3e5f5"
+     stroke="#7b1fa2"
+     stroke-width="2"
+     id="rect16" />
+  <text
+     x="800"
+     y="310"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text17">GestureHandler</text>
+  <text
+     x="800"
+     y="330"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text18">• Pan detection</text>
+  <text
+     x="800"
+     y="350"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text19">• Pinch detection</text>
+  <!-- OnyxDrawingActivity -->
+  <rect
+     x="250"
+     y="450"
+     width="500"
+     height="120"
+     fill="#e3f2fd"
+     stroke="#1976d2"
+     stroke-width="2"
+     id="rect19" />
+  <text
+     x="500"
+     y="480"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text20">OnyxDrawingActivity</text>
+  <text
+     x="500"
+     y="500"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text21">• Converts TouchPoints (Surface → Note coords)</text>
+  <text
+     x="500"
+     y="520"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text22">• Creates SDK Shapes from TouchPointList</text>
+  <text
+     x="500"
+     y="540"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text23">• Manages bitmap rendering</text>
+  <text
+     x="500"
+     y="560"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text24">• Handles erase operations</text>
+  <!-- ViewportManager -->
+  <rect
+     x="850"
+     y="450"
+     width="200"
+     height="120"
+     fill="#fff3e0"
+     stroke="#f57c00"
+     stroke-width="2"
+     id="rect24" />
+  <text
+     x="950"
+     y="480"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text25">ViewportManager</text>
+  <text
+     x="950"
+     y="500"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text26">• Coordinate transform</text>
+  <text
+     x="950"
+     y="520"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text27">• Zoom state (0.5x-5x)</text>
+  <text
+     x="950"
+     y="540"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text28">• Pan offset</text>
+  <text
+     x="950"
+     y="560"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text29">• Matrix operations</text>
+  <!-- EditorViewModel -->
+  <rect
+     x="350"
+     y="660"
+     width="300"
+     height="120"
+     fill="#fff3e0"
+     stroke="#f57c00"
+     stroke-width="2"
+     id="rect29" />
+  <text
+     x="500"
+     y="690"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text30">EditorViewModel</text>
+  <text
+     x="500"
+     y="710"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text31">• Current note state</text>
+  <text
+     x="500"
+     y="730"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text32">• Pen profile settings</text>
+  <text
+     x="500"
+     y="750"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text33">• UI state management</text>
+  <text
+     x="500"
+     y="770"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text34">• Viewport persistence</text>
+  <!-- NoteRepository -->
+  <rect
+     x="750"
+     y="660"
+     width="250"
+     height="120"
+     fill="#f3e5f5"
+     stroke="#7b1fa2"
+     stroke-width="2"
+     id="rect34" />
+  <text
+     x="875"
+     y="690"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text35">NoteRepository</text>
+  <text
+     x="875"
+     y="710"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text36">• Note CRUD operations</text>
+  <text
+     x="875"
+     y="730"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text37">• Shape persistence</text>
+  <text
+     x="875"
+     y="750"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text38">• Viewport state save</text>
+  <text
+     x="875"
+     y="770"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text39">• Domain ↔ Entity mapping</text>
+  <!-- Database -->
+  <rect
+     x="750"
+     y="870"
+     width="250"
+     height="100"
+     fill="#e8f5e9"
+     stroke="#388e3c"
+     stroke-width="2"
+     id="rect39" />
+  <text
+     x="875"
+     y="900"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text40">Room Database</text>
+  <text
+     x="875"
+     y="920"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text41">• NoteEntity (+ viewport)</text>
+  <text
+     x="875"
+     y="940"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text42">• ShapeEntity</text>
+  <text
+     x="875"
+     y="960"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text43">• FolderEntity</text>
+  <!-- UI Components -->
+  <rect
+     x="100"
+     y="870"
+     width="200"
+     height="100"
+     fill="#e3f2fd"
+     stroke="#1976d2"
+     stroke-width="2"
+     id="rect43" />
+  <text
+     x="200"
+     y="900"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text44">EditorView</text>
+  <text
+     x="200"
+     y="920"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text45">• DrawingCanvas</text>
+  <text
+     x="200"
+     y="940"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text46">• Toolbar</text>
+  <text
+     x="200"
+     y="960"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text47">• ViewportInfo</text>
+  <!-- ViewportInfo -->
+  <rect
+     x="350"
+     y="870"
+     width="200"
+     height="100"
+     fill="#e3f2fd"
+     stroke="#1976d2"
+     stroke-width="2"
+     id="rect47" />
+  <text
+     x="450"
+     y="900"
+     font-family="Arial, sans-serif"
+     font-size="16"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text48">ViewportInfo</text>
+  <text
+     x="450"
+     y="920"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text49">• Zoom: XX%</text>
+  <text
+     x="450"
+     y="940"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text50">• Scroll: (X, Y)</text>
+  <text
+     x="450"
+     y="960"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     text-anchor="middle"
+     id="text51">• Bottom overlay</text>
+  <!-- Data Flow Arrows -->
+  <!-- User to Onyx SDK (stylus) -->
+  <path
+     d="M 300 320 L 400 320"
+     stroke="#1976d2"
+     stroke-width="2"
+     marker-end="url(#arrow-blue)"
+     id="path51" />
+  <text
+     x="350"
+     y="315"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     text-anchor="middle"
+     id="text52">stylus</text>
+  <!-- User to GestureHandler (finger) -->
+  <path
+     d="M 300 340 Q 500 400 700 340"
+     stroke="#d32f2f"
+     stroke-width="2"
+     marker-end="url(#arrow-red)"
+     id="path52"
+     style="fill:none" />
+  <text
+     x="500"
+     y="395"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     text-anchor="middle"
+     id="text53">finger touch</text>
+  <!-- Onyx SDK to OnyxDrawingActivity -->
+  <path
+     d="M 500 360 L 500 450"
+     stroke="#1976d2"
+     stroke-width="2"
+     marker-end="url(#arrow-blue)"
+     id="path53" />
+  <text
+     x="520"
+     y="405"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     id="text54">TouchPointList</text>
+  <!-- GestureHandler to ViewportManager -->
+  <path
+     d="M 850 360 Q 900 400 900 450"
+     stroke="#d32f2f"
+     stroke-width="2"
+     marker-end="url(#arrow-red)"
+     id="path54"
+     style="fill:none" />
+  <text
+     x="880"
+     y="405"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     id="text55">pan/zoom</text>
+  <!-- OnyxDrawingActivity to ViewportManager -->
+  <path
+     d="M 750 510 L 850 510"
+     stroke="#333"
+     stroke-width="2"
+     marker-end="url(#arrow)"
+     id="path55" />
+  <text
+     x="800"
+     y="505"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     text-anchor="middle"
+     id="text56">coordinate</text>
+  <text
+     x="800"
+     y="520"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     text-anchor="middle"
+     id="text57">conversion</text>
+  <!-- ViewportManager back to OnyxDrawingActivity -->
+  <path
+     d="M 850 530 L 750 530"
+     stroke="#333"
+     stroke-width="2"
+     marker-end="url(#arrow)"
+     id="path57" />
+  <text
+     x="800"
+     y="545"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     text-anchor="middle"
+     id="text58">transform</text>
+  <text
+     x="800"
+     y="560"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     text-anchor="middle"
+     id="text59">matrix</text>
+  <!-- OnyxDrawingActivity to EditorViewModel -->
+  <path
+     d="M 500 570 L 500 660"
+     stroke="#388e3c"
+     stroke-width="2"
+     marker-end="url(#arrow-green)"
+     id="path59" />
+  <text
+     x="520"
+     y="615"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     id="text60">Shape data</text>
+  <text
+     x="520"
+     y="630"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     id="text61">(Note coords)</text>
+  <!-- EditorViewModel to ViewportManager -->
+  <path
+     d="M 650 720 Q 750 590 850 520"
+     stroke="#333"
+     stroke-width="2"
+     stroke-dasharray="3,3"
+     marker-end="url(#arrow)"
+     id="path61"
+     style="fill:none" />
+  <text
+     x="750"
+     y="640"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     text-anchor="middle"
+     id="text62">owns</text>
+  <!-- EditorViewModel to NoteRepository -->
+  <path
+     d="M 650 720 L 750 720"
+     stroke="#388e3c"
+     stroke-width="2"
+     marker-end="url(#arrow-green)"
+     id="path62" />
+  <text
+     x="700"
+     y="715"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     text-anchor="middle"
+     id="text63">save shapes</text>
+  <!-- EditorViewModel to UI -->
+  <path
+     d="M 350 740 Q 250 800 200 870"
+     stroke="#d32f2f"
+     stroke-width="2"
+     marker-end="url(#arrow-red)"
+     id="path63"
+     style="fill:none" />
+  <text
+     x="270"
+     y="820"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     id="text64">UI state</text>
+  <!-- ViewportManager to ViewportInfo -->
+  <path
+     d="M 950 570 Q 700 720 550 870"
+     stroke="#d32f2f"
+     stroke-width="2"
+     marker-end="url(#arrow-red)"
+     id="path64"
+     style="fill:none" />
+  <text
+     x="750"
+     y="720"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     id="text65">viewport state</text>
+  <!-- NoteRepository to Database -->
+  <path
+     d="M 875 780 L 875 870"
+     stroke="#388e3c"
+     stroke-width="2"
+     marker-end="url(#arrow-green)"
+     id="path65" />
+  <text
+     x="890"
+     y="825"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     id="text66">persist</text>
+  <!-- Database to NoteRepository -->
+  <path
+     d="M 825 870 L 825 780"
+     stroke="#388e3c"
+     stroke-width="2"
+     marker-end="url(#arrow-green)"
+     id="path66" />
+  <text
+     x="790"
+     y="825"
+     font-family="Arial, sans-serif"
+     font-size="10"
+     id="text67">load</text>
+  <!-- Key Process Boxes -->
+  <!-- Coordinate Transformation Process -->
+  <rect
+     x="1150"
+     y="280"
+     width="400"
+     height="200"
+     fill="#fffde7"
+     stroke="#f9a825"
+     stroke-width="2"
+     rx="10"
+     id="rect67" />
+  <text
+     x="1350"
+     y="305"
+     font-family="Arial, sans-serif"
+     font-size="14"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text68">Coordinate Transformation Process</text>
+  <text
+     x="1170"
+     y="330"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text69">1. User draws with stylus (SurfaceViewCoordinates)</text>
+  <text
+     x="1170"
+     y="350"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text70">2. OnyxDrawingActivity receives TouchPointList</text>
+  <text
+     x="1170"
+     y="370"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text71">3. ViewportManager.surfaceToNoteCoordinates()</text>
+  <text
+     x="1170"
+     y="390"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text72">4. Shape stored with NoteCoordinates</text>
+  <text
+     x="1170"
+     y="410"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text73">5. Rendering: ViewportManager.getTransformMatrix()</text>
+  <text
+     x="1170"
+     y="430"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text74">6. Canvas applies matrix (Note → Surface)</text>
+  <text
+     x="1170"
+     y="450"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text75">7. Shape rendered at correct screen position</text>
+  <!-- Gesture Handling Process -->
+  <rect
+     x="1150"
+     y="520"
+     width="400"
+     height="180"
+     fill="#fffde7"
+     stroke="#f9a825"
+     stroke-width="2"
+     rx="10"
+     id="rect75" />
+  <text
+     x="1350"
+     y="545"
+     font-family="Arial, sans-serif"
+     font-size="14"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text76">Gesture Handling Process</text>
+  <text
+     x="1170"
+     y="570"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text77">1. Finger touch on SurfaceView</text>
+  <text
+     x="1170"
+     y="590"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text78">2. GestureHandler detects pan/pinch</text>
+  <text
+     x="1170"
+     y="610"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text79">3. ViewportManager.updateOffset() or updateScale()</text>
+  <text
+     x="1170"
+     y="630"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text80">4. forceScreenRefresh() called</text>
+  <text
+     x="1170"
+     y="650"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text81">5. All shapes re-rendered with new transform</text>
+  <text
+     x="1170"
+     y="670"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text82">6. ViewportInfo updates zoom/scroll display</text>
+  <!-- Data Persistence Process -->
+  <rect
+     x="1150"
+     y="740"
+     width="400"
+     height="160"
+     fill="#fffde7"
+     stroke="#f9a825"
+     stroke-width="2"
+     rx="10"
+     id="rect82" />
+  <text
+     x="1350"
+     y="765"
+     font-family="Arial, sans-serif"
+     font-size="14"
+     text-anchor="middle"
+     font-weight="bold"
+     id="text83">Data Persistence Process</text>
+  <text
+     x="1170"
+     y="790"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text84">1. Shape created → saved to Repository</text>
+  <text
+     x="1170"
+     y="810"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text85">2. Viewport changes → debounced 500ms</text>
+  <text
+     x="1170"
+     y="830"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text86">3. Repository converts Domain → Entity</text>
+  <text
+     x="1170"
+     y="850"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text87">4. Room Database persists to SQLite</text>
+  <text
+     x="1170"
+     y="870"
+     font-family="Arial, sans-serif"
+     font-size="12"
+     id="text88">5. On load: Entity → Domain → UI</text>
+</svg>

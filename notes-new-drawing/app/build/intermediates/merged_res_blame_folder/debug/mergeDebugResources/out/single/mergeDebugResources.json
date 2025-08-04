@@ -1,0 +1,150 @@
+[
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_brush.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_brush.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-mdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_scribble_back_ground_grid.png.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/scribble_back_ground_grid.png"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_border_black_2dp.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/border_black_2dp.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_pencil.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_pencil.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-xhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-xxxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/layout_activity_main.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_eraser.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_eraser.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-xhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-xxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_marker_pen.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_marker_pen.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/layout_activity_notes.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/layout/activity_notes.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_charcoal.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_charcoal.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_pen_hard.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_pen_hard.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-hdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/raw_demo.html.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/raw/demo.html"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-mdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_bg_toolbar_button_selected.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/bg_toolbar_button_selected.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_marker.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_marker.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-xxxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_pen_fountain.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_pen_fountain.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_color_selector.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/color_selector.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/xml_backup_rules.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/xml_data_extraction_rules.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_charcoal_pen.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_charcoal_pen.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-xxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_bg_toolbar_button.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/bg_toolbar_button.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_pen_soft.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_pen_soft.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_width_minus_circle.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_width_minus_circle.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_bg_button_click_solid.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/bg_button_click_solid.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/mipmap-hdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-debug-86:/drawable_ic_width_plus_circle.xml.flat",
+        "source": "com.wyldsoft.notes.app-main-88:/drawable/ic_width_plus_circle.xml"
+    }
+]

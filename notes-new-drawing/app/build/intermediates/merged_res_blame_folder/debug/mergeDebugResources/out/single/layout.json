@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.wyldsoft.notes.app-mergeDebugResources-85:/layout/activity_notes.xml",
+        "source": "com.wyldsoft.notes.app-main-88:/layout/activity_notes.xml"
+    },
+    {
+        "merged": "com.wyldsoft.notes.app-mergeDebugResources-85:/layout/activity_main.xml",
+        "source": "com.wyldsoft.notes.app-main-88:/layout/activity_main.xml"
+    }
+]
