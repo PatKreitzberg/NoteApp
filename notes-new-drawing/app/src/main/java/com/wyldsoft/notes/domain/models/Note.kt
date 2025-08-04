@@ -11,7 +11,9 @@ data class Note(
     val template: Template? = null,
     val viewportScale: Float = 1.0f,
     val viewportOffsetX: Float = 0f,
-    val viewportOffsetY: Float = 0f
+    val viewportOffsetY: Float = 0f,
+    val isPaginationEnabled: Boolean = true,
+    val paperSize: String = "LETTER"
 )
 
 data class Template(

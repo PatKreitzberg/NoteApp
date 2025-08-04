@@ -97,14 +97,19 @@ class NoteRepositoryImpl(
     }
     
     override suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float) {
-        val note = getNote(noteId) ?: return
-        val updatedNote = note.copy(
+        val noteEntity = noteDao.getNote(noteId) ?: return
+        val updatedEntity = noteEntity.copy(
             viewportScale = scale,
             viewportOffsetX = offsetX,
             viewportOffsetY = offsetY,
             modifiedAt = System.currentTimeMillis()
         )
-        saveNote(updatedNote)
+        noteDao.update(updatedEntity)
+        
+        // Update current note if it's the same
+        if (_currentNote.value?.id == noteId) {
+            setCurrentNote(noteId)
+        }
     }
     
     override suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String) {
@@ -132,7 +137,9 @@ class NoteRepositoryImpl(
             modifiedAt = modifiedAt,
             viewportScale = viewportScale,
             viewportOffsetX = viewportOffsetX,
-            viewportOffsetY = viewportOffsetY
+            viewportOffsetY = viewportOffsetY,
+            isPaginationEnabled = isPaginationEnabled,
+            paperSize = paperSize
         )
     }
     
@@ -144,7 +151,9 @@ class NoteRepositoryImpl(
             modifiedAt = modifiedAt,
             viewportScale = viewportScale,
             viewportOffsetX = viewportOffsetX,
-            viewportOffsetY = viewportOffsetY
+            viewportOffsetY = viewportOffsetY,
+            isPaginationEnabled = isPaginationEnabled,
+            paperSize = paperSize
         )
     }
     

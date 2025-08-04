@@ -90,9 +90,8 @@ class EditorViewModel(
                         it.viewportOffsetY
                     )
                     // Initialize pagination state
-                    // TODO: Read from NoteEntity when database fields are added
-                    // _isPaginationEnabled.value = it.isPaginationEnabled
-                    // _paperSize.value = PaperSize.fromString(it.paperSize)
+                    _isPaginationEnabled.value = it.isPaginationEnabled
+                    _paperSize.value = PaperSize.fromString(it.paperSize)
                     calculatePageDimensions()
                 }
             }
