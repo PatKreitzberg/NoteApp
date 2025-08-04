@@ -48,7 +48,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected var surfaceView: SurfaceView? = null
     protected var isDrawingInProgress = false
     protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
-    private var editorViewModel: EditorViewModel? = null
+    protected var editorViewModel: EditorViewModel? = null
     protected val viewModel: EditorViewModel?
         get() = editorViewModel
     private lateinit var viewModelFactory: ViewModelFactory
@@ -60,7 +60,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     abstract fun disableFingerTouch()
     abstract fun cleanSurfaceView(surfaceView: SurfaceView): Boolean
     abstract fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?)
-    abstract fun updateTouchHelperExclusionZones(excludeRects: List<Rect>)
 
     // Template methods - common implementation for all SDKs
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.wyldsoft.notes.domain.models.PaperSize
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteSettingsDialog(
     isPaginationEnabled: Boolean,
