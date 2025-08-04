@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +26,10 @@ import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import com.wyldsoft.notes.presentation.viewmodel.ViewModelFactory
+import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
+import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 
 @Composable
 fun HomeView(
@@ -39,19 +44,41 @@ fun HomeView(
     val notebooks by viewModel.notebooks.collectAsState()
     val showCreateFolderDialog by viewModel.showCreateFolderDialog.collectAsState()
     val showCreateNotebookDialog by viewModel.showCreateNotebookDialog.collectAsState()
+    var showAppSettingsDialog by remember { mutableStateOf(false) }
+    var selectedNotebook by remember { mutableStateOf<NotebookEntity?>(null) }
     
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Breadcrumb navigation
-        BreadcrumbBar(
-            folderPath = folderPath,
-            onFolderClick = { folder ->
-                viewModel.navigateToFolder(folder.id)
+        // Top bar with settings
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Breadcrumb navigation
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BreadcrumbBar(
+                    folderPath = folderPath,
+                    onFolderClick = { folder ->
+                        viewModel.navigateToFolder(folder.id)
+                    }
+                )
             }
-        )
+            
+            // Settings icon
+            IconButton(onClick = { showAppSettingsDialog = true }) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "App Settings"
+                )
+            }
+        }
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -79,7 +106,10 @@ fun HomeView(
         NotebookRow(
             notebooks = notebooks,
             viewModel = viewModel,
-            onNotebookSelected = onNotebookSelected
+            onNotebookSelected = onNotebookSelected,
+            onNotebookLongClick = { notebook ->
+                selectedNotebook = notebook
+            }
         )
     }
     
@@ -107,6 +137,27 @@ fun HomeView(
             },
             onDismiss = {
                 viewModel.hideCreateNotebookDialog()
+            }
+        )
+    }
+    
+    // App settings dialog
+    if (showAppSettingsDialog) {
+        AppSettingsDialog(
+            onDismiss = { showAppSettingsDialog = false }
+        )
+    }
+    
+    // Notebook settings dialog
+    selectedNotebook?.let { notebook ->
+        NotebookSettingsDialog(
+            notebookName = notebook.name,
+            onRename = { newName ->
+                viewModel.renameNotebook(notebook.id, newName)
+                selectedNotebook = null
+            },
+            onDismiss = {
+                selectedNotebook = null
             }
         )
     }
@@ -223,7 +274,8 @@ fun FolderItem(
 fun NotebookRow(
     notebooks: List<NotebookEntity>,
     viewModel: HomeViewModel,
-    onNotebookSelected: (String, String) -> Unit
+    onNotebookSelected: (String, String) -> Unit,
+    onNotebookLongClick: (NotebookEntity) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -235,17 +287,20 @@ fun NotebookRow(
             NotebookItem(
                 notebook = notebook,
                 viewModel = viewModel,
-                onNotebookSelected = onNotebookSelected
+                onNotebookSelected = onNotebookSelected,
+                onLongClick = { onNotebookLongClick(notebook) }
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NotebookItem(
     notebook: NotebookEntity,
     viewModel: HomeViewModel,
-    onNotebookSelected: (String, String) -> Unit
+    onNotebookSelected: (String, String) -> Unit,
+    onLongClick: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     
@@ -254,14 +309,17 @@ fun NotebookItem(
             .width(100.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.secondaryContainer)
-            .clickable { 
-                coroutineScope.launch {
-                    val noteId = viewModel.getFirstNoteInNotebook(notebook.id)
-                    noteId?.let {
-                        onNotebookSelected(notebook.id, it)
+            .combinedClickable(
+                onClick = { 
+                    coroutineScope.launch {
+                        val noteId = viewModel.getFirstNoteInNotebook(notebook.id)
+                        noteId?.let {
+                            onNotebookSelected(notebook.id, it)
+                        }
                     }
-                }
-            }
+                },
+                onLongClick = onLongClick
+            )
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

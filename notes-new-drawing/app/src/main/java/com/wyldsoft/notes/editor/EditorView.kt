@@ -12,6 +12,7 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.presentation.viewmodel.ViewModelFactory
 import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.ViewportInfo
+import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
 
 @Composable
 fun EditorView(
@@ -22,6 +23,7 @@ fun EditorView(
     val uiState by viewModel.uiState.collectAsState()
     val currentPenProfile by viewModel.currentPenProfile.collectAsState()
     val viewportState by viewModel.viewportState.collectAsState()
+    var showNoteSettingsDialog by remember { mutableStateOf(false) }
     
     // Pass ViewModel to the activity
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -40,7 +42,8 @@ fun EditorView(
             Toolbar(
                 viewModel = viewModel,
                 currentPenProfile = currentPenProfile,
-                isStrokeOptionsOpen = uiState.isStrokeOptionsOpen
+                isStrokeOptionsOpen = uiState.isStrokeOptionsOpen,
+                onSettingsClick = { showNoteSettingsDialog = true }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -55,6 +58,13 @@ fun EditorView(
         ViewportInfo(
             viewportState = viewportState,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+    
+    // Note settings dialog
+    if (showNoteSettingsDialog) {
+        NoteSettingsDialog(
+            onDismiss = { showNoteSettingsDialog = false }
         )
     }
 }

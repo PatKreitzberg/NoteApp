@@ -102,4 +102,10 @@ class HomeViewModel(
     suspend fun getFirstNoteInNotebook(notebookId: String): String? {
         return notebookRepository.getFirstNoteInNotebook(notebookId)?.id
     }
+    
+    fun renameNotebook(notebookId: String, newName: String) {
+        viewModelScope.launch {
+            notebookRepository.updateNotebookName(notebookId, newName)
+        }
+    }
 }

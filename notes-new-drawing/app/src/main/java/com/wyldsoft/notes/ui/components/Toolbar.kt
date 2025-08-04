@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +26,8 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 fun Toolbar(
     viewModel: EditorViewModel,
     currentPenProfile: PenProfile,
-    isStrokeOptionsOpen: Boolean
+    isStrokeOptionsOpen: Boolean,
+    onSettingsClick: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     var selectedProfileIndex by remember { mutableStateOf(0) }
@@ -147,6 +150,15 @@ fun Toolbar(
             }
 
             Spacer(modifier = Modifier.weight(1f))
+
+            // Settings icon
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Note Settings",
+                    tint = Color.Black
+                )
+            }
 
             // Debug info
             Text(
