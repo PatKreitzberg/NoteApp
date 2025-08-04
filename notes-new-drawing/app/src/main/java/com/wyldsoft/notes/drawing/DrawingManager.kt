@@ -5,6 +5,8 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
+import android.graphics.Color
+import android.graphics.Rect
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.pen.PenProfile
@@ -125,6 +127,63 @@ class DrawingManager(
             strokeJoin = Paint.Join.ROUND
             color = profile.getColorAsInt()
             strokeWidth = profile.strokeWidth
+        }
+    }
+    
+    fun drawPageSeparators(
+        canvas: Canvas, 
+        screenWidth: Int,
+        pageHeight: Float,
+        isPaginationEnabled: Boolean,
+        viewportOffsetY: Float
+    ) {
+        if (!isPaginationEnabled || pageHeight <= 0) return
+        
+        val separatorPaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.FILL
+        }
+        
+        val textPaint = Paint().apply {
+            color = Color.WHITE
+            textSize = 40f
+            isAntiAlias = true
+        }
+        
+        // Calculate visible page range
+        val viewportTop = -viewportOffsetY
+        val viewportBottom = viewportTop + canvas.height
+        
+        // Draw separators for visible pages
+        var pageY = pageHeight
+        var pageNum = 2
+        
+        while (pageY - 10 < viewportBottom + pageHeight) {
+            if (pageY + 10 > viewportTop - pageHeight) {
+                // Draw blue separator rectangle
+                val separatorTop = pageY + viewportOffsetY
+                canvas.drawRect(
+                    0f,
+                    separatorTop,
+                    screenWidth.toFloat(),
+                    separatorTop + 10f,
+                    separatorPaint
+                )
+                
+                // Draw page number in top right of the page above separator
+                val pageNumberY = separatorTop - 20f
+                val pageNumberX = screenWidth - 100f
+                canvas.drawText("Page ${pageNum - 1}", pageNumberX, pageNumberY, textPaint)
+            }
+            pageY += pageHeight
+            pageNum++
+        }
+        
+        // Draw page number for the first page if visible
+        if (viewportTop < pageHeight) {
+            val pageNumberY = 40f + viewportOffsetY
+            val pageNumberX = screenWidth - 100f
+            canvas.drawText("Page 1", pageNumberX, pageNumberY, textPaint)
         }
     }
 }

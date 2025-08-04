@@ -18,7 +18,9 @@ import kotlin.math.roundToInt
 @Composable
 fun ViewportInfo(
     viewportState: ViewportState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPaginationEnabled: Boolean = false,
+    currentPageNumber: Int = 1
 ) {
     // Calculate scroll position in NoteCoordinates
     val scrollX = (-viewportState.offsetX / viewportState.scale).roundToInt()
@@ -41,20 +43,37 @@ fun ViewportInfo(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Zoom info
-            Text(
-                text = "Zoom: $zoomPercent%",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-            
-            // Separator
-            Text(
-                text = "|",
-                color = Color.White.copy(alpha = 0.5f),
-                fontSize = 14.sp
-            )
+            // Show page number when pagination is enabled
+            if (isPaginationEnabled) {
+                Text(
+                    text = "Page: $currentPageNumber",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                
+                // Separator
+                Text(
+                    text = "|",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 14.sp
+                )
+            } else {
+                // Zoom info (only when pagination is disabled)
+                Text(
+                    text = "Zoom: $zoomPercent%",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                
+                // Separator
+                Text(
+                    text = "|",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 14.sp
+                )
+            }
             
             // Scroll position
             Text(

@@ -20,6 +20,7 @@ interface NoteRepository {
     suspend fun setCurrentNote(noteId: String)
     fun getNoteFlow(noteId: String): Flow<Note?>
     suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float)
+    suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String)
 }
 
 class NoteRepositoryImpl(
@@ -104,6 +105,21 @@ class NoteRepositoryImpl(
             modifiedAt = System.currentTimeMillis()
         )
         saveNote(updatedNote)
+    }
+    
+    override suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String) {
+        val noteEntity = noteDao.getNote(noteId) ?: return
+        val updatedEntity = noteEntity.copy(
+            isPaginationEnabled = isPaginationEnabled,
+            paperSize = paperSize,
+            modifiedAt = System.currentTimeMillis()
+        )
+        noteDao.update(updatedEntity)
+        
+        // Update current note if it's the same
+        if (_currentNote.value?.id == noteId) {
+            setCurrentNote(noteId)
+        }
     }
     
     // Extension functions for converting between domain models and entities

@@ -11,6 +11,7 @@ import com.onyx.android.sdk.pen.TouchHelper
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
 import com.wyldsoft.notes.rendering.RendererToScreenRequest
+import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.touchhandling.TouchUtils
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
@@ -20,6 +21,8 @@ import androidx.lifecycle.lifecycleScope
 import com.onyx.android.sdk.api.device.epd.EpdController
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.drawing.DrawingManager
+import android.graphics.Canvas
 
 
 open class OnyxDrawingActivity : BaseDrawingActivity() {
@@ -121,9 +124,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
         if (bitmap != null) {
             getRxManager().enqueue(
-                RendererToScreenRequest(
+                PaginationRendererToScreenRequest(
                     surfaceView,
-                    bitmap
+                    bitmap,
+                    editorViewModel
                 ), null)
         }
     }

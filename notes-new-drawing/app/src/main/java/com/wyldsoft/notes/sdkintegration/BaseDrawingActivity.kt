@@ -60,6 +60,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     abstract fun disableFingerTouch()
     abstract fun cleanSurfaceView(surfaceView: SurfaceView): Boolean
     abstract fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?)
+    abstract fun updateTouchHelperExclusionZones(excludeRects: List<Rect>)
 
     // Template methods - common implementation for all SDKs
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -198,16 +199,53 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     override fun setViewModel(viewModel: EditorViewModel) {
         this.editorViewModel = viewModel
         
+        // Set screen width for pagination calculations
+        val screenWidth = resources.displayMetrics.widthPixels
+        viewModel.setScreenWidth(screenWidth)
+        
         // Observe pen profile changes
         lifecycleScope.launch {
             viewModel.currentPenProfile.collect { profile ->
                 updatePenProfile(profile)
             }
         }
+        
+        // Observe pagination state changes
+        lifecycleScope.launch {
+            viewModel.isPaginationEnabled.collect { enabled ->
+                // Update exclusion zones when pagination state changes
+                updatePaginationExclusionZones()
+            }
+        }
+        
+        // Observe viewport changes to update page separator positions
+        lifecycleScope.launch {
+            viewModel.viewportState.collect { _ ->
+                if (viewModel.isPaginationEnabled.value) {
+                    // Update scroll position for page number calculation
+                    viewModel.updateCurrentPage(-viewModel.viewportState.value.offsetY)
+                    // Update exclusion zones when viewport changes
+                    updatePaginationExclusionZones()
+                }
+            }
+        }
     }
 
     override fun onShapeCompleted(points: List<PointF>, pressures: List<Float>) {
         viewModel?.addShape(points, pressures)
+    }
+    
+    private fun updatePaginationExclusionZones() {
+        editorViewModel?.let { viewModel ->
+            val currentExcludeRects = viewModel.excludeRects.value.toMutableList()
+            val pageSeparatorRects = viewModel.getPageSeparatorRects()
+            
+            // Combine current exclusion rects with page separator rects
+            val allExcludeRects = currentExcludeRects + pageSeparatorRects
+            
+            // Update touch helper with all exclusion zones
+            updateTouchHelperExclusionZones(allExcludeRects)
+        }
     }
 
     fun updatePenProfile(penProfile: PenProfile) {

@@ -13,6 +13,7 @@ import com.wyldsoft.notes.presentation.viewmodel.ViewModelFactory
 import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.ViewportInfo
 import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
+import com.wyldsoft.notes.domain.models.PaperSize
 
 @Composable
 fun EditorView(
@@ -23,6 +24,9 @@ fun EditorView(
     val uiState by viewModel.uiState.collectAsState()
     val currentPenProfile by viewModel.currentPenProfile.collectAsState()
     val viewportState by viewModel.viewportState.collectAsState()
+    val isPaginationEnabled by viewModel.isPaginationEnabled.collectAsState()
+    val paperSize by viewModel.paperSize.collectAsState()
+    val currentPageNumber by viewModel.currentPageNumber.collectAsState()
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
     
     // Pass ViewModel to the activity
@@ -57,6 +61,8 @@ fun EditorView(
         // Viewport info overlay at the bottom
         ViewportInfo(
             viewportState = viewportState,
+            isPaginationEnabled = isPaginationEnabled,
+            currentPageNumber = currentPageNumber,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -64,6 +70,14 @@ fun EditorView(
     // Note settings dialog
     if (showNoteSettingsDialog) {
         NoteSettingsDialog(
+            isPaginationEnabled = isPaginationEnabled,
+            currentPaperSize = paperSize,
+            onPaginationToggle = { enabled ->
+                viewModel.updatePaginationEnabled(enabled)
+            },
+            onPaperSizeChange = { newPaperSize ->
+                viewModel.updatePaperSize(newPaperSize)
+            },
             onDismiss = { showNoteSettingsDialog = false }
         )
     }
