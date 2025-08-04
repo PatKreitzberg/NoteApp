@@ -38,26 +38,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun initializeSDK() {
         // Onyx-specific initialization
-        // Initialize stylus handler
-        stylusHandler = OnyxStylusHandler(
-            surfaceView,
-            viewModel,
-            getRxManager(),
-            onDrawingStateChanged = { isDrawing ->
-                if (isDrawing) {
-                    disableFingerTouch()
-                } else {
-                    enableFingerTouch()
-                    forceScreenRefresh()
-                }
-            },
-            onShapeCompleted = { points, pressures ->
-                onShapeCompleted(points, pressures)
-            },
-            onBitmapChanged = {
-                forceScreenRefresh()
-            }
-        )
+        // Note: stylus handler will be created in createTouchHelper when surfaceView is available
         
         // Subscribe to current note changes to load existing shapes
         lifecycleScope.launch {
@@ -73,6 +54,32 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun createTouchHelper(surfaceView: SurfaceView) {
+        // Create stylus handler now that surfaceView is available
+        if (stylusHandler == null) {
+            stylusHandler = OnyxStylusHandler(
+                surfaceView,
+                viewModel,
+                getRxManager(),
+                onDrawingStateChanged = { isDrawing ->
+                    if (isDrawing) {
+                        disableFingerTouch()
+                    } else {
+                        enableFingerTouch()
+                        forceScreenRefresh()
+                    }
+                },
+                onShapeCompleted = { points, pressures ->
+                    onShapeCompleted(points, pressures)
+                },
+                onBitmapChanged = {
+                    forceScreenRefresh()
+                },
+                getBitmap = { getOrCreateBitmap() },
+                getBitmapCanvas = { getBitmapCanvas() }
+            )
+            stylusHandler?.updatePenProfile(currentPenProfile)
+        }
+        
         val callback = stylusHandler?.createOnyxCallback()
         onyxTouchHelper = TouchHelper.create(surfaceView, callback)
         
@@ -200,11 +207,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         deviceReceiver.setSystemNotificationPanelChangeListener { open ->
             onyxTouchHelper?.setRawDrawingEnabled(!open)
             surfaceView?.let { sv ->
-                renderToScreen(sv, stylusHandler?.bitmap ?: bitmap)
+                renderToScreen(sv, bitmap)
             }
         }.setSystemScreenOnListener {
             surfaceView?.let { sv ->
-                renderToScreen(sv, stylusHandler?.bitmap ?: bitmap)
+                renderToScreen(sv, bitmap)
             }
         }
     }
@@ -218,9 +225,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         surfaceView?.let { sv ->
             cleanSurfaceView(sv)
             // Recreate bitmap from all stored shapes
-            stylusHandler?.recreateBitmapFromShapes()
-            stylusHandler?.bitmap?.let { renderToScreen(sv, it) }
+            recreateBitmapFromShapes()
+            bitmap?.let { renderToScreen(sv, it) }
         }
+    }
+    
+    override fun recreateBitmapFromShapes() {
+        getOrCreateBitmap() // Ensure bitmap exists
+        stylusHandler?.recreateBitmapFromShapes()
     }
     
     override fun setViewModel(viewModel: EditorViewModel) {
@@ -248,7 +260,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 },
                 onBitmapChanged = {
                     forceScreenRefresh()
-                }
+                },
+                getBitmap = { getOrCreateBitmap() },
+                getBitmapCanvas = { getBitmapCanvas() }
             )
             stylusHandler?.updatePenProfile(currentPenProfile)
         }

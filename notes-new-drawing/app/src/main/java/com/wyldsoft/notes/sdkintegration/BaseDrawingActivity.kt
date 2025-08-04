@@ -180,11 +180,19 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         val surfaceCallback = object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 cleanSurfaceView(surfaceView)
+                createDrawingBitmap() // Ensure bitmap is created
                 bitmap?.let { renderToScreen(surfaceView, it) }
             }
 
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
                 updateActiveSurface()
+                if (bitmap == null || bitmap!!.width != width || bitmap!!.height != height) {
+                    // Recreate bitmap if size changed
+                    bitmap?.recycle()
+                    bitmap = null
+                    bitmapCanvas = null
+                    createDrawingBitmap()
+                }
                 bitmap?.let { renderToScreen(surfaceView, it) }
             }
 
@@ -270,6 +278,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             bitmap?.let { renderToScreen(sv, it) }
         }
     }
+    
+    // Method to recreate bitmap from shapes
+    abstract fun recreateBitmapFromShapes()
 
     protected fun createDrawingBitmap(): Bitmap? {
         return surfaceView?.let { sv ->
@@ -280,6 +291,20 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             }
             bitmap
         }
+    }
+    
+    fun getOrCreateBitmap(): Bitmap? {
+        if (bitmap == null) {
+            createDrawingBitmap()
+        }
+        return bitmap
+    }
+    
+    fun getBitmapCanvas(): Canvas? {
+        if (bitmapCanvas == null && bitmap != null) {
+            bitmapCanvas = Canvas(bitmap!!)
+        }
+        return bitmapCanvas
     }
 
     private fun cleanupResources() {

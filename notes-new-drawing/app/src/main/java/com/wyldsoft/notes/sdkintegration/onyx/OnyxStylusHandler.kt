@@ -33,7 +33,9 @@ class OnyxStylusHandler(
     private val rxManager: RxManager,
     private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
     private val onShapeCompleted: (points: List<PointF>, pressures: List<Float>) -> Unit,
-    private val onBitmapChanged: () -> Unit
+    private val onBitmapChanged: () -> Unit,
+    private val getBitmap: () -> Bitmap?,
+    private val getBitmapCanvas: () -> Canvas?
 ) {
     companion object {
         private const val TAG = "OnyxStylusHandler"
@@ -52,11 +54,6 @@ class OnyxStylusHandler(
     // Drawing state
     private var isDrawingInProgress = false
     private var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
-    
-    // Bitmap for drawing
-    var bitmap: Bitmap? = null
-        private set
-    private var bitmapCanvas: Canvas? = null
 
     /**
      * Updates the current pen profile used for drawing
@@ -162,7 +159,7 @@ class OnyxStylusHandler(
     private fun drawScribbleToBitmap(points: List<TouchPoint>, touchPointList: TouchPointList) {
         Log.d(TAG, "drawScribbleToBitmap called list size " + touchPointList.size())
         surfaceView?.let { sv ->
-            createDrawingBitmap()
+            val bitmap = getBitmap() ?: return
 
             // Create shape with original touch points (in SurfaceViewCoordinates)
             val shape = createShapeFromPenType(touchPointList)
@@ -231,9 +228,9 @@ class OnyxStylusHandler(
      * Renders a shape to the bitmap
      */
     private fun renderShapeToBitmap(shape: BaseShape) {
-        bitmap?.let { bmp ->
-            val renderContext = rendererHelper.getRenderContext() ?: return
-            val canvas = Canvas(bmp)
+        val bmp = getBitmap() ?: return
+        val renderContext = rendererHelper.getRenderContext() ?: return
+        val canvas = getBitmapCanvas() ?: return
             
             // Apply viewport transformation if available
             canvas.save()
@@ -295,18 +292,15 @@ class OnyxStylusHandler(
      * Recreates the bitmap from all stored shapes
      */
     fun recreateBitmapFromShapes() {
-        surfaceView?.let { sv ->
-            // Create a fresh bitmap
-            bitmap?.recycle()
-            bitmap = createBitmap(sv.width, sv.height)
-            bitmapCanvas = Canvas(bitmap!!)
-            bitmapCanvas?.drawColor(Color.WHITE)
-
-            // Get render context
-            val renderContext = rendererHelper.getRenderContext() ?: return
-            renderContext.bitmap = bitmap
-            
-            val canvas = bitmapCanvas!!
+        val bitmap = getBitmap() ?: return
+        val canvas = getBitmapCanvas() ?: return
+        
+        // Clear the bitmap
+        canvas.drawColor(Color.WHITE)
+        
+        // Get render context
+        val renderContext = rendererHelper.getRenderContext() ?: return
+        renderContext.bitmap = bitmap
             
             // Apply viewport transformation if available
             canvas.save()
@@ -333,16 +327,6 @@ class OnyxStylusHandler(
         }
     }
 
-    /**
-     * Creates the drawing bitmap if it doesn't exist
-     */
-    private fun createDrawingBitmap() {
-        if (bitmap == null && surfaceView != null) {
-            bitmap = createBitmap(surfaceView.width, surfaceView.height)
-            bitmapCanvas = Canvas(bitmap!!)
-            bitmapCanvas?.drawColor(Color.WHITE)
-        }
-    }
 
     /**
      * Renders bitmap to screen
@@ -362,9 +346,7 @@ class OnyxStylusHandler(
      */
     fun clearDrawing() {
         drawnShapes.clear()
-        bitmap?.recycle()
-        bitmap = null
-        bitmapCanvas = null
+        getBitmapCanvas()?.drawColor(Color.WHITE)
     }
 
     /**
