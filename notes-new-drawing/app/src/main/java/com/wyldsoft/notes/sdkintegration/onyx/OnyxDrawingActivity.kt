@@ -75,7 +75,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     forceScreenRefresh()
                 },
                 getBitmap = { getOrCreateBitmap() },
-                getBitmapCanvas = { getBitmapCanvas() }
+                getBitmapCanvas = { bitmapCanvas }
             )
             stylusHandler?.updatePenProfile(currentPenProfile)
         }
@@ -88,21 +88,30 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         
         // Set touch listener on the surface view to capture gestures
         surfaceView.setOnTouchListener { _, event ->
-            // Check if any pointer is a stylus
-            var hasStylus = false
+            // Check if any pointer is a stylus or eraser
+            var hasStylusOrEraser = false
             for (i in 0 until event.pointerCount) {
-                if (event.getToolType(i) == MotionEvent.TOOL_TYPE_STYLUS) {
-                    hasStylus = true
+                val toolType = event.getToolType(i)
+                if (toolType == MotionEvent.TOOL_TYPE_STYLUS || 
+                    toolType == MotionEvent.TOOL_TYPE_ERASER) {
+                    hasStylusOrEraser = true
                     break
                 }
             }
             
-            // Only handle events if no stylus is detected
-            if (!hasStylus) {
+            // Check if erasing is in progress
+            val isErasing = stylusHandler?.isErasing() ?: false
+            
+            // Only handle events if no stylus/eraser is detected and not erasing
+            if (!hasStylusOrEraser && !isErasing) {
                 gestureHandler?.onTouchEvent(event) ?: false
             } else {
-                Log.d(TAG, "Stylus detected, ignoring gesture handling")
-                false // Let Onyx SDK handle stylus events
+                if (isErasing) {
+                    Log.d(TAG, "Erasing in progress, ignoring gesture handling")
+                } else if (hasStylusOrEraser) {
+                    Log.d(TAG, "Stylus/eraser detected, ignoring gesture handling")
+                }
+                false // Let Onyx SDK handle stylus/eraser events
             }
         }
     }
@@ -219,6 +228,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onCleanupDeviceReceiver() {
         onyxDeviceReceiver?.enable(this, false)
     }
+    
+    override fun onViewportChanged() {
+        // Recreate bitmap with new viewport transformation
+        stylusHandler?.recreateBitmapFromShapes()
+        // Request screen refresh to show the updated shapes
+        forceScreenRefresh()
+    }
 
     override fun forceScreenRefresh() {
         EpdController.enablePost(surfaceView, 1) // this is absolutely necessary to ensure the screen refreshes properly
@@ -262,7 +278,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     forceScreenRefresh()
                 },
                 getBitmap = { getOrCreateBitmap() },
-                getBitmapCanvas = { getBitmapCanvas() }
+                getBitmapCanvas = { bitmapCanvas }
             )
             stylusHandler?.updatePenProfile(currentPenProfile)
         }

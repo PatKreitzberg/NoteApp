@@ -53,8 +53,14 @@ class OnyxStylusHandler(
     
     // Drawing state
     private var isDrawingInProgress = false
+    private var isErasingInProgress = false
     private var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
 
+    /**
+     * Returns true if erasing is currently in progress
+     */
+    fun isErasing(): Boolean = isErasingInProgress
+    
     /**
      * Updates the current pen profile used for drawing
      */
@@ -94,10 +100,14 @@ class OnyxStylusHandler(
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
             // Handle erasing start
+            isErasingInProgress = true
+            Log.d(TAG, "Erasing started")
         }
 
         override fun onEndRawErasing(b: Boolean, touchPoint: TouchPoint?) {
             // Handle erasing end
+            isErasingInProgress = false
+            Log.d(TAG, "Erasing ended")
         }
 
         override fun onRawErasingTouchPointMoveReceived(touchPoint: TouchPoint?) {
@@ -251,8 +261,8 @@ class OnyxStylusHandler(
 
             shape.render(renderContext)
             canvas.restore()
-        }
     }
+
 
     /**
      * Converts a TouchPointList from SurfaceViewCoordinates to NoteCoordinates
@@ -301,30 +311,29 @@ class OnyxStylusHandler(
         // Get render context
         val renderContext = rendererHelper.getRenderContext() ?: return
         renderContext.bitmap = bitmap
-            
-            // Apply viewport transformation if available
-            canvas.save()
-            viewModel?.viewportManager?.let { viewportManager ->
-                canvas.concat(viewportManager.getTransformMatrix())
-            }
-            
-            renderContext.canvas = canvas
-            renderContext.paint = Paint().apply {
-                isAntiAlias = true
-                style = Paint.Style.STROKE
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
-            }
-            // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
-            renderContext.viewPoint = android.graphics.Point(0, 0)
-
-            // Render all shapes
-            for (shape in drawnShapes) {
-                shape.render(renderContext)
-            }
-            
-            canvas.restore()
+        
+        // Apply viewport transformation if available
+        canvas.save()
+        viewModel?.viewportManager?.let { viewportManager ->
+            canvas.concat(viewportManager.getTransformMatrix())
         }
+        
+        renderContext.canvas = canvas
+        renderContext.paint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
+        renderContext.viewPoint = android.graphics.Point(0, 0)
+
+        // Render all shapes
+        for (shape in drawnShapes) {
+            shape.render(renderContext)
+        }
+        
+        canvas.restore()
     }
 
 

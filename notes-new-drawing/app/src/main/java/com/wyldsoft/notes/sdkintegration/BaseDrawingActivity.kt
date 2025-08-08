@@ -225,7 +225,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             }
         }
         
-        // Observe viewport changes to update page separator positions
+        // Observe viewport changes to update page separator positions and redraw shapes
         lifecycleScope.launch {
             viewModel.viewportState.collect { _ ->
                 if (viewModel.isPaginationEnabled.value) {
@@ -234,6 +234,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     // Update exclusion zones when viewport changes
                     updatePaginationExclusionZones()
                 }
+                // Trigger redraw of shapes when viewport changes
+                onViewportChanged()
             }
         }
     }
@@ -300,7 +302,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         return bitmap
     }
     
-    fun getBitmapCanvas(): Canvas? {
+    fun ensureBitmapCanvas(): Canvas? {
         if (bitmapCanvas == null && bitmap != null) {
             bitmapCanvas = Canvas(bitmap!!)
         }
@@ -323,4 +325,5 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected abstract fun updateTouchHelperExclusionZones(excludeRects: List<Rect>)
     protected abstract fun initializeDeviceReceiver()
     protected abstract fun onCleanupDeviceReceiver()
+    protected abstract fun onViewportChanged()
 }

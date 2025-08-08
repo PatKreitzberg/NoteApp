@@ -183,6 +183,7 @@ fun Toolbar(
                 }
 
                 StrokeOptionsPanel(
+                    viewModel = viewModel,
                     currentProfile = currentPenProfile,
                     onProfileChanged = { newProfile ->
                         updateProfile(newProfile)

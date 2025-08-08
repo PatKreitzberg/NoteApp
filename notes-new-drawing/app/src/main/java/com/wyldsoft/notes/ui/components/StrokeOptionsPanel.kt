@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wyldsoft.notes.PenIconUtils
-import com.wyldsoft.notes.editor.EditorState
+import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.getColorName
 import com.wyldsoft.notes.getDefaultStrokeWidthForPenType
 import com.wyldsoft.notes.getMaxStrokeSizeForPenType
@@ -32,6 +32,7 @@ import com.wyldsoft.notes.utils.noRippleClickable
 
 @Composable
 fun StrokeOptionsPanel(
+    viewModel: EditorViewModel,
     currentProfile: PenProfile,
     onProfileChanged: (PenProfile) -> Unit,
     onPanelPositioned: (Rect) -> Unit = {}
@@ -61,7 +62,7 @@ fun StrokeOptionsPanel(
             penType = selectedPenType
         )
         onProfileChanged(newProfile)
-        EditorState.refreshUi.emit(Unit)
+        viewModel.forceRefresh()
     }
 
     Column(
