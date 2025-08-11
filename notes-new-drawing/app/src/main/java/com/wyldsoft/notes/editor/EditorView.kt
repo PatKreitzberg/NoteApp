@@ -5,17 +5,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 import com.wyldsoft.notes.DrawingCanvas
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.ViewModelFactory
 import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.ViewportInfo
 import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
-import com.wyldsoft.notes.domain.models.PaperSize
 
 @Composable
 fun EditorView(

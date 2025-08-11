@@ -1,43 +1,22 @@
 // MainActivity.kt - Refactored
 package com.wyldsoft.notes
 
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import com.wyldsoft.notes.sdkintegration.onyx.OnyxDrawingActivity
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Rect
 import android.os.Bundle
-import android.util.Log
-import android.view.SurfaceHolder
-import android.view.SurfaceView
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.LaunchedEffect
-import androidx.core.graphics.createBitmap
-import com.onyx.android.sdk.pen.TouchHelper
-import com.wyldsoft.notes.editor.EditorView
-import com.wyldsoft.notes.pen.PenProfile
-import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
-import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.ViewModelFactory
 import com.wyldsoft.notes.data.repository.*
 import com.wyldsoft.notes.data.database.NotesDatabase
-import com.wyldsoft.notes.drawing.DrawingActivityInterface
-import android.graphics.PointF
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import androidx.navigation.NavType
-import com.onyx.android.sdk.api.device.epd.EpdController
 import com.wyldsoft.notes.home.HomeView
 
 /**
@@ -80,16 +59,6 @@ class MainActivity : ComponentActivity() {
             noteDao = database.noteDao()
         )
 
-//        viewModelFactory = ViewModelFactory(
-//            noteRepository = noteRepository,
-//            folderRepository = folderRepository,
-//            notebookRepository = notebookRepository
-//        )
-//
-//        initializeSDK()
-//        initializePaint()
-//        initializeDeviceReceiver()
-
         setContent {
             MinimaleditorTheme {
                 Surface(
@@ -103,34 +72,17 @@ class MainActivity : ComponentActivity() {
                         startDestination = "home"
                     ) {
                         composable("home") {
+                            val context = LocalContext.current
                             HomeView(
                                 noteRepository,
                                 notebookRepository,
                                 folderRepository,
                                 onNotebookSelected = { notebookId, noteId ->
-                                    navController.navigate("editor/$notebookId/$noteId")
-                                }
-                            )
-                        }
-
-                        composable(
-                            "editor/{notebookId}/{noteId}",
-                            arguments = listOf(
-                                navArgument("notebookId") { type = NavType.StringType },
-                                navArgument("noteId") { type = NavType.StringType }
-                            )
-                        ) { backStackEntry ->
-                            val noteId = backStackEntry.arguments?.getString("noteId") ?: return@composable
-
-                            LaunchedEffect(noteId) {
-                                noteRepository.setCurrentNote(noteId)
-                            }
-
-                            EditorView(
-                                noteRepository,
-                                notebookRepository,
-                                onSurfaceViewCreated = { sv ->
-                                    handleSurfaceViewCreated(sv)
+                                    val intent = Intent(context, OnyxDrawingActivity::class.java).apply {
+                                        putExtra("notebookId", notebookId)
+                                        putExtra("noteId", noteId)
+                                    }
+                                    context.startActivity(intent)
                                 }
                             )
                         }

@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:1-25:12
-INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:1-25:12
-INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:1-25:12
-INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:1-25:12
+ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:1-31:12
+INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:1-31:12
+INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:1-31:12
+INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:1-31:12
 MERGED from [com.onyx.android.sdk:onyxsdk-pen:1.4.12] /Users/pat/.gradle/caches/8.11.1/transforms/60d6de6c75ceac020fed8271d9749fed/transformed/jetified-onyxsdk-pen-1.4.12/AndroidManifest.xml:2:1-16:12
 MERGED from [com.onyx.android.sdk:onyxsdk-base:1.7.8] /Users/pat/.gradle/caches/8.11.1/transforms/605a88b8b89e35819934b7da96fc9e8d/transformed/jetified-onyxsdk-base-1.7.8/AndroidManifest.xml:2:1-31:12
 MERGED from [androidx.databinding:databinding-adapters:8.9.1] /Users/pat/.gradle/caches/8.11.1/transforms/4699fba947078ae1a346c059a85bda10/transformed/databinding-adapters-8.9.1/AndroidManifest.xml:2:1-7:12
@@ -152,8 +152,8 @@ MERGED from [com.jakewharton.hugo.fix:hugo-annotations:1.2.3] /Users/pat/.gradle
 	xmlns:android
 		ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:2:11-69
 application
-ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:5:5-23:19
-INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:5:5-23:19
+ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:5:5-29:19
+INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:5:5-29:19
 MERGED from [com.onyx.android.sdk:onyxsdk-pen:1.4.12] /Users/pat/.gradle/caches/8.11.1/transforms/60d6de6c75ceac020fed8271d9749fed/transformed/jetified-onyxsdk-pen-1.4.12/AndroidManifest.xml:11:5-14:19
 MERGED from [com.onyx.android.sdk:onyxsdk-pen:1.4.12] /Users/pat/.gradle/caches/8.11.1/transforms/60d6de6c75ceac020fed8271d9749fed/transformed/jetified-onyxsdk-pen-1.4.12/AndroidManifest.xml:11:5-14:19
 MERGED from [com.onyx.android.sdk:onyxsdk-base:1.7.8] /Users/pat/.gradle/caches/8.11.1/transforms/605a88b8b89e35819934b7da96fc9e8d/transformed/jetified-onyxsdk-base-1.7.8/AndroidManifest.xml:23:5-29:19
@@ -262,6 +262,14 @@ category#android.intent.category.LAUNCHER
 ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:20:17-77
 	android:name
 		ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:20:27-74
+activity#com.wyldsoft.notes.sdkintegration.onyx.OnyxDrawingActivity
+ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:24:9-28:20
+	android:screenOrientation
+		ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:27:13-49
+	android:exported
+		ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:26:13-36
+	android:name
+		ADDED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml:25:13-68
 uses-sdk
 INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/pat/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/app/src/main/AndroidManifest.xml

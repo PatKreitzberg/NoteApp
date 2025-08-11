@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.LaunchedEffect
 import androidx.core.graphics.createBitmap
 import com.wyldsoft.notes.editor.EditorView
 import com.wyldsoft.notes.pen.PenProfile
@@ -29,13 +28,7 @@ import com.wyldsoft.notes.drawing.DrawingActivityInterface
 import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import androidx.navigation.NavType
 import com.onyx.android.sdk.api.device.epd.EpdController
-import com.wyldsoft.notes.home.HomeView
 
 abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterface {
     protected val TAG = "BaseDrawingActivity"
@@ -87,50 +80,20 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         initializeSDK()
         initializePaint()
         initializeDeviceReceiver()
-        
+
         setContent {
             MinimaleditorTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val navController = rememberNavController()
-                    
-                    NavHost(
-                        navController = navController,
-                        startDestination = "home"
-                    ) {
-                        composable("home") {
-                            HomeView(
-                                noteRepository = noteRepository,
-                                notebookRepository = notebookRepository,
-                                onNotebookSelected = { notebookId, noteId ->
-                                    navController.navigate("editor/$notebookId/$noteId")
-                                }
-                            )
+                    EditorView(
+                        noteRepository = noteRepository,
+                        notebookRepository = notebookRepository,
+                        onSurfaceViewCreated = { sv ->
+                            handleSurfaceViewCreated(sv)
                         }
-                        
-                        composable(
-                            "editor/{notebookId}/{noteId}",
-                            arguments = listOf(
-                                navArgument("notebookId") { type = NavType.StringType },
-                                navArgument("noteId") { type = NavType.StringType }
-                            )
-                        ) { backStackEntry ->
-                            val noteId = backStackEntry.arguments?.getString("noteId") ?: return@composable
-                            
-                            LaunchedEffect(noteId) {
-                                noteRepository.setCurrentNote(noteId)
-                            }
-                            
-                            EditorView(
-                                viewModelFactory = viewModelFactory,
-                                onSurfaceViewCreated = { sv ->
-                                    handleSurfaceViewCreated(sv)
-                                }
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }
