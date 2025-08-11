@@ -16,10 +16,10 @@ class ViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when {
             modelClass.isAssignableFrom(EditorViewModel::class.java) -> {
-                EditorViewModel(noteRepository) as T
+                EditorViewModel(noteRepository, notebookRepository) as T
             }
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
-                HomeViewModel(folderRepository, notebookRepository) as T
+                HomeViewModel(noteRepository, notebookRepository, folderRepository) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }

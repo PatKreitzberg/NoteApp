@@ -8,6 +8,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 import com.wyldsoft.notes.DrawingCanvas
+import com.wyldsoft.notes.data.repository.NoteRepository
+import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.presentation.viewmodel.ViewModelFactory
 import com.wyldsoft.notes.ui.components.Toolbar
@@ -17,10 +19,12 @@ import com.wyldsoft.notes.domain.models.PaperSize
 
 @Composable
 fun EditorView(
-    viewModelFactory: ViewModelFactory,
+    noteRepository: NoteRepository,
+    notebookRepository: NotebookRepository,
     onSurfaceViewCreated: (android.view.SurfaceView) -> Unit = {}
 ) {
-    val viewModel: EditorViewModel = viewModel(factory = viewModelFactory)
+    val viewModel = EditorViewModel(noteRepository, notebookRepository)
+
     val uiState by viewModel.uiState.collectAsState()
     val currentPenProfile by viewModel.currentPenProfile.collectAsState()
     val viewportState by viewModel.viewportState.collectAsState()

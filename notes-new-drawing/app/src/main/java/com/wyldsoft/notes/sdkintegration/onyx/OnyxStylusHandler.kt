@@ -15,6 +15,7 @@ import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.viewport.ViewportManager
 import com.wyldsoft.notes.rendering.RendererHelper
 import com.wyldsoft.notes.rendering.RendererToScreenRequest
 import com.wyldsoft.notes.shapemanagement.EraseManager
@@ -167,7 +168,7 @@ class OnyxStylusHandler(
      * Draws scribble to bitmap
      */
     private fun drawScribbleToBitmap(points: List<TouchPoint>, touchPointList: TouchPointList) {
-        Log.d(TAG, "drawScribbleToBitmap called list size " + touchPointList.size())
+        Log.d("DebugAug11.1", "drawScribbleToBitmap called list size " + touchPointList.size())
         surfaceView?.let { sv ->
             val bitmap = getBitmap() ?: return
 
@@ -242,25 +243,19 @@ class OnyxStylusHandler(
         val renderContext = rendererHelper.getRenderContext() ?: return
         val canvas = getBitmapCanvas() ?: return
             
-            // Apply viewport transformation if available
-            canvas.save()
-            viewModel?.viewportManager?.let { viewportManager ->
-                canvas.concat(viewportManager.getTransformMatrix())
-            }
-            
-            renderContext.bitmap = bmp
-            renderContext.canvas = canvas
-            renderContext.paint = Paint().apply {
-                isAntiAlias = true
-                style = Paint.Style.STROKE
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
-            }
-            // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
-            renderContext.viewPoint = android.graphics.Point(0, 0)
+        // Don't apply viewport transformation here since shape is in surface coordinates
+        renderContext.bitmap = bmp
+        renderContext.canvas = canvas
+        renderContext.paint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
+        renderContext.viewPoint = android.graphics.Point(0, 0)
 
-            shape.render(renderContext)
-            canvas.restore()
+        shape.render(renderContext)
     }
 
 
@@ -297,11 +292,31 @@ class OnyxStylusHandler(
         
         return notePointList
     }
-
+    
+    /**
+     * Checks if a shape is visible in the current viewport
+     */
+    private fun isShapeVisible(shape: BaseShape, viewportManager: ViewportManager, screenWidth: Int, screenHeight: Int): Boolean {
+        // Get the shape's bounding rect
+        Log.d("\"DebugAug11.1\"", "Checking visibility for shape")
+        shape.updateShapeRect()
+        val boundingRect = shape.boundingRect ?: return false
+        Log.d("\"DebugAug11.1\"", "Shape bounding rect: $boundingRect")
+        
+        // Convert the bounding rect corners to surface coordinates
+        val topLeft = viewportManager.noteToSurfaceCoordinates(boundingRect.left, boundingRect.top)
+        val bottomRight = viewportManager.noteToSurfaceCoordinates(boundingRect.right, boundingRect.bottom)
+        Log.d("DebugAug11.1", "Shape surface rect: topLeft=$topLeft, bottomRight=$bottomRight")
+        // Check if the shape intersects with the screen
+        return !(topLeft.x > screenWidth || bottomRight.x < 0 || 
+                topLeft.y > screenHeight || bottomRight.y < 0)
+    }
+    
     /**
      * Recreates the bitmap from all stored shapes
      */
     fun recreateBitmapFromShapes() {
+        Log.d("DebugAug11.1", "Recreating bitmap from ${drawnShapes.size} shapes")
         val bitmap = getBitmap() ?: return
         val canvas = getBitmapCanvas() ?: return
         
@@ -312,28 +327,76 @@ class OnyxStylusHandler(
         val renderContext = rendererHelper.getRenderContext() ?: return
         renderContext.bitmap = bitmap
         
-        // Apply viewport transformation if available
-        canvas.save()
-        viewModel?.viewportManager?.let { viewportManager ->
-            canvas.concat(viewportManager.getTransformMatrix())
+        // Render all shapes - they are stored in note coordinates, so transform them to surface coordinates
+        val viewportManager = viewModel?.viewportManager
+        val screenWidth = bitmap.width
+        val screenHeight = bitmap.height
+        if (viewModel != null) {
+            Log.w("DebugAug11.1", "ViewModel is NOT null in recreateBitmapFromShapes")
+        } else {
+            Log.w("DebugAug11.1", "ViewModel is null in recreateBitmapFromShapes")
         }
-        
-        renderContext.canvas = canvas
-        renderContext.paint = Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-        }
-        // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
-        renderContext.viewPoint = android.graphics.Point(0, 0)
 
-        // Render all shapes
-        for (shape in drawnShapes) {
-            shape.render(renderContext)
+        if (viewportManager != null) {
+            for (shape in drawnShapes) {
+                // Skip shapes that are not visible in the current viewport
+                if (!isShapeVisible(shape, viewportManager, screenWidth, screenHeight)) {
+                    Log.d("DebugAug11.1", "Skipping shape - not visible in viewport")
+                    continue
+                }
+                Log.d("DebugAug11.1", "Rendering shape with ${shape.touchPointList.size()} points")
+                
+                canvas.save()
+                
+                // Create a temporary shape with surface coordinates
+                val surfaceTouchPoints = TouchPointList()
+                for (i in 0 until shape.touchPointList.size()) {
+                    val notePoint = shape.touchPointList.get(i)
+                    val surfacePoint = viewportManager.noteToSurfaceCoordinates(notePoint.x, notePoint.y)
+                    surfaceTouchPoints.add(TouchPoint(surfacePoint.x, surfacePoint.y, notePoint.pressure, notePoint.size, notePoint.timestamp))
+                }
+                
+                // Temporarily replace the shape's touch points
+                val originalTouchPoints = shape.touchPointList
+                shape.touchPointList = surfaceTouchPoints
+                
+                renderContext.canvas = canvas
+                renderContext.paint = Paint().apply {
+                    isAntiAlias = true
+                    style = Paint.Style.STROKE
+                    strokeCap = Paint.Cap.ROUND
+                    strokeJoin = Paint.Join.ROUND
+                }
+                renderContext.viewPoint = android.graphics.Point(0, 0)
+                
+                shape.render(renderContext)
+                
+                // Restore original touch points
+                shape.touchPointList = originalTouchPoints
+                
+                canvas.restore()
+            }
+            
+            // Render the updated bitmap to screen
+            surfaceView?.let { sv ->
+                renderBitmapToScreen(sv, bitmap)
+            }
+        } else {
+            Log.d("DebugAug11.1", "No viewport manager available, rendering without transformation")
+            // Fallback if no viewport manager
+            renderContext.canvas = canvas
+            renderContext.paint = Paint().apply {
+                isAntiAlias = true
+                style = Paint.Style.STROKE
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+            }
+            renderContext.viewPoint = android.graphics.Point(0, 0)
+            
+            for (shape in drawnShapes) {
+                shape.render(renderContext)
+            }
         }
-        
-        canvas.restore()
     }
 
 

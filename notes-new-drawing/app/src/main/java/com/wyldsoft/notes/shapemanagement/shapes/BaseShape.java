@@ -5,6 +5,7 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
+import android.util.Log;
 
 import com.wyldsoft.notes.rendering.RendererHelper;
 import com.onyx.android.sdk.data.note.TouchPoint;
@@ -90,12 +91,15 @@ public class BaseShape {
     }
 
     public void updateShapeRect() {
+        originRect = null;
+
         List<TouchPoint> list = touchPointList.getPoints();
         for(TouchPoint touchPoint: list) {
             if (touchPoint == null) {
                 continue;
             }
             if (originRect == null) {
+                Log.d("BaseShape", "Creating originRect for touchPoint: " + touchPoint);
                 originRect = new RectF(touchPoint.x, touchPoint.y, touchPoint.x, touchPoint.y);
             } else {
                 originRect.union(touchPoint.x, touchPoint.y);

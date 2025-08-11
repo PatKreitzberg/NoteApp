@@ -5,6 +5,7 @@ import android.graphics.Rect
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wyldsoft.notes.data.repository.NoteRepository
+import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
@@ -17,7 +18,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
 class EditorViewModel(
-    private val noteRepository: NoteRepository
+    private val noteRepository: NoteRepository,
+    notebookRepository: NotebookRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(EditorUiState())

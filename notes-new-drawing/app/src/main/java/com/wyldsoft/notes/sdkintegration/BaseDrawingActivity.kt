@@ -17,7 +17,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.graphics.createBitmap
-import com.onyx.android.sdk.pen.TouchHelper
 import com.wyldsoft.notes.editor.EditorView
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
@@ -103,7 +102,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     ) {
                         composable("home") {
                             HomeView(
-                                viewModelFactory = viewModelFactory,
+                                noteRepository = noteRepository,
+                                notebookRepository = notebookRepository,
                                 onNotebookSelected = { notebookId, noteId ->
                                     navController.navigate("editor/$notebookId/$noteId")
                                 }

@@ -5,13 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.repository.FolderRepository
+import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class HomeViewModel(
+    private val noteRepository: NoteRepository,
+    private val notebookRepository: NotebookRepository,
     private val folderRepository: FolderRepository,
-    private val notebookRepository: NotebookRepository
 ) : ViewModel() {
     
     private val _currentFolderId = MutableStateFlow<String?>(null)

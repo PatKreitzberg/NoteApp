@@ -3,14 +3,12 @@ package com.wyldsoft.notes.sdkintegration.onyx
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.PointF
 import android.graphics.Rect
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.pen.TouchHelper
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
-import com.wyldsoft.notes.rendering.RendererToScreenRequest
 import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.touchhandling.TouchUtils
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
@@ -21,8 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import com.onyx.android.sdk.api.device.epd.EpdController
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.drawing.DrawingManager
-import android.graphics.Canvas
+
 
 
 open class OnyxDrawingActivity : BaseDrawingActivity() {
@@ -56,6 +53,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun createTouchHelper(surfaceView: SurfaceView) {
         // Create stylus handler now that surfaceView is available
         if (stylusHandler == null) {
+            Log.d("DebugAug11.1", "creating new OnyxStylusHandler. vewModel is null = ${viewModel == null}")
             stylusHandler = OnyxStylusHandler(
                 surfaceView,
                 viewModel,
@@ -230,6 +228,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
     
     override fun onViewportChanged() {
+        Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
         // Recreate bitmap with new viewport transformation
         stylusHandler?.recreateBitmapFromShapes()
         // Request screen refresh to show the updated shapes
@@ -259,6 +258,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         
         // Update stylus handler if it exists
         if (stylusHandler == null && surfaceView != null) {
+            Log.d("DebugAug11.1", "creating new OnyxStylusHandler and surfaceView is not null. vewModel is null = ${viewModel == null}")
+
             stylusHandler = OnyxStylusHandler(
                 surfaceView,
                 viewModel,

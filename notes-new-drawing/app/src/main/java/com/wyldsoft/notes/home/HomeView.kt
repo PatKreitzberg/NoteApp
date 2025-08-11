@@ -30,13 +30,18 @@ import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import com.wyldsoft.notes.data.repository.FolderRepository
+import com.wyldsoft.notes.data.repository.NoteRepository
+import com.wyldsoft.notes.data.repository.NotebookRepository
 
 @Composable
 fun HomeView(
-    viewModelFactory: ViewModelFactory,
+    noteRepository: NoteRepository,
+    notebookRepository: NotebookRepository,
+    folderRepository: FolderRepository,
     onNotebookSelected: (String, String) -> Unit // notebookId, noteId
 ) {
-    val viewModel: HomeViewModel = viewModel(factory = viewModelFactory)
+    val viewModel = HomeViewModel(noteRepository, notebookRepository, folderRepository)
     
     val currentFolder by viewModel.currentFolder.collectAsState()
     val folderPath by viewModel.folderPath.collectAsState()
