@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.home
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -103,7 +104,10 @@ fun HomeView(
         // Notebooks section
         SectionHeader(
             title = "Notebooks",
-            onAddClick = { viewModel.showCreateNotebookDialog() }
+            onAddClick = {
+                Log.d("HomeView", "Show create notebook dialog onAddClick")
+                viewModel.showCreateNotebookDialog()
+            }
         )
         
         NotebookRow(
@@ -132,6 +136,7 @@ fun HomeView(
     
     // Create notebook dialog
     if (showCreateNotebookDialog) {
+        Log.d("HomeView", "Show create notebook dialog if statement")
         CreateItemDialog(
             title = "Create Notebook",
             placeholder = "Notebook name",

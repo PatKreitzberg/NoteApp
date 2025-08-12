@@ -387,22 +387,8 @@ class OnyxStylusHandler(
                 Log.w("DebugAug11.1", "ViewModel is null in recreateBitmapFromShapes")
             }
             Log.d("DebugAug11.1", "No viewport manager available, rendering without transformation (no viewportManager)")
-            // Fallback if no viewport manager
-            renderContext.canvas = canvas
-            renderContext.paint = Paint().apply {
-                isAntiAlias = true
-                style = Paint.Style.STROKE
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
-            }
-            renderContext.viewPoint = android.graphics.Point(0, 0)
-            
-            for (shape in drawnShapes) {
-                shape.render(renderContext)
-            }
         }
     }
-
 
     /**
      * Renders bitmap to screen
