@@ -19,6 +19,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.wyldsoft.notes.home.HomeView
+import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
+
 
 /**
  * Main activity that uses Onyx SDK implementation.
@@ -59,6 +61,7 @@ class MainActivity : ComponentActivity() {
             notebookDao = database.notebookDao(),
             noteDao = database.noteDao()
         )
+        val viewModel = HomeViewModel(noteRepository, notebookRepository, folderRepository)
 
         setContent {
             MinimaleditorTheme {
@@ -75,9 +78,7 @@ class MainActivity : ComponentActivity() {
                         composable("home") {
                             val context = LocalContext.current
                             HomeView(
-                                noteRepository,
-                                notebookRepository,
-                                folderRepository,
+                                viewModel,
                                 onNotebookSelected = { notebookId, noteId ->
                                     val intent = Intent(context, OnyxDrawingActivity::class.java).apply {
                                         putExtra("notebookId", notebookId)

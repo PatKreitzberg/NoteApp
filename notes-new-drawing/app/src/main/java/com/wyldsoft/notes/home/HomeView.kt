@@ -35,13 +35,9 @@ import com.wyldsoft.notes.data.repository.NotebookRepository
 
 @Composable
 fun HomeView(
-    noteRepository: NoteRepository,
-    notebookRepository: NotebookRepository,
-    folderRepository: FolderRepository,
+    viewModel: HomeViewModel,
     onNotebookSelected: (String, String) -> Unit // notebookId, noteId
 ) {
-    val viewModel = HomeViewModel(noteRepository, notebookRepository, folderRepository)
-    
     val currentFolder by viewModel.currentFolder.collectAsState()
     val folderPath by viewModel.folderPath.collectAsState()
     val subfolders by viewModel.subfolders.collectAsState()
@@ -50,7 +46,29 @@ fun HomeView(
     val showCreateNotebookDialog by viewModel.showCreateNotebookDialog.collectAsState()
     var showAppSettingsDialog by remember { mutableStateOf(false) }
     var selectedNotebook by remember { mutableStateOf<NotebookEntity?>(null) }
-    
+
+    LaunchedEffect(viewModel.showCreateNotebookDialog) {
+        viewModel.showCreateNotebookDialog.collect { value ->
+            Log.d("HomeView", "showCreateNotebookDialog changed to $value")
+        }
+    }
+
+    // Create notebook dialog
+    if (showCreateNotebookDialog) {
+        Log.d("HomeView", "Show create notebook dialog if statement")
+        CreateItemDialog(
+            title = "Create Notebook",
+            placeholder = "Notebook name",
+            onConfirm = { name ->
+                viewModel.createNotebook(name)
+            },
+            onDismiss = {
+                Log.d("HomeView", "Hiding create notebook dialog")
+                viewModel.hideCreateNotebookDialog()
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -133,21 +151,8 @@ fun HomeView(
             }
         )
     }
-    
-    // Create notebook dialog
-    if (showCreateNotebookDialog) {
-        Log.d("HomeView", "Show create notebook dialog if statement")
-        CreateItemDialog(
-            title = "Create Notebook",
-            placeholder = "Notebook name",
-            onConfirm = { name ->
-                viewModel.createNotebook(name)
-            },
-            onDismiss = {
-                viewModel.hideCreateNotebookDialog()
-            }
-        )
-    }
+
+
     
     // App settings dialog
     if (showAppSettingsDialog) {

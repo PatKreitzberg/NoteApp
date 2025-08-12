@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wyldsoft.notes.data.database.entities.FolderEntity
@@ -15,6 +16,11 @@ class HomeViewModel(
     private val notebookRepository: NotebookRepository,
     private val folderRepository: FolderRepository,
 ) : ViewModel() {
+
+    fun onCreate() {
+        // This can be used for any initialization logic if needed
+        Log.d("HomeViewModel", "HomeViewModel created")
+    }
     
     private val _currentFolderId = MutableStateFlow<String?>(null)
     val currentFolderId: StateFlow<String?> = _currentFolderId.asStateFlow()
@@ -50,7 +56,7 @@ class HomeViewModel(
     private val _showCreateFolderDialog = MutableStateFlow(false)
     val showCreateFolderDialog: StateFlow<Boolean> = _showCreateFolderDialog.asStateFlow()
     
-    private val _showCreateNotebookDialog = MutableStateFlow(false)
+    private val _showCreateNotebookDialog = MutableStateFlow(true)
     val showCreateNotebookDialog: StateFlow<Boolean> = _showCreateNotebookDialog.asStateFlow()
     
     init {
@@ -78,6 +84,7 @@ class HomeViewModel(
     }
     
     fun createNotebook(name: String) {
+        Log.d("HomeViewModel", "Creating notebook with name: $name")
         viewModelScope.launch {
             val currentId = _currentFolderId.value ?: return@launch
             notebookRepository.createNotebook(name, currentId)
@@ -94,10 +101,12 @@ class HomeViewModel(
     }
     
     fun showCreateNotebookDialog() {
+        Log.d("HomeViewModel", "Showing create notebook dialog")
         _showCreateNotebookDialog.value = true
     }
     
     fun hideCreateNotebookDialog() {
+        Log.d("HomeViewModel", "Hiding create notebook dialog")
         _showCreateNotebookDialog.value = false
     }
     
