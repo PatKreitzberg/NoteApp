@@ -29,8 +29,6 @@ import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.onyx.android.sdk.api.device.epd.EpdController
-import com.wyldsoft.notes.DrawingCanvas
-import okio.Timeout
 
 
 abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterface {
@@ -66,11 +64,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
         editorViewModel = EditorViewModel(noteRepository_notebookRepository.first, noteRepository_notebookRepository.second)
 
-        // Create items used for drawing
-        initializeSDK() // loads shapes, sets currentNote change listener
-        initializePaint() // init paint, really not much
-        initializeDeviceReceiver() // init device receiver for pen events
-        Log.d("DebugAug12", "Device receiver initialized")
+
 
         // Create the UI
         setEditorViewAsContent(noteId, noteRepository_notebookRepository.first, noteRepository_notebookRepository.second)
@@ -148,22 +142,22 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     }
 
     private fun handleSurfaceViewCreated(sv: SurfaceView, vm: EditorViewModel) {
-        Log.d("DebugAug12", "handleSurfaceViewCreated called with SurfaceView: ${sv.width}x${sv.height}, ViewModel: $vm")
         surfaceView = sv
-
-        Log.d("DebugAug12", "SurfaceView set in BaseDrawingActivity with size ${surfaceView.width}x${surfaceView.height}")
         setViewModel(vm)
 
-        Log.d("DebugAug12", "SurfaceView set in BaseDrawingActivity and is size ${surfaceView.width}x${surfaceView.height}")
+        // Create items used for drawing
+        initializeSDK() // loads shapes, sets currentNote change listener. Importantly, refreshes screen so has to be called here
+        initializePaint() // init paint, really not much
+        initializeDeviceReceiver() // init device receiver for pen events
+
+        Log.d("DebugAug12", "SurfaceView created in BaseDrawingActivity of size: ${sv.width}x${sv.height}")
 
         // have to initialize after set editorview as content because they rely on the viewmodel being set
-        Log.d("DebugAug12", "Setting ViewModel in BaseDrawingActivity")
         initializeTouchHelper(surfaceView)
-        Log.d("DebugAug12", "Touch helper initialized")
         createTouchHelper(surfaceView)
-        Log.d("DebugAug12", "Touch helper created")
 
-        //setObservers()
+        Log.d("DebugAug12", "setting up observers in BaseDrawingActivity")
+        setObservers()
     }
 
     protected open fun initializeTouchHelper(surfaceView: SurfaceView) {
@@ -212,6 +206,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         // Observe pen profile changes
         lifecycleScope.launch {
             editorViewModel.currentPenProfile.collect { profile ->
+                Log.d("DebugAug12", "OBSERVER: Pen profile changed: $profile")
                 updatePenProfile(profile)
             }
         }
@@ -221,18 +216,22 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             editorViewModel.isPaginationEnabled.collect { enabled ->
                 // Update exclusion zones when pagination state changes
                 updatePaginationExclusionZones()
+                Log.d("DebugAug12", "OBSERVER: Pagination enabled: $enabled")
             }
         }
         
         // Observe viewport changes to update page separator positions and redraw shapes
         lifecycleScope.launch {
             editorViewModel.viewportState.collect { _ ->
+                Log.d("DebugAug12", "OBSERVER Viewport changed: ${editorViewModel.viewportState.value}")
                 if (editorViewModel.isPaginationEnabled.value) {
                     // Update scroll position for page number calculation
                     editorViewModel.updateCurrentPage(-editorViewModel.viewportState.value.offsetY)
                     // Update exclusion zones when viewport changes
                     updatePaginationExclusionZones()
                 }
+
+                Log.d("DebugAug12", "OBSERVER Viewport changed calling onViewportChanged()")
                 // Trigger redraw of shapes when viewport changes
                 onViewportChanged()
             }
