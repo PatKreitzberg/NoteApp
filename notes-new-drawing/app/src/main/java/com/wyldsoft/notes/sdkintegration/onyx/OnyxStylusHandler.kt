@@ -8,7 +8,6 @@ import android.graphics.PointF
 import android.graphics.RectF
 import android.util.Log
 import android.view.SurfaceView
-import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.RawInputCallback
 import com.onyx.android.sdk.pen.data.TouchPointList
@@ -382,7 +381,12 @@ class OnyxStylusHandler(
                 renderBitmapToScreen(sv, bitmap)
             }
         } else {
-            Log.d("DebugAug11.1", "No viewport manager available, rendering without transformation")
+            if (viewModel != null) {
+                Log.w("DebugAug11.1", "ViewModel is NOT null in recreateBitmapFromShapes")
+            } else {
+                Log.w("DebugAug11.1", "ViewModel is null in recreateBitmapFromShapes")
+            }
+            Log.d("DebugAug11.1", "No viewport manager available, rendering without transformation (no viewportManager)")
             // Fallback if no viewport manager
             renderContext.canvas = canvas
             renderContext.paint = Paint().apply {

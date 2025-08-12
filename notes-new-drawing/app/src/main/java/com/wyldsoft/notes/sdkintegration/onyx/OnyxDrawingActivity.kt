@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
+import android.os.Bundle
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.pen.TouchHelper
@@ -21,7 +22,6 @@ import kotlinx.coroutines.launch
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 
 
-
 open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var rxManager: RxManager? = null
     private var onyxTouchHelper: TouchHelper? = null
@@ -33,13 +33,17 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     // Gesture handler
     private var gestureHandler: GestureHandler? = null
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+    }
+
     override fun initializeSDK() {
         // Onyx-specific initialization
         // Note: stylus handler will be created in createTouchHelper when surfaceView is available
         
         // Subscribe to current note changes to load existing shapes
         lifecycleScope.launch {
-            viewModel?.currentNote?.collect { note ->
+            editorViewModel?.currentNote?.collect { note ->
                 note?.let { 
                     loadShapesFromNote(it)
                     // Viewport state is restored in ViewModel, just need to refresh
@@ -53,10 +57,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun createTouchHelper(surfaceView: SurfaceView) {
         // Create stylus handler now that surfaceView is available
         if (stylusHandler == null) {
-            Log.d("DebugAug11.1", "creating new OnyxStylusHandler. vewModel is null = ${viewModel == null}")
+            Log.d("DebugAug11.1", "creating new OnyxStylusHandler. vewModel is null = ${editorViewModel == null}")
             stylusHandler = OnyxStylusHandler(
                 surfaceView,
-                viewModel,
+                editorViewModel,
                 getRxManager(),
                 onDrawingStateChanged = { isDrawing ->
                     if (isDrawing) {
@@ -175,8 +179,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             val limit = Rect()
             surfaceView?.getLocalVisibleRect(limit)
 
-            val excludeRects = viewModel?.excludeRects?.value ?: emptyList()
-            Log.d("ExclusionRects", "Current exclusion rects ${excludeRects.size}")
+            val excludeRects = editorViewModel?.excludeRects?.value ?: emptyList()
+            Log.d("ExclusionRects", "updateTouchHelperWithProfile Current exclusion rects ${excludeRects.size}")
+
             helper.setStrokeWidth(currentPenProfile.strokeWidth)
                 .setStrokeColor(currentPenProfile.getColorAsInt())
                 .setLimitRect(limit, ArrayList(excludeRects))
@@ -197,7 +202,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             val limit = Rect()
             surfaceView?.getLocalVisibleRect(limit)
 
-            Log.d("ExclusionRects", "Current exclusion rects ${excludeRects.size}")
+            Log.d("ExclusionRects", "updateTouchHelperExclusionZones Current exclusion rects ${excludeRects.size}")
             helper.setStrokeWidth(currentPenProfile.strokeWidth)
                 .setLimitRect(limit, ArrayList(excludeRects))
                 .openRawDrawing()

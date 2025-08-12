@@ -15,7 +15,7 @@ import kotlin.math.atan2
 import kotlin.math.sqrt
 
 class GestureHandler(
-    context: Context, 
+    context: Context,
     private val view: View,
     private var viewportManager: ViewportManager? = null
 ) {

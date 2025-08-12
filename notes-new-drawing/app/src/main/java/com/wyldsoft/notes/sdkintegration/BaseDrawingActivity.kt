@@ -15,13 +15,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
 import androidx.core.graphics.createBitmap
 import com.wyldsoft.notes.editor.EditorView
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.ViewModelFactory
 import com.wyldsoft.notes.data.repository.*
 import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.drawing.DrawingActivityInterface
@@ -29,6 +29,9 @@ import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.onyx.android.sdk.api.device.epd.EpdController
+import com.wyldsoft.notes.DrawingCanvas
+import okio.Timeout
+
 
 abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterface {
     protected val TAG = "BaseDrawingActivity"
@@ -37,13 +40,10 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected var paint = Paint()
     protected var bitmap: Bitmap? = null
     protected var bitmapCanvas: Canvas? = null
-    protected var surfaceView: SurfaceView? = null
+    protected lateinit var surfaceView: SurfaceView // lateinite instead of ? = null if I am sure it will be initialized before use
     protected var isDrawingInProgress = false
     protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
-    protected var editorViewModel: EditorViewModel? = null
-    protected val viewModel: EditorViewModel?
-        get() = editorViewModel
-    private lateinit var viewModelFactory: ViewModelFactory
+    protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun initializeSDK()
@@ -57,6 +57,26 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // init database and repositories
+        var noteRepository_notebookRepository = initializeDatabase()
+        val notebookId = intent.getStringExtra("notebookId") ?: return // note used but will be
+        val noteId = intent.getStringExtra("noteId") ?: return
+
+        // Create EditorViewModel with repositories
+        Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
+        editorViewModel = EditorViewModel(noteRepository_notebookRepository.first, noteRepository_notebookRepository.second)
+
+        // Create items used for drawing
+        initializeSDK() // loads shapes, sets currentNote change listener
+        initializePaint() // init paint, really not much
+        initializeDeviceReceiver() // init device receiver for pen events
+        Log.d("DebugAug12", "Device receiver initialized")
+
+        // Create the UI
+        setEditorViewAsContent(noteId, noteRepository_notebookRepository.first, noteRepository_notebookRepository.second)
+    }
+
+    fun initializeDatabase(): Pair<NoteRepository, NotebookRepository> {
         // Initialize database and repositories
         val database = NotesDatabase.getDatabase(this)
         val noteRepository = NoteRepositoryImpl(
@@ -70,28 +90,26 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             notebookDao = database.notebookDao(),
             noteDao = database.noteDao()
         )
-        
-        viewModelFactory = ViewModelFactory(
-            noteRepository = noteRepository,
-            folderRepository = folderRepository,
-            notebookRepository = notebookRepository
-        )
+        return Pair(noteRepository, notebookRepository)
+    }
 
-        initializeSDK()
-        initializePaint()
-        initializeDeviceReceiver()
-
+    fun setEditorViewAsContent(noteId: String, noteRepository: NoteRepository, notebookRepository: NotebookRepository) {
+        Log.d(TAG, "ViewModel created")
         setContent {
             MinimaleditorTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    LaunchedEffect(noteId) {
+                        noteRepository.setCurrentNote(noteId)
+                    }
+
                     EditorView(
-                        noteRepository = noteRepository,
-                        notebookRepository = notebookRepository,
-                        onSurfaceViewCreated = { sv ->
-                            handleSurfaceViewCreated(sv)
+                        editorViewModel,
+                        onSurfaceViewCreated = { sv, vm ->
+                            Log.d(TAG, "SurfaceView created in EditorView")
+                            handleSurfaceViewCreated(sv, vm)
                         }
                     )
                 }
@@ -129,13 +147,28 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         Log.d(TAG, "Updated paint: color=${currentPenProfile.strokeColor}, width=${currentPenProfile.strokeWidth}")
     }
 
-    private fun handleSurfaceViewCreated(sv: SurfaceView) {
+    private fun handleSurfaceViewCreated(sv: SurfaceView, vm: EditorViewModel) {
+        Log.d("DebugAug12", "handleSurfaceViewCreated called with SurfaceView: ${sv.width}x${sv.height}, ViewModel: $vm")
         surfaceView = sv
-        initializeTouchHelper(sv)
-        createTouchHelper(sv)
+
+        Log.d("DebugAug12", "SurfaceView set in BaseDrawingActivity with size ${surfaceView.width}x${surfaceView.height}")
+        setViewModel(vm)
+
+        Log.d("DebugAug12", "SurfaceView set in BaseDrawingActivity and is size ${surfaceView.width}x${surfaceView.height}")
+
+        // have to initialize after set editorview as content because they rely on the viewmodel being set
+        Log.d("DebugAug12", "Setting ViewModel in BaseDrawingActivity")
+        initializeTouchHelper(surfaceView)
+        Log.d("DebugAug12", "Touch helper initialized")
+        createTouchHelper(surfaceView)
+        Log.d("DebugAug12", "Touch helper created")
+
+        //setObservers()
     }
 
     protected open fun initializeTouchHelper(surfaceView: SurfaceView) {
+        Log.d("DebugAug12", "Initializing touch helper")
+
         surfaceView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateActiveSurface()
         }
@@ -167,22 +200,25 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     }
 
     override fun setViewModel(viewModel: EditorViewModel) {
+        Log.d("DebugAug12", "Setting ViewModel in BaseDrawingActivity")
         this.editorViewModel = viewModel
-        
+
         // Set screen width for pagination calculations
         val screenWidth = resources.displayMetrics.widthPixels
         viewModel.setScreenWidth(screenWidth)
-        
+    }
+
+    fun setObservers() {
         // Observe pen profile changes
         lifecycleScope.launch {
-            viewModel.currentPenProfile.collect { profile ->
+            editorViewModel.currentPenProfile.collect { profile ->
                 updatePenProfile(profile)
             }
         }
         
         // Observe pagination state changes
         lifecycleScope.launch {
-            viewModel.isPaginationEnabled.collect { enabled ->
+            editorViewModel.isPaginationEnabled.collect { enabled ->
                 // Update exclusion zones when pagination state changes
                 updatePaginationExclusionZones()
             }
@@ -190,10 +226,10 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         
         // Observe viewport changes to update page separator positions and redraw shapes
         lifecycleScope.launch {
-            viewModel.viewportState.collect { _ ->
-                if (viewModel.isPaginationEnabled.value) {
+            editorViewModel.viewportState.collect { _ ->
+                if (editorViewModel.isPaginationEnabled.value) {
                     // Update scroll position for page number calculation
-                    viewModel.updateCurrentPage(-viewModel.viewportState.value.offsetY)
+                    editorViewModel.updateCurrentPage(-editorViewModel.viewportState.value.offsetY)
                     // Update exclusion zones when viewport changes
                     updatePaginationExclusionZones()
                 }
@@ -201,10 +237,11 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                 onViewportChanged()
             }
         }
+        Log.d("DebugAug12", "DONE Setting ViewModel in BaseDrawingActivity")
     }
 
     override fun onShapeCompleted(points: List<PointF>, pressures: List<Float>) {
-        viewModel?.addShape(points, pressures)
+        editorViewModel?.addShape(points, pressures)
     }
     
     private fun updatePaginationExclusionZones() {
@@ -230,7 +267,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     fun updateExclusionZones(excludeRects: List<Rect>) {
         updateTouchHelperExclusionZones(excludeRects)
-        viewModel?.updateExclusionZones(excludeRects)
+        editorViewModel?.updateExclusionZones(excludeRects)
         println("forceScreenRefresh() from updateExclusionZone")
         //forceScreenRefresh()
     }
@@ -248,6 +285,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     abstract fun recreateBitmapFromShapes()
 
     protected fun createDrawingBitmap(): Bitmap? {
+        if (surfaceView == null) {
+            Log.e(TAG, "SurfaceView is not initialized")
+        }
+        else {
+            Log.d(TAG, "Creating drawing bitmap for SurfaceView: ${surfaceView.width}x${surfaceView.height}")
+        }
+
         return surfaceView?.let { sv ->
             if (bitmap == null) {
                 bitmap = createBitmap(sv.width, sv.height)

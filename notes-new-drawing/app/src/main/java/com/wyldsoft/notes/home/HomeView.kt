@@ -20,12 +20,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
-import com.wyldsoft.notes.presentation.viewmodel.ViewModelFactory
 import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
 import androidx.compose.foundation.ExperimentalFoundationApi

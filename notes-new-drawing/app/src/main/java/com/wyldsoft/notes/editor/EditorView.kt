@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.editor
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,12 +17,9 @@ import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
 
 @Composable
 fun EditorView(
-    noteRepository: NoteRepository,
-    notebookRepository: NotebookRepository,
-    onSurfaceViewCreated: (android.view.SurfaceView) -> Unit = {}
+    viewModel: EditorViewModel,
+    onSurfaceViewCreated: (android.view.SurfaceView, EditorViewModel) -> Unit = {_, _ -> },
 ) {
-    val viewModel = EditorViewModel(noteRepository, notebookRepository)
-
     val uiState by viewModel.uiState.collectAsState()
     val currentPenProfile by viewModel.currentPenProfile.collectAsState()
     val viewportState by viewModel.viewportState.collectAsState()
@@ -32,7 +30,9 @@ fun EditorView(
     
     // Pass ViewModel to the activity
     val context = androidx.compose.ui.platform.LocalContext.current
+
     LaunchedEffect(viewModel) {
+        Log.d("EditorView", "Setting ViewModel in DrawingActivityInterface")
         (context as? com.wyldsoft.notes.drawing.DrawingActivityInterface)?.setViewModel(viewModel)
     }
 

@@ -153,6 +153,7 @@ class ViewportManager {
      * Sets the viewport state (used for persistence/restoration).
      */
     fun setState(scale: Float, offsetX: Float, offsetY: Float) {
+        Log.d("ViewportManager", "setState called with: scale=$scale, offsetX=$offsetX, offsetY=$offsetY")
         _viewportState.value = ViewportState(
             scale = scale.coerceIn(MIN_SCALE, MAX_SCALE),
             offsetX = offsetX,
@@ -200,7 +201,8 @@ class ViewportManager {
     fun setPaginationMode(enabled: Boolean, screenWidth: Int) {
         isPaginationMode = enabled
         maxWidth = screenWidth
-        
+        Log.d("ViewportManager", "setPaginationMode: enabled=$enabled, screenWidth=$screenWidth")
+
         if (enabled) {
             // Reset to default scale and horizontal offset when enabling pagination
             _viewportState.value = _viewportState.value.copy(

@@ -2,6 +2,7 @@ package com.wyldsoft.notes.presentation.viewmodel
 
 import android.graphics.PointF
 import android.graphics.Rect
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wyldsoft.notes.data.repository.NoteRepository
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.LongArraySerializer
 
 class EditorViewModel(
     private val noteRepository: NoteRepository,
@@ -62,6 +64,7 @@ class EditorViewModel(
     init {
         viewModelScope.launch {
             if (currentNote.value == null) {
+                Log.d("EditorViewModel", "No current note found, creating a new one")
                 noteRepository.createNewNote()
             }
         }
@@ -69,9 +72,10 @@ class EditorViewModel(
         // Save viewport state when it changes (with debounce to avoid too frequent saves)
         viewModelScope.launch {
             viewportState
-                .debounce(500) // Wait 500ms after last change before saving
+                .debounce(1) // Wait 500ms after last change before saving
                 .collect { state ->
                     currentNote.value?.let { note ->
+                        Log.d("EditorViewModel", "Saving viewport state for note: ${note.id}, scale: ${state.scale}, offsetX: ${state.offsetX}, offsetY: ${state.offsetY}")
                         noteRepository.updateViewportState(
                             note.id,
                             state.scale,
@@ -84,13 +88,16 @@ class EditorViewModel(
         
         // Restore viewport state when note changes
         viewModelScope.launch {
-            currentNote.collect { note ->
+            currentNote.debounce(1) // Wait 500ms after last change before saving
+                .collect { note ->
+                Log.d("EditorViewModel", "Restoring viewport state for note: ${note?.id}")
                 note?.let {
                     viewportManager.setState(
                         it.viewportScale,
                         it.viewportOffsetX,
                         it.viewportOffsetY
                     )
+
                     // Initialize pagination state
                     _isPaginationEnabled.value = it.isPaginationEnabled
                     _paperSize.value = PaperSize.fromString(it.paperSize)
@@ -113,6 +120,7 @@ class EditorViewModel(
     fun addShape(points: List<PointF>, pressures: List<Float> = emptyList()) {
         viewModelScope.launch {
             currentNote.value?.let { note ->
+                Log.d("EditorViewModel", "Adding shape to note: ${note.id}, points: $points, pressures: $pressures")
                 val shape = Shape(
                     type = ShapeType.STROKE,
                     points = points,
@@ -158,6 +166,7 @@ class EditorViewModel(
         _isPaginationEnabled.value = enabled
         viewModelScope.launch {
             currentNote.value?.let { note ->
+                Log.d("EditorViewModel", "Updating pagination settings for note: ${note.id}, enabled: $enabled, paperSize: ${_paperSize.value.name}")
                 noteRepository.updatePaginationSettings(note.id, enabled, _paperSize.value.name)
             }
         }
@@ -174,6 +183,7 @@ class EditorViewModel(
         calculatePageDimensions()
         viewModelScope.launch {
             currentNote.value?.let { note ->
+                Log.d("EditorViewModel", "Updating paper size for note: ${note.id}, new size: ${paperSize.name}")
                 noteRepository.updatePaginationSettings(note.id, _isPaginationEnabled.value, paperSize.name)
             }
         }

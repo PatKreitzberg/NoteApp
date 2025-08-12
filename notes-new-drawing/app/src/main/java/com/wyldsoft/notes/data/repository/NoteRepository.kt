@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.data.repository
 
+import android.util.Log
 import com.wyldsoft.notes.data.database.dao.NoteDao
 import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.entities.NoteEntity
@@ -50,6 +51,7 @@ class NoteRepositoryImpl(
         
         // Update current note if it's the same
         if (_currentNote.value?.id == note.id) {
+            Log.d("NoteRepository", "Updating current note: ${note.id}")
             _currentNote.value = note
         }
     }
@@ -57,6 +59,7 @@ class NoteRepositoryImpl(
     override suspend fun deleteNote(id: String) {
         noteDao.deleteById(id)
         if (_currentNote.value?.id == id) {
+            Log.d("NoteRepository", "Deleting current note: $id")
             _currentNote.value = null
         }
     }
@@ -67,6 +70,7 @@ class NoteRepositoryImpl(
         
         // Update current note if needed
         if (_currentNote.value?.id == noteId) {
+            Log.d("NoteRepository", "Adding shape to current note: $noteId")
             _currentNote.value = getNote(noteId)
         }
     }
@@ -76,6 +80,7 @@ class NoteRepositoryImpl(
         
         // Update current note if needed
         if (_currentNote.value?.id == noteId) {
+            Log.d("NoteRepository", "Removing shape from current note: $noteId")
             _currentNote.value = getNote(noteId)
         }
     }
@@ -88,11 +93,13 @@ class NoteRepositoryImpl(
         noteDao.insert(noteEntity)
         
         val note = noteEntity.toNote(emptyList())
+        Log.d("NoteRepository", "Created new note: ${note.id}")
         _currentNote.value = note
         return note
     }
     
     override suspend fun setCurrentNote(noteId: String) {
+        Log.d("NoteRepository", "Setting current note: $noteId")
         _currentNote.value = getNote(noteId)
     }
     
@@ -108,6 +115,7 @@ class NoteRepositoryImpl(
         
         // Update current note if it's the same
         if (_currentNote.value?.id == noteId) {
+            Log.d("NoteRepository", "Updating viewport state for current note: $noteId")
             setCurrentNote(noteId)
         }
     }
