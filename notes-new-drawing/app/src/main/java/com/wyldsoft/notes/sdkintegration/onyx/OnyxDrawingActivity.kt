@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import com.onyx.android.sdk.api.device.epd.EpdController
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.rendering.BitmapManager
 
 
 open class OnyxDrawingActivity : BaseDrawingActivity() {
@@ -62,6 +63,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 surfaceView,
                 editorViewModel,
                 getRxManager(),
+                bitmapManager,
                 onDrawingStateChanged = { isDrawing ->
                     if (isDrawing) {
                         disableFingerTouch()
@@ -235,7 +237,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onViewportChanged() {
         Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
         // Recreate bitmap with new viewport transformation
-        stylusHandler?.recreateBitmapFromShapes()
+        bitmapManager.recreateBitmapFromShapes(stylusHandler?.drawnShapes)
         // Request screen refresh to show the updated shapes
         forceScreenRefresh()
     }
@@ -252,7 +254,18 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     
     override fun recreateBitmapFromShapes() {
         getOrCreateBitmap() // Ensure bitmap exists
-        stylusHandler?.recreateBitmapFromShapes()
+        bitmapManager.recreateBitmapFromShapes(stylusHandler?.drawnShapes)
+    }
+
+    override fun initializeBitmapManager(sv: SurfaceView, vm: EditorViewModel) {
+        Log.d(TAG, "BitmapManager initialized with current bitmap")
+        bitmapManager = BitmapManager(
+            surfaceView = sv,
+            viewModel = vm,
+            rxManager = getRxManager(),
+            getBitmap = { getOrCreateBitmap() },
+            getBitmapCanvas = { bitmapCanvas }
+        )
     }
     
     override fun setViewModel(viewModel: EditorViewModel) {
@@ -269,6 +282,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 surfaceView,
                 viewModel,
                 getRxManager(),
+                bitmapManager,
                 onDrawingStateChanged = { isDrawing ->
                     if (isDrawing) {
                         disableFingerTouch()

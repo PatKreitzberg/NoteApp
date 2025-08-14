@@ -27,8 +27,10 @@ import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.drawing.DrawingActivityInterface
 import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.onyx.android.sdk.api.device.epd.EpdController
+import com.wyldsoft.notes.rendering.BitmapManager
 
 
 abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterface {
@@ -39,6 +41,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected var bitmap: Bitmap? = null
     protected var bitmapCanvas: Canvas? = null
     protected lateinit var surfaceView: SurfaceView // lateinite instead of ? = null if I am sure it will be initialized before use
+    protected lateinit var bitmapManager: BitmapManager // lateinite instead of ? = null if I am sure it will be initialized before use
     protected var isDrawingInProgress = false
     protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
     protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
@@ -113,6 +116,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     open fun createTouchHelper(surfaceView: SurfaceView) { }
 
+    open fun initializeBitmapManager(surfaceView: SurfaceView, editorViewModel: EditorViewModel) { }
+
     override fun onResume() {
         super.onResume()
         onResumeDrawing()
@@ -153,7 +158,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         Log.d("DebugAug12", "SurfaceView created in BaseDrawingActivity of size: ${sv.width}x${sv.height}")
 
         // have to initialize after set editorview as content because they rely on the viewmodel being set
+
         initializeTouchHelper(surfaceView)
+        initializeBitmapManager(surfaceView, editorViewModel)
         createTouchHelper(surfaceView)
 
         Log.d("DebugAug12", "setting up observers in BaseDrawingActivity")

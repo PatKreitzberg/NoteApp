@@ -22,15 +22,17 @@ import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
 import com.wyldsoft.notes.pen.PenProfile
+import com.wyldsoft.notes.rendering.BitmapManager
 
 /**
  * Handles all stylus-related operations for Onyx devices including drawing and erasing.
  * This class encapsulates the logic for processing stylus input and managing shapes.
  */
 class OnyxStylusHandler(
-    private val surfaceView: SurfaceView?,
+    protected var surfaceView: SurfaceView? = null,
     private val viewModel: EditorViewModel?,
     private val rxManager: RxManager,
+    private val bitmapManager: BitmapManager,
     private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
     private val onShapeCompleted: (points: List<PointF>, pressures: List<Float>) -> Unit,
     private val onBitmapChanged: () -> Unit,
@@ -41,7 +43,7 @@ class OnyxStylusHandler(
         private const val TAG = "OnyxStylusHandler"
     }
 
-    // Store all drawn shapes for re-rendering
+    // Store all drawn shapes for re-renderings
     val drawnShapes = mutableListOf<BaseShape>()
     
     // Renderer helper for shape rendering
@@ -159,7 +161,7 @@ class OnyxStylusHandler(
             }
             
             // Also update the main bitmap by recreating it from remaining shapes
-            recreateBitmapFromShapes()
+            bitmapManager.recreateBitmapFromShapes(drawnShapes)
         }
     }
 
@@ -168,7 +170,7 @@ class OnyxStylusHandler(
      */
     private fun drawScribbleToBitmap(points: List<TouchPoint>, touchPointList: TouchPointList) {
         Log.d("DebugAug11.1", "drawScribbleToBitmap called list size " + touchPointList.size())
-        surfaceView?.let { sv ->
+        surfaceView?.let { sv: SurfaceView ->
             val bitmap = getBitmap() ?: return
 
             // Create shape with original touch points (in SurfaceViewCoordinates)
@@ -195,7 +197,7 @@ class OnyxStylusHandler(
 
             // Render the new shape to the bitmap
             renderShapeToBitmap(shape)
-            renderBitmapToScreen(sv, bitmap)
+            bitmapManager.renderBitmapToScreen(sv, bitmap)
         }
     }
 
@@ -309,98 +311,6 @@ class OnyxStylusHandler(
         // Check if the shape intersects with the screen
         return !(topLeft.x > screenWidth || bottomRight.x < 0 || 
                 topLeft.y > screenHeight || bottomRight.y < 0)
-    }
-    
-    /**
-     * Recreates the bitmap from all stored shapes
-     */
-    fun recreateBitmapFromShapes() {
-        Log.d("DebugAug11.1", "Recreating bitmap from ${drawnShapes.size} shapes")
-        val bitmap = getBitmap() ?: return
-        val canvas = getBitmapCanvas() ?: return
-        
-        // Clear the bitmap
-        canvas.drawColor(Color.WHITE)
-        
-        // Get render context
-        val renderContext = rendererHelper.getRenderContext() ?: return
-        renderContext.bitmap = bitmap
-        
-        // Render all shapes - they are stored in note coordinates, so transform them to surface coordinates
-        val viewportManager = viewModel?.viewportManager
-        val screenWidth = bitmap.width
-        val screenHeight = bitmap.height
-        if (viewModel != null) {
-            Log.w("DebugAug11.1", "ViewModel is NOT null in recreateBitmapFromShapes")
-        } else {
-            Log.w("DebugAug11.1", "ViewModel is null in recreateBitmapFromShapes")
-        }
-
-        if (viewportManager != null) {
-            for (shape in drawnShapes) {
-                // Skip shapes that are not visible in the current viewport
-                if (!isShapeVisible(shape, viewportManager, screenWidth, screenHeight)) {
-                    Log.d("DebugAug11.1", "Skipping shape - not visible in viewport")
-                    continue
-                }
-                Log.d("DebugAug11.1", "Rendering shape with ${shape.touchPointList.size()} points")
-                
-                canvas.save()
-                
-                // Create a temporary shape with surface coordinates
-                val surfaceTouchPoints = TouchPointList()
-                for (i in 0 until shape.touchPointList.size()) {
-                    val notePoint = shape.touchPointList.get(i)
-                    val surfacePoint = viewportManager.noteToSurfaceCoordinates(notePoint.x, notePoint.y)
-                    surfaceTouchPoints.add(TouchPoint(surfacePoint.x, surfacePoint.y, notePoint.pressure, notePoint.size, notePoint.timestamp))
-                }
-                
-                // Temporarily replace the shape's touch points
-                val originalTouchPoints = shape.touchPointList
-                shape.touchPointList = surfaceTouchPoints
-                
-                renderContext.canvas = canvas
-                renderContext.paint = Paint().apply {
-                    isAntiAlias = true
-                    style = Paint.Style.STROKE
-                    strokeCap = Paint.Cap.ROUND
-                    strokeJoin = Paint.Join.ROUND
-                }
-                renderContext.viewPoint = android.graphics.Point(0, 0)
-                
-                shape.render(renderContext)
-                
-                // Restore original touch points
-                shape.touchPointList = originalTouchPoints
-                
-                canvas.restore()
-            }
-            
-            // Render the updated bitmap to screen
-            surfaceView?.let { sv ->
-                renderBitmapToScreen(sv, bitmap)
-            }
-        } else {
-            if (viewModel != null) {
-                Log.w("DebugAug11.1", "ViewModel is NOT null in recreateBitmapFromShapes")
-            } else {
-                Log.w("DebugAug11.1", "ViewModel is null in recreateBitmapFromShapes")
-            }
-            Log.d("DebugAug11.1", "No viewport manager available, rendering without transformation (no viewportManager)")
-        }
-    }
-
-    /**
-     * Renders bitmap to screen
-     */
-    private fun renderBitmapToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
-        if (bitmap != null) {
-            rxManager.enqueue(
-                RendererToScreenRequest(
-                    surfaceView,
-                    bitmap
-                ), null)
-        }
     }
 
     /**

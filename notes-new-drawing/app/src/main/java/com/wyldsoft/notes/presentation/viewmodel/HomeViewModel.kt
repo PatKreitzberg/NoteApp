@@ -16,12 +16,6 @@ class HomeViewModel(
     private val notebookRepository: NotebookRepository,
     private val folderRepository: FolderRepository,
 ) : ViewModel() {
-
-    fun onCreate() {
-        // This can be used for any initialization logic if needed
-        Log.d("HomeViewModel", "HomeViewModel created")
-    }
-    
     private val _currentFolderId = MutableStateFlow<String?>(null)
     val currentFolderId: StateFlow<String?> = _currentFolderId.asStateFlow()
     
@@ -56,7 +50,7 @@ class HomeViewModel(
     private val _showCreateFolderDialog = MutableStateFlow(false)
     val showCreateFolderDialog: StateFlow<Boolean> = _showCreateFolderDialog.asStateFlow()
     
-    private val _showCreateNotebookDialog = MutableStateFlow(true)
+    private val _showCreateNotebookDialog = MutableStateFlow(false)
     val showCreateNotebookDialog: StateFlow<Boolean> = _showCreateNotebookDialog.asStateFlow()
     
     init {
