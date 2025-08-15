@@ -1,49 +1,56 @@
-# Objects need to be initialized
-## When opening note or notebook
+* TODO
+** Features to implement:
+1. Make undo/redo
+2. Allow for loose notes
+3. Google Drive integration
+
+** Quick fixes:
+1. Modify bitmapManager to allow for erasing single shape without having to remove shape from drawnShapes and then recreate the entire bitmaap
+2. Change nullable objects to lateinit var because since OnyxDrawingActivity is no longer the main activity we can guarantee that they will be initialized before use
+3. Reduce redundant code in setViewModel and createTouchHelper functions (4. first so make sure surfaceView and viewModel are initialized before calling these functions)
+4. Clarify initializations in OnyxDrawingActivity
+5. Add to Project.md to clarify workflows (what happens when draw, what happens to refresh screen, to render, etc.)
+
+
+* PROJECT OUTLINE
+** Views
+*** Homeview
+Simple. Allows the user to:
+1. Open folder, notebook, or note
+2. Create new folder, notebook, or note
+3. Change app settings
+4. (Future) Synch notes with Google drive
+*** EditorView
+1. Allows user to open note/notebook
+2. A new *OnyxDrawingactivity* is created each time new EditorView is created
+
+
+** Objects need to be initialized
+*** When opening note or notebook
 1. EditorView
 2. surfaceview created
 3. createTouchHelper
 4. viewModel (which should be a EditorViewModel)
+
+
+
+
+** Screen Refreshing
+*** How is the screen refreshed?
+Only current way is by calling OnyxDrawingactivity.forceScreenRefresh()
+
+*** When is screen refreshed?
+1. When OnyxDrawingactivity is initialized:
+   onCreate ->
+   initializeSDK ->
+   OnyxDrawingactivity.forceScreenRefresh()
+2. When user is done drawing:
+   onEndRawDrawing ->
+   onDrawingStateChanged(false) ->
+   OnyxDrawingactivity.forceScreenRefresh()
+3. When viewport is changed:
+   ViewportManager changes _viewportState ->
+    OnyxDrawingactivity.onViewportChanged ->
+   OnyxDrawingactivity.forceScreenRefresh()
+4. 
    
-need to change so that createtouch helper is called in
-correct order
-
-Problem: viewportManager is not created in OnyxDrawingActivity
-Happens because ViewModel is null
-
-ViewModel created in EditorView and is set as viewmodel for
-OnyxDrawingActivity in EditorView constructor
-
-Where is OnyxStylushandler created?
-  In createTouchHelper
-Where is createTouchHelper called?
-  In handleSurfaceViewCreated
-Where is handleSurfaceViewCreated called?
-  When surfaceview is created in DrawingCanvas
-Where is DrawingCanvas created?
-  When EditorView is created
-Where is EditorView created?
-  When OnyxDrawingActivity is created (onCreate fun)
-
-  OnyxDrawingactivity -> EditorView -> DrawingCanvas -> SurfaceView
-  SurfaceView created -> OnyxStylushandler created  
-
-# Order of initialization when opening note/notebook
-1. OnyxDrawingactivity created
-   1. Database
-   2. Repositories (note, notebook, folder)
-   3. Paint
-   4. DeciveReciever
-   5. EditorView
-      Initializes
-      Calls
-        1. handleSurfaceViewCreated
-            Initializes
-            Calls
-              1. createTouchHelper
-                 Initializes
-                  - OnyxStylusHandler (touchHelper)
-                  - gestureHandler
-                 Calls
-               
-

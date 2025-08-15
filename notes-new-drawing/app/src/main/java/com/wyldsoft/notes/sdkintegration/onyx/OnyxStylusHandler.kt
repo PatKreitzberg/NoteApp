@@ -25,7 +25,19 @@ import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 
 /**
- * Handles all stylus-related operations for Onyx devices including drawing and erasing.
+ * Handles all stylus-related operations for Onyx devices:
+ * Drawing:
+ *   - Starts and ends drawing sessions
+ *   - Processes touch points to create shapes
+ *   - Manages scribble rendering to bitmap
+ * Erasing:
+ *   - Starts and ends erasing sessions
+ *   - Processes touch points to find and erase shapes
+ *   - Manages partial refresh of erased areas
+ * Shape Management:
+ *   - Stores drawn shapes
+ *   - Converts touch points to NoteCoordinates
+ *   - Renders shapes to bitmap
  * This class encapsulates the logic for processing stylus input and managing shapes.
  */
 class OnyxStylusHandler(
@@ -71,7 +83,8 @@ class OnyxStylusHandler(
     }
 
     /**
-     * Creates the Onyx callback for handling stylus input
+     * Creates the Onyx callback for handling stylus input.
+     * The callback interfaces with the Onyx SDK to receive raw input events from the stylus.
      */
     fun createOnyxCallback(): RawInputCallback = object : RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {

@@ -38,18 +38,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         super.onCreate(savedInstanceState)
     }
 
-    override fun initializeSDK() {
+    override fun loadShapesAndRefreshScreen() {
         // Onyx-specific initialization
-        // Note: stylus handler will be created in createTouchHelper when surfaceView is available
-        
-        // Subscribe to current note changes to load existing shapes
+        // Note: stylus handler will be created in createTouchHelper
+        // when surfaceView is available
         lifecycleScope.launch {
-            editorViewModel?.currentNote?.collect { note ->
-                note?.let { 
-                    loadShapesFromNote(it)
-                    // Viewport state is restored in ViewModel, just need to refresh
-                    forceScreenRefresh()
-                }
+            editorViewModel?.currentNote?.value?.let { note ->
+                Log.d(TAG, "loadShapesAndRefreshScreen currentNote has changed, calling refresh")
+                loadShapesFromNote(note)
+                forceScreenRefresh()
             }
         }
     }
@@ -58,7 +55,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun createTouchHelper(surfaceView: SurfaceView) {
         // Create stylus handler now that surfaceView is available
         if (stylusHandler == null) {
-            Log.d("DebugAug11.1", "creating new OnyxStylusHandler. vewModel is null = ${editorViewModel == null}")
             stylusHandler = OnyxStylusHandler(
                 surfaceView,
                 editorViewModel,
@@ -73,6 +69,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     }
                 },
                 onShapeCompleted = { points, pressures ->
+                    // add shape to NoteRepository
                     onShapeCompleted(points, pressures)
                 },
                 onBitmapChanged = {
@@ -244,12 +241,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun forceScreenRefresh() {
         EpdController.enablePost(surfaceView, 1) // this is absolutely necessary to ensure the screen refreshes properly
-        surfaceView?.let { sv ->
+        surfaceView.let { sv ->
             cleanSurfaceView(sv)
             // Recreate bitmap from all stored shapes
             recreateBitmapFromShapes()
             bitmap?.let { renderToScreen(sv, it) }
         }
+        // fixme: should we have the following line?
+        // EpdController.enablePost(surfaceView, 0)
     }
     
     override fun recreateBitmapFromShapes() {
@@ -259,7 +258,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun initializeBitmapManager(sv: SurfaceView, vm: EditorViewModel) {
         Log.d(TAG, "BitmapManager initialized with current bitmap")
-        bitmapManager = BitmapManager(
+        this.bitmapManager = BitmapManager(
             surfaceView = sv,
             viewModel = vm,
             rxManager = getRxManager(),
@@ -292,6 +291,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     }
                 },
                 onShapeCompleted = { points, pressures ->
+                    // add shape to NoteRepository
                     onShapeCompleted(points, pressures)
                 },
                 onBitmapChanged = {

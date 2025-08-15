@@ -27,7 +27,6 @@ import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.drawing.DrawingActivityInterface
 import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.wyldsoft.notes.rendering.BitmapManager
@@ -40,14 +39,17 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected var paint = Paint()
     protected var bitmap: Bitmap? = null
     protected var bitmapCanvas: Canvas? = null
+    protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
+
+    // Need EditorView to be created in order for them to be initialized.
     protected lateinit var surfaceView: SurfaceView // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var bitmapManager: BitmapManager // lateinite instead of ? = null if I am sure it will be initialized before use
-    protected var isDrawingInProgress = false
-    protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
     protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
 
+    protected var isDrawingInProgress = false
+
     // Abstract methods that must be implemented by SDK-specific classes
-    abstract fun initializeSDK()
+    abstract fun loadShapesAndRefreshScreen()
     abstract fun createDeviceReceiver(): BaseDeviceReceiver
     abstract fun enableFingerTouch()
     abstract fun disableFingerTouch()
@@ -67,10 +69,10 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
         editorViewModel = EditorViewModel(noteRepository_notebookRepository.first, noteRepository_notebookRepository.second)
 
-
-
         // Create the UI
         setEditorViewAsContent(noteId, noteRepository_notebookRepository.first, noteRepository_notebookRepository.second)
+        // setEditorViewAsContent will create a SurfaceView and then call handleSurfaceViewCreated
+        // which will initialize rest of items.
     }
 
     fun initializeDatabase(): Pair<NoteRepository, NotebookRepository> {
@@ -148,22 +150,20 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     private fun handleSurfaceViewCreated(sv: SurfaceView, vm: EditorViewModel) {
         surfaceView = sv
+        initializeBitmapManager(surfaceView, vm)
         setViewModel(vm)
 
         // Create items used for drawing
-        initializeSDK() // loads shapes, sets currentNote change listener. Importantly, refreshes screen so has to be called here
+        loadShapesAndRefreshScreen() // loads shapes, sets currentNote change listener. Importantly, refreshes screen so has to be called here
         initializePaint() // init paint, really not much
         initializeDeviceReceiver() // init device receiver for pen events
-
-        Log.d("DebugAug12", "SurfaceView created in BaseDrawingActivity of size: ${sv.width}x${sv.height}")
-
-        // have to initialize after set editorview as content because they rely on the viewmodel being set
-
         initializeTouchHelper(surfaceView)
-        initializeBitmapManager(surfaceView, editorViewModel)
         createTouchHelper(surfaceView)
+        // Set observers for:
+        // 1. When pen profile changes
+        // 2. Pagination is enabled or disabled
+        // 3. ViewportState changes
 
-        Log.d("DebugAug12", "setting up observers in BaseDrawingActivity")
         setObservers()
     }
 
@@ -271,33 +271,10 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         // Don't call viewModel?.updatePenProfile here to avoid infinite loop
     }
 
-    fun updateExclusionZones(excludeRects: List<Rect>) {
-        updateTouchHelperExclusionZones(excludeRects)
-        editorViewModel?.updateExclusionZones(excludeRects)
-        println("forceScreenRefresh() from updateExclusionZone")
-        //forceScreenRefresh()
-    }
-
-    override fun forceScreenRefresh() {
-        Log.d("BaseDrawingActivity:", "forceScreenRefresh()")
-        EpdController.enablePost(surfaceView, 1)
-        surfaceView?.let { sv ->
-            cleanSurfaceView(sv)
-            bitmap?.let { renderToScreen(sv, it) }
-        }
-    }
-    
     // Method to recreate bitmap from shapes
     abstract fun recreateBitmapFromShapes()
 
     protected fun createDrawingBitmap(): Bitmap? {
-        if (surfaceView == null) {
-            Log.e(TAG, "SurfaceView is not initialized")
-        }
-        else {
-            Log.d(TAG, "Creating drawing bitmap for SurfaceView: ${surfaceView.width}x${surfaceView.height}")
-        }
-
         return surfaceView?.let { sv ->
             if (bitmap == null) {
                 bitmap = createBitmap(sv.width, sv.height)

@@ -45,11 +45,11 @@ fun Toolbar(
     }
     
     // Force refresh counter for debugging
-    val refreshTrigger by viewModel.refreshUi.collectAsState()
+    val refreshTriggerForUI by viewModel.refreshUi.collectAsState()
 
     fun forceUIRefresh() {
+        Log.d("Toolbar:", "UI Refresh triggered WARNING: CURRENTLY DOES NOTHING")
         viewModel.forceRefresh()
-        Log.d("Toolbar:", "UI Refresh triggered")
     }
 
     fun addStrokeOptionPanelRect() {
