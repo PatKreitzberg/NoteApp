@@ -85,26 +85,6 @@ class EditorViewModel(
                     }
                 }
         }
-        
-        // Restore viewport state when note changes
-        viewModelScope.launch {
-            currentNote.debounce(1) // Wait 500ms after last change before saving
-                .collect { note ->
-                Log.d("EditorViewModel", "Restoring viewport state for note: ${note?.id}")
-                note?.let {
-                    viewportManager.setState(
-                        it.viewportScale,
-                        it.viewportOffsetX,
-                        it.viewportOffsetY
-                    )
-
-                    // Initialize pagination state
-                    _isPaginationEnabled.value = it.isPaginationEnabled
-                    _paperSize.value = PaperSize.fromString(it.paperSize)
-                    calculatePageDimensions()
-                }
-            }
-        }
     }
     
     fun startDrawing() {
@@ -114,7 +94,6 @@ class EditorViewModel(
     
     fun endDrawing() {
         _isDrawing.value = false
-        forceRefresh()
     }
     
     fun addShape(points: List<PointF>, pressures: List<Float> = emptyList()) {

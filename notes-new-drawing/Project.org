@@ -40,17 +40,23 @@ Simple. Allows the user to:
 Only current way is by calling OnyxDrawingactivity.forceScreenRefresh()
 
 *** When is screen refreshed?
-1. When OnyxDrawingactivity is initialized:
+1. When OnyxDrawingactivity is *INITIALIZED*:
    onCreate ->
    initializeSDK ->
    OnyxDrawingactivity.forceScreenRefresh()
-2. When user is done drawing:
+2. When user is done *DRAWING*:
    onEndRawDrawing ->
    onDrawingStateChanged(false) ->
    OnyxDrawingactivity.forceScreenRefresh()
-3. When viewport is changed:
+3. When *VIEWPORT* is changed:
    ViewportManager changes _viewportState ->
     OnyxDrawingactivity.onViewportChanged ->
    OnyxDrawingactivity.forceScreenRefresh()
-4. 
+4. After *ERASING*:
+   handleErasing -> partialEraseRefresh.performPartialRefresh()
+
+*** Questions:
+1. Who should call for screen refresh after user draws a line. Currently
+    done by onDrawingStateChanged. SHOULD BE DONE BY BITMAPMANAGER
+
    

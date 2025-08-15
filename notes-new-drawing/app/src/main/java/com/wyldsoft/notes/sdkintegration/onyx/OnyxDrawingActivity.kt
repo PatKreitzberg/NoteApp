@@ -71,12 +71,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 onShapeCompleted = { points, pressures ->
                     // add shape to NoteRepository
                     onShapeCompleted(points, pressures)
-                },
-                onBitmapChanged = {
-                    forceScreenRefresh()
-                },
-                getBitmap = { getOrCreateBitmap() },
-                getBitmapCanvas = { bitmapCanvas }
+                }
             )
             stylusHandler?.updatePenProfile(currentPenProfile)
         }
@@ -252,6 +247,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
     
     override fun recreateBitmapFromShapes() {
+        Log.d(TAG, "recreateBitmapFromShapes called from OnyxDrawingActivity")
         getOrCreateBitmap() // Ensure bitmap exists
         bitmapManager.recreateBitmapFromShapes(stylusHandler?.drawnShapes)
     }
@@ -263,7 +259,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             viewModel = vm,
             rxManager = getRxManager(),
             getBitmap = { getOrCreateBitmap() },
-            getBitmapCanvas = { bitmapCanvas }
+            getBitmapCanvas = { bitmapCanvas },
+            callToForceRefresh = { forceScreenRefresh() }
         )
     }
     
@@ -293,12 +290,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 onShapeCompleted = { points, pressures ->
                     // add shape to NoteRepository
                     onShapeCompleted(points, pressures)
-                },
-                onBitmapChanged = {
-                    forceScreenRefresh()
-                },
-                getBitmap = { getOrCreateBitmap() },
-                getBitmapCanvas = { bitmapCanvas }
+                }
             )
             stylusHandler?.updatePenProfile(currentPenProfile)
         }

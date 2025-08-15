@@ -1,9 +1,5 @@
 package com.wyldsoft.notes.sdkintegration.onyx
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.RectF
 import android.util.Log
@@ -16,7 +12,6 @@ import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.viewport.ViewportManager
 import com.wyldsoft.notes.rendering.RendererHelper
-import com.wyldsoft.notes.rendering.RendererToScreenRequest
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
@@ -46,10 +41,7 @@ class OnyxStylusHandler(
     private val rxManager: RxManager,
     private val bitmapManager: BitmapManager,
     private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
-    private val onShapeCompleted: (points: List<PointF>, pressures: List<Float>) -> Unit,
-    private val onBitmapChanged: () -> Unit,
-    private val getBitmap: () -> Bitmap?,
-    private val getBitmapCanvas: () -> Canvas?
+    private val onShapeCompleted: (points: List<PointF>, pressures: List<Float>) -> Unit
 ) {
     companion object {
         private const val TAG = "OnyxStylusHandler"
@@ -95,9 +87,6 @@ class OnyxStylusHandler(
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             isDrawingInProgress = false
-            onDrawingStateChanged(false)
-            onBitmapChanged()
-            viewModel?.endDrawing()
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
@@ -111,6 +100,11 @@ class OnyxStylusHandler(
                 }
                 drawScribbleToBitmap(points, touchPointList)
             }
+
+            // moved from onEndRawDraing
+            isDrawingInProgress = false
+            onDrawingStateChanged(false)
+            viewModel?.endDrawing()
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
@@ -184,8 +178,6 @@ class OnyxStylusHandler(
     private fun drawScribbleToBitmap(points: List<TouchPoint>, touchPointList: TouchPointList) {
         Log.d("DebugAug11.1", "drawScribbleToBitmap called list size " + touchPointList.size())
         surfaceView?.let { sv: SurfaceView ->
-            val bitmap = getBitmap() ?: return
-
             // Create shape with original touch points (in SurfaceViewCoordinates)
             val shape = createShapeFromPenType(touchPointList)
             
@@ -209,8 +201,8 @@ class OnyxStylusHandler(
             onShapeCompleted(pointFs, pressures)
 
             // Render the new shape to the bitmap
-            renderShapeToBitmap(shape)
-            bitmapManager.renderBitmapToScreen(sv, bitmap)
+            bitmapManager.renderShapeToBitmap(shape)
+            bitmapManager.renderBitmapToScreen()
         }
     }
 
@@ -249,28 +241,7 @@ class OnyxStylusHandler(
         return shape
     }
 
-    /**
-     * Renders a shape to the bitmap
-     */
-    private fun renderShapeToBitmap(shape: BaseShape) {
-        val bmp = getBitmap() ?: return
-        val renderContext = rendererHelper.getRenderContext() ?: return
-        val canvas = getBitmapCanvas() ?: return
-            
-        // Don't apply viewport transformation here since shape is in surface coordinates
-        renderContext.bitmap = bmp
-        renderContext.canvas = canvas
-        renderContext.paint = Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-        }
-        // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
-        renderContext.viewPoint = android.graphics.Point(0, 0)
 
-        shape.render(renderContext)
-    }
 
 
     /**
@@ -331,7 +302,7 @@ class OnyxStylusHandler(
      */
     fun clearDrawing() {
         drawnShapes.clear()
-        getBitmapCanvas()?.drawColor(Color.WHITE)
+        bitmapManager.clearDrawing()
     }
 
     /**
