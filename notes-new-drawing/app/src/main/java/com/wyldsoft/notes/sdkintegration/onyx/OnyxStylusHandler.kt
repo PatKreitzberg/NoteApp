@@ -229,25 +229,7 @@ class OnyxStylusHandler(
         
         return notePointList
     }
-    
-    /**
-     * Checks if a shape is visible in the current viewport
-     */
-    private fun isShapeVisible(shape: BaseShape, viewportManager: ViewportManager, screenWidth: Int, screenHeight: Int): Boolean {
-        // Get the shape's bounding rect
-        Log.d("\"DebugAug11.1\"", "Checking visibility for shape")
-        shape.updateShapeRect()
-        val boundingRect = shape.boundingRect ?: return false
-        Log.d("\"DebugAug11.1\"", "Shape bounding rect: $boundingRect")
-        
-        // Convert the bounding rect corners to surface coordinates
-        val topLeft = viewportManager.noteToSurfaceCoordinates(boundingRect.left, boundingRect.top)
-        val bottomRight = viewportManager.noteToSurfaceCoordinates(boundingRect.right, boundingRect.bottom)
-        Log.d("DebugAug11.1", "Shape surface rect: topLeft=$topLeft, bottomRight=$bottomRight")
-        // Check if the shape intersects with the screen
-        return !(topLeft.x > screenWidth || bottomRight.x < 0 || 
-                topLeft.y > screenHeight || bottomRight.y < 0)
-    }
+
 
     /**
      * Clears all drawings

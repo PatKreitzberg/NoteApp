@@ -51,29 +51,33 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
     }
 
+    fun createOnyxStylusHandler(): OnyxStylusHandler {
+        return OnyxStylusHandler(
+            surfaceView,
+            editorViewModel,
+            getRxManager(),
+            bitmapManager,
+            onDrawingStateChanged = { isDrawing ->
+                if (isDrawing) {
+                    disableFingerTouch()
+                } else {
+                    enableFingerTouch()
+                    forceScreenRefresh()
+                }
+            },
+            onShapeCompleted = { id, points, pressures ->
+                // add shape to NoteRepository
+                onShapeCompleted(id, points, pressures)
+            },
+            onShapeRemoved = {shapeId -> onShapeRemoved(shapeId)}
+        )
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun createTouchHelper(surfaceView: SurfaceView) {
         // Create stylus handler now that surfaceView is available
         if (stylusHandler == null) {
-            stylusHandler = OnyxStylusHandler(
-                surfaceView,
-                editorViewModel,
-                getRxManager(),
-                bitmapManager,
-                onDrawingStateChanged = { isDrawing ->
-                    if (isDrawing) {
-                        disableFingerTouch()
-                    } else {
-                        enableFingerTouch()
-                        forceScreenRefresh()
-                    }
-                },
-                onShapeCompleted = { id, points, pressures ->
-                    // add shape to NoteRepository
-                    onShapeCompleted(id, points, pressures)
-                },
-                onShapeRemoved = {shapeId -> onShapeRemoved(shapeId)}
-            )
+            stylusHandler = createOnyxStylusHandler()
             stylusHandler?.updatePenProfile(currentPenProfile)
         }
         
@@ -275,25 +279,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         if (stylusHandler == null && surfaceView != null) {
             Log.d("DebugAug11.1", "creating new OnyxStylusHandler and surfaceView is not null. vewModel is null = ${viewModel == null}")
 
-            stylusHandler = OnyxStylusHandler(
-                surfaceView,
-                viewModel,
-                getRxManager(),
-                bitmapManager,
-                onDrawingStateChanged = { isDrawing ->
-                    if (isDrawing) {
-                        disableFingerTouch()
-                    } else {
-                        enableFingerTouch()
-                        forceScreenRefresh()
-                    }
-                },
-                onShapeCompleted = { id, points, pressures ->
-                    // add shape to NoteRepository
-                    onShapeCompleted(id, points, pressures)
-                },
-                onShapeRemoved = {shapeId -> onShapeRemoved(shapeId)}
-            )
+            stylusHandler = createOnyxStylusHandler()
             stylusHandler?.updatePenProfile(currentPenProfile)
         }
     }
