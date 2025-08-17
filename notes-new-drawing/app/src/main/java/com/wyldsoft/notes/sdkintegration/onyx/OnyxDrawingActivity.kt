@@ -25,17 +25,18 @@ import com.wyldsoft.notes.rendering.BitmapManager
 
 open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var rxManager: RxManager? = null
-    private var onyxTouchHelper: TouchHelper? = null
+    private var onyxTouchHelper: TouchHelper? = null // can't use lateinit because of onResume being called
     private var onyxDeviceReceiver: GlobalDeviceReceiver? = null
 
     // Stylus handler for all stylus-related operations
-    private var stylusHandler: OnyxStylusHandler? = null
+    private lateinit var stylusHandler: OnyxStylusHandler
     
     // Gesture handler
-    private var gestureHandler: GestureHandler? = null
+    private lateinit var gestureHandler: GestureHandler//? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "NEW OnyxDrawingActivity")
     }
 
     override fun loadShapesAndRefreshScreen() {
@@ -52,6 +53,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     fun createOnyxStylusHandler(): OnyxStylusHandler {
+        Log.d(TAG, "createOnyxStylusHandler called")
         return OnyxStylusHandler(
             surfaceView,
             editorViewModel,
@@ -75,17 +77,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun createTouchHelper(surfaceView: SurfaceView) {
-        // Create stylus handler now that surfaceView is available
-        if (stylusHandler == null) {
-            stylusHandler = createOnyxStylusHandler()
-            stylusHandler?.updatePenProfile(currentPenProfile)
-        }
+        Log.d(TAG, "createTouchHelper")
         
-        val callback = stylusHandler?.createOnyxCallback()
+        val callback = stylusHandler.createOnyxCallback()
         onyxTouchHelper = TouchHelper.create(surfaceView, callback)
-        
-        // Initialize gesture handler (viewportManager will be set later when viewModel is available)
-        gestureHandler = GestureHandler(this, surfaceView)
         
         // Set touch listener on the surface view to capture gestures
         surfaceView.setOnTouchListener { _, event ->
@@ -101,11 +96,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             }
             
             // Check if erasing is in progress
-            val isErasing = stylusHandler?.isErasing() ?: false
+            val isErasing = stylusHandler.isErasing()
             
             // Only handle events if no stylus/eraser is detected and not erasing
             if (!hasStylusOrEraser && !isErasing) {
-                gestureHandler?.onTouchEvent(event) ?: false
+                gestureHandler.onTouchEvent(event)
             } else {
                 if (isErasing) {
                     Log.d(TAG, "Erasing in progress, ignoring gesture handling")
@@ -150,19 +145,20 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun onResumeDrawing() {
+        Log.d(TAG, "onResumeDrawing")
         onyxTouchHelper?.setRawDrawingEnabled(true)
     }
 
     override fun onPauseDrawing() {
+        Log.d(TAG, "onPauseDrawing")
         onyxTouchHelper?.setRawDrawingEnabled(false)
     }
 
     override fun onCleanupSDK() {
+        Log.d(TAG, "onCleanupSDK")
         onyxTouchHelper?.closeRawDrawing()
-        stylusHandler?.clearDrawing()
-        stylusHandler = null
+        stylusHandler.clearDrawing()
         gestureHandler?.cleanup()
-        gestureHandler = null
     }
 
     override fun updateActiveSurface() {
@@ -170,6 +166,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun updateTouchHelperWithProfile() {
+        Log.d(TAG, "updateTouchHelperWithProfile")
         stylusHandler?.updatePenProfile(currentPenProfile)
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
@@ -193,6 +190,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun updateTouchHelperExclusionZones(excludeRects: List<Rect>) {
+        Log.d(TAG, "updateTouchHelperExclusionZones")
         stylusHandler?.updatePenProfile(currentPenProfile)
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
@@ -213,17 +211,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun initializeDeviceReceiver() {
+        Log.d(TAG, "initializeDeviceReceiver")
         val deviceReceiver = createDeviceReceiver() as OnyxDeviceReceiverWrapper
         deviceReceiver.enable(this, true)
         deviceReceiver.setSystemNotificationPanelChangeListener { open ->
             onyxTouchHelper?.setRawDrawingEnabled(!open)
-            surfaceView?.let { sv ->
-                renderToScreen(sv, bitmap)
-            }
+            renderToScreen(surfaceView, bitmap)
         }.setSystemScreenOnListener {
-            surfaceView?.let { sv ->
-                renderToScreen(sv, bitmap)
-            }
+            renderToScreen(surfaceView, bitmap)
         }
     }
 
@@ -257,8 +252,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         bitmapManager.recreateBitmapFromShapes(stylusHandler?.drawnShapes)
     }
 
-    override fun initializeBitmapManager(sv: SurfaceView, vm: EditorViewModel) {
+    override fun initializeBitmapManagerAndGestureHandler(sv: SurfaceView, vm: EditorViewModel) {
         Log.d(TAG, "BitmapManager initialized with current bitmap")
+        // Initialize gesture handler (viewportManager will be set later when viewModel is available)
+        gestureHandler = GestureHandler(this, sv)
+        gestureHandler.setViewportManager(vm.viewportManager)
+
         this.bitmapManager = BitmapManager(
             surfaceView = sv,
             viewModel = vm,
@@ -271,17 +270,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     
     override fun setViewModel(viewModel: EditorViewModel) {
         super.setViewModel(viewModel)
-        // Update gesture handler with viewport manager now that it's available
-        gestureHandler?.setViewportManager(viewModel.viewportManager)
-        Log.d(TAG, "Updated GestureHandler with ViewportManager")
-        
-        // Update stylus handler if it exists
-        if (stylusHandler == null && surfaceView != null) {
-            Log.d("DebugAug11.1", "creating new OnyxStylusHandler and surfaceView is not null. vewModel is null = ${viewModel == null}")
-
+            Log.d(TAG, "setViewModel called")
             stylusHandler = createOnyxStylusHandler()
-            stylusHandler?.updatePenProfile(currentPenProfile)
-        }
+            stylusHandler.updatePenProfile(currentPenProfile)
     }
 
     private fun getRxManager(): RxManager {
@@ -293,21 +284,19 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     // Add method to clear all drawings
     fun clearDrawing() {
-        stylusHandler?.clearDrawing()
-        surfaceView?.let { sv ->
-            cleanSurfaceView(sv)
-        }
+        stylusHandler.clearDrawing()
+        cleanSurfaceView(surfaceView)
     }
     
     // Load shapes from note into the drawing
     private fun loadShapesFromNote(note: com.wyldsoft.notes.domain.models.Note) {
         // Clear existing shapes
-        stylusHandler?.drawnShapes?.clear()
+        stylusHandler.drawnShapes.clear()
         
         // Convert domain shapes to SDK shapes
         for (domainShape in note.shapes) {
-            val sdkShape = stylusHandler?.convertDomainShapeToSdkShape(domainShape)
-            sdkShape?.let { stylusHandler?.drawnShapes?.add(it) }
+            val sdkShape = stylusHandler.convertDomainShapeToSdkShape(domainShape)
+            sdkShape.let { stylusHandler.drawnShapes.add(it) }
         }
         
         // Recreate bitmap with all shapes

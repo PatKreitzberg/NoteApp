@@ -28,7 +28,6 @@ import com.wyldsoft.notes.drawing.DrawingActivityInterface
 import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import com.onyx.android.sdk.api.device.epd.EpdController
 import com.wyldsoft.notes.rendering.BitmapManager
 
 
@@ -118,7 +117,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     open fun createTouchHelper(surfaceView: SurfaceView) { }
 
-    open fun initializeBitmapManager(surfaceView: SurfaceView, editorViewModel: EditorViewModel) { }
+    open fun initializeBitmapManagerAndGestureHandler(surfaceView: SurfaceView, editorViewModel: EditorViewModel) { }
 
     override fun onResume() {
         super.onResume()
@@ -150,7 +149,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     private fun handleSurfaceViewCreated(sv: SurfaceView, vm: EditorViewModel) {
         surfaceView = sv
-        initializeBitmapManager(surfaceView, vm)
+        initializeBitmapManagerAndGestureHandler(surfaceView, vm)
+        Log.d(TAG, "Setting View model from handleSurfaceViewCreated")
         setViewModel(vm)
 
         // Create items used for drawing
@@ -279,7 +279,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     abstract fun recreateBitmapFromShapes()
 
     protected fun createDrawingBitmap(): Bitmap? {
-        return surfaceView?.let { sv ->
+        return surfaceView.let { sv ->
             if (bitmap == null) {
                 bitmap = createBitmap(sv.width, sv.height)
                 bitmapCanvas = Canvas(bitmap!!)

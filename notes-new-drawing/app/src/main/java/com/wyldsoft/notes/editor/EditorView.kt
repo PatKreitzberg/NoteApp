@@ -27,14 +27,6 @@ fun EditorView(
     val paperSize by viewModel.paperSize.collectAsState()
     val currentPageNumber by viewModel.currentPageNumber.collectAsState()
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
-    
-    // Pass ViewModel to the activity
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    LaunchedEffect(viewModel) {
-        Log.d("EditorView", "Setting ViewModel in DrawingActivityInterface")
-        (context as? com.wyldsoft.notes.drawing.DrawingActivityInterface)?.setViewModel(viewModel)
-    }
 
     Box(
         modifier = Modifier.fillMaxSize()

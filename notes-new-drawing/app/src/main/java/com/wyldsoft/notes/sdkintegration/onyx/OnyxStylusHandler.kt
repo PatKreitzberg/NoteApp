@@ -33,8 +33,8 @@ import com.wyldsoft.notes.rendering.BitmapManager
  * This class encapsulates the logic for processing stylus input and managing shapes.
  */
 class OnyxStylusHandler(
-    protected var surfaceView: SurfaceView? = null,
-    private val viewModel: EditorViewModel?,
+    protected var surfaceView: SurfaceView,
+    private val viewModel: EditorViewModel,
     private val rxManager: RxManager,
     private val bitmapManager: BitmapManager,
     private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
@@ -43,6 +43,10 @@ class OnyxStylusHandler(
 ) {
     companion object {
         private const val TAG = "OnyxStylusHandler"
+    }
+
+    init {
+        Log.d(TAG, "NEW OnyxStylusHandler")
     }
 
     // Store all drawn shapes for re-renderings
@@ -130,13 +134,13 @@ class OnyxStylusHandler(
      */
     private fun drawScribbleToBitmap(touchPointList: TouchPointList) {
         Log.d("DebugAug11.1", "drawScribbleToBitmap called list size " + touchPointList.size())
-        surfaceView?.let { sv: SurfaceView ->
+        surfaceView.let { sv: SurfaceView ->
             // Create shape with original touch points (in SurfaceViewCoordinates)
             val shape = createShapeFromPenType(touchPointList)
-            
+
             // Convert touch points to NoteCoordinates for storage
             val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
-            
+
             // Update shape with note coordinates
             shape.setTouchPointList(notePointList)
             shape.updateShapeRect()
@@ -202,7 +206,7 @@ class OnyxStylusHandler(
      */
     private fun convertTouchPointListToNoteCoordinates(surfacePointList: TouchPointList): TouchPointList {
         val notePointList = TouchPointList()
-        val viewportManager = viewModel?.viewportManager
+        val viewportManager = viewModel.viewportManager
         
         if (viewportManager == null) {
             Log.w(TAG, "ViewportManager is null in convertTouchPointListToNoteCoordinates")
