@@ -55,6 +55,9 @@ Only current way is by calling OnyxDrawingactivity.forceScreenRefresh()
 4. After *ERASING*:
    handleErasing -> partialEraseRefresh.performPartialRefresh()
 
+** Adding and removing shapes
+
+
 *** Questions:
 1. Who should call for screen refresh after user draws a line. Currently
     done by onDrawingStateChanged. SHOULD BE DONE BY BITMAPMANAGER
@@ -63,6 +66,26 @@ Only current way is by calling OnyxDrawingactivity.forceScreenRefresh()
 ** Shapes
 Note is stored via the EditorViewModel's *currentNote*
 *** Added to Note
+When user draws:
+
+onRawDrawingTouchPointListReceived ->
+drawScribbleToBitmap ->
+OnyxStylusHandler.onShapeCompleted ->
+BaseDrawingActivity.onShapeCompleted ->
+EditorViewModel.addShape ->
+NoteRepository.addShape
+
+*** Removed from Note
+Has to remove shape from NoteRepository and from DrawnShapes list in OnyxStylusHandler.
+
+Flow:
+OnyxStylusHandler.onRawErasingTouchPointListReceived ->
+OnyxStylusHandler.handleErasing ->
+OnyxStylusHandler.onShapeRemoved ->
+BaseDrawingactivity.onShapeRemoved ->
+EditorViewModel.removeShape ->
+NoteRepository.removeShape
+
 
 
 * Actions:

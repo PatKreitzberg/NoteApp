@@ -1,13 +1,66 @@
 package com.wyldsoft.notes.shapemanagement
 
 import android.graphics.RectF
+import android.util.Log
+import android.view.SurfaceView
 import com.onyx.android.sdk.pen.data.TouchPointList
+import com.onyx.android.sdk.rx.RxManager
+import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
+import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.rendering.RendererHelper
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 
-class EraseManager {
+class EraseManager(
+    private val surfaceView: SurfaceView?,
+    private val rxManager: RxManager,
+    private val bitmapManager: BitmapManager,
+    private val onShapeRemoved: (String) -> Unit
+) {
+    private val partialEraseRefresh = PartialEraseRefresh()
+    private val rendererHelper = RendererHelper()
+
     companion object {
         private const val ERASE_RADIUS = 15f // Default erase radius in pixels
+        private const val TAG = "EraseManager"
     }
+
+    internal fun handleErasing(noteErasePointList: TouchPointList, drawnShapes: MutableList<BaseShape>) {
+        // Find shapes that intersect with the erase touch points
+        val intersectingShapes = findIntersectingShapes(
+            noteErasePointList,
+            drawnShapes
+        )
+
+        if (intersectingShapes.isNotEmpty()) {
+            Log.d(TAG, "Found ${intersectingShapes.size} shapes to erase")
+
+            // Calculate refresh area before removing shapes
+            val refreshRect = calculateRefreshRect(intersectingShapes)
+
+            // Remove intersecting shapes from our shape list
+            drawnShapes.removeAll(intersectingShapes.toSet())
+            for (shape in intersectingShapes) {
+                onShapeRemoved(shape.id)
+            }
+
+            // Perform partial refresh of the erased area
+            refreshRect?.let { rect: RectF ->
+                surfaceView?.let { sv ->
+                    partialEraseRefresh.performPartialRefresh(
+                        sv,
+                        rect,
+                        drawnShapes, // Pass remaining shapes
+                        rendererHelper,
+                        rxManager
+                    )
+                }
+            }
+
+            // Also update the main bitmap by recreating it from remaining shapes
+            bitmapManager.recreateBitmapFromShapes(drawnShapes)
+        }
+    }
+
 
     fun findIntersectingShapes(
         touchPointList: TouchPointList,

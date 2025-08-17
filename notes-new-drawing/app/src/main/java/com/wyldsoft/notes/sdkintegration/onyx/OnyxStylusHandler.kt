@@ -1,7 +1,6 @@
 package com.wyldsoft.notes.sdkintegration.onyx
 
 import android.graphics.PointF
-import android.graphics.RectF
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.data.note.TouchPoint
@@ -11,11 +10,9 @@ import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.viewport.ViewportManager
-import com.wyldsoft.notes.rendering.RendererHelper
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
-import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 
@@ -50,14 +47,10 @@ class OnyxStylusHandler(
 
     // Store all drawn shapes for re-renderings
     val drawnShapes = mutableListOf<BaseShape>()
-    
-    // Renderer helper for shape rendering
-    private val rendererHelper = RendererHelper()
-    
+
     // Erase management
-    private val eraseManager = EraseManager()
-    private val partialEraseRefresh = PartialEraseRefresh()
-    
+    private val eraseManager = EraseManager(surfaceView, rxManager, bitmapManager, onShapeRemoved)
+
     // Drawing state
     private var isDrawingInProgress = false
     private var isErasingInProgress = false
@@ -99,7 +92,7 @@ class OnyxStylusHandler(
                 if (!isDrawingInProgress) {
                     isDrawingInProgress = true
                 }
-                drawScribbleToBitmap(points, touchPointList)
+                drawScribbleToBitmap(touchPointList)
             }
 
             // moved from onEndRawDraing
@@ -126,60 +119,16 @@ class OnyxStylusHandler(
 
         override fun onRawErasingTouchPointListReceived(touchPointList: TouchPointList?) {
             touchPointList?.let { erasePointList ->
-                handleErasing(erasePointList)
+                val noteErasePointList = convertTouchPointListToNoteCoordinates(erasePointList)
+                eraseManager.handleErasing(noteErasePointList, drawnShapes)
             }
-        }
-    }
-
-    /**
-     * Handles erasing operations
-     */
-    private fun handleErasing(erasePointList: TouchPointList) {
-        Log.d(TAG, "handleErasing called with ${erasePointList.size()} points")
-        
-        // Convert erase points from SurfaceViewCoordinates to NoteCoordinates
-        val noteErasePointList = convertTouchPointListToNoteCoordinates(erasePointList)
-        
-        // Find shapes that intersect with the erase touch points
-        val intersectingShapes = eraseManager.findIntersectingShapes(
-            noteErasePointList, 
-            drawnShapes
-        )
-        
-        if (intersectingShapes.isNotEmpty()) {
-            Log.d(TAG, "Found ${intersectingShapes.size} shapes to erase")
-            
-            // Calculate refresh area before removing shapes
-            val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
-            
-            // Remove intersecting shapes from our shape list
-            drawnShapes.removeAll(intersectingShapes.toSet())
-            for (shape in intersectingShapes) {
-                onShapeRemoved(shape.id)
-            }
-            
-            // Perform partial refresh of the erased area
-            refreshRect?.let { rect: RectF ->
-                surfaceView?.let { sv ->
-                    partialEraseRefresh.performPartialRefresh(
-                        sv,
-                        rect,
-                        drawnShapes, // Pass remaining shapes
-                        rendererHelper,
-                        rxManager
-                    )
-                }
-            }
-            
-            // Also update the main bitmap by recreating it from remaining shapes
-            bitmapManager.recreateBitmapFromShapes(drawnShapes)
         }
     }
 
     /**
      * Draws scribble to bitmap
      */
-    private fun drawScribbleToBitmap(points: List<TouchPoint>, touchPointList: TouchPointList) {
+    private fun drawScribbleToBitmap(touchPointList: TouchPointList) {
         Log.d("DebugAug11.1", "drawScribbleToBitmap called list size " + touchPointList.size())
         surfaceView?.let { sv: SurfaceView ->
             // Create shape with original touch points (in SurfaceViewCoordinates)
@@ -245,8 +194,6 @@ class OnyxStylusHandler(
 
         return shape
     }
-
-
 
 
     /**
