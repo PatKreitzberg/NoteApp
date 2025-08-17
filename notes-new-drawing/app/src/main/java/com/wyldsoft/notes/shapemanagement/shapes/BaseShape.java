@@ -13,12 +13,14 @@ import com.onyx.android.sdk.pen.PenUtils;
 import com.onyx.android.sdk.pen.data.TouchPointList;
 
 import java.util.List;
+import java.util.UUID;
 
 public class BaseShape {
     protected int shapeType;
     protected int texture;
     protected int strokeColor;
     protected float strokeWidth;
+    protected String id;
     protected boolean transparent;
 
     public TouchPointList touchPointList;
@@ -27,10 +29,12 @@ public class BaseShape {
     protected RectF originRect;
 
     public BaseShape() {
+        this.id = UUID.randomUUID().toString();
     }
 
     public BaseShape(TouchPointList touchPointList) {
         this.touchPointList = touchPointList;
+        this.id = UUID.randomUUID().toString();
     }
 
     public void setTransparent(boolean transparent) {
@@ -80,6 +84,10 @@ public class BaseShape {
 
     public void setOriginRect(RectF originRect) {
         this.originRect = originRect;
+    }
+
+    public String getId() {
+        return this.id;
     }
 
     public int getStrokeColor() {

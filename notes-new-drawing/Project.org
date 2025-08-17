@@ -59,4 +59,21 @@ Only current way is by calling OnyxDrawingactivity.forceScreenRefresh()
 1. Who should call for screen refresh after user draws a line. Currently
     done by onDrawingStateChanged. SHOULD BE DONE BY BITMAPMANAGER
 
-   
+* OnyxDrawingActivity
+** Shapes
+Note is stored via the EditorViewModel's *currentNote*
+*** Added to Note
+
+
+* Actions:
+** To complete:
+1. Make Action and DrawAction classes
+2. Allow DrawAction to add or remove shape from the note/bitmap
+
+
+
+** Steps:
+1. Currently OnyxStylus uses drawnShapes list. Want to get rid of
+   this, probably work with NoteEntity directly. BECAUSE want to use undo/redo manager.
+
+

@@ -11,12 +11,12 @@ class EraseManager {
 
     fun findIntersectingShapes(
         touchPointList: TouchPointList,
-        drawnShapes: List<BaseShape>,
+        shapes: List<BaseShape>,
         eraseRadius: Float = ERASE_RADIUS
     ): List<BaseShape> {
         val intersectingShapes = mutableListOf<BaseShape>()
 
-        for (shape in drawnShapes) {
+        for (shape in shapes) {
             if (shape.hitTestPoints(touchPointList, eraseRadius)) {
                 intersectingShapes.add(shape)
             }

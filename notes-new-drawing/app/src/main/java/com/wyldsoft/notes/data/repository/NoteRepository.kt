@@ -74,7 +74,7 @@ class NoteRepositoryImpl(
             _currentNote.value = getNote(noteId)
         }
     }
-    
+
     override suspend fun removeShape(noteId: String, shapeId: String) {
         shapeDao.deleteById(shapeId)
         
@@ -178,6 +178,7 @@ class NoteRepositoryImpl(
     }
     
     private fun Shape.toEntity(noteId: String): ShapeEntity {
+        Log.d("NoteRepository","Shape.toEntity id is ${id}")
         return ShapeEntity(
             id = id,
             noteId = noteId,

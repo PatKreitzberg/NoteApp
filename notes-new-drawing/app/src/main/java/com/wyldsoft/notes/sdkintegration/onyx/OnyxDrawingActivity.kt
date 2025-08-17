@@ -68,10 +68,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         forceScreenRefresh()
                     }
                 },
-                onShapeCompleted = { points, pressures ->
+                onShapeCompleted = { id, points, pressures ->
                     // add shape to NoteRepository
-                    onShapeCompleted(points, pressures)
-                }
+                    onShapeCompleted(id, points, pressures)
+                },
+                onShapeRemoved = {shapeId -> onShapeRemoved(shapeId)}
             )
             stylusHandler?.updatePenProfile(currentPenProfile)
         }
@@ -287,10 +288,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         forceScreenRefresh()
                     }
                 },
-                onShapeCompleted = { points, pressures ->
+                onShapeCompleted = { id, points, pressures ->
                     // add shape to NoteRepository
-                    onShapeCompleted(points, pressures)
-                }
+                    onShapeCompleted(id, points, pressures)
+                },
+                onShapeRemoved = {shapeId -> onShapeRemoved(shapeId)}
             )
             stylusHandler?.updatePenProfile(currentPenProfile)
         }

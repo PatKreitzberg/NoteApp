@@ -246,12 +246,16 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         Log.d("DebugAug12", "DONE Setting ViewModel in BaseDrawingActivity")
     }
 
-    override fun onShapeCompleted(points: List<PointF>, pressures: List<Float>) {
-        editorViewModel?.addShape(points, pressures)
+    override fun onShapeCompleted(id: String, points: List<PointF>, pressures: List<Float>) {
+        editorViewModel.addShape(id, points, pressures)
+    }
+
+    override fun onShapeRemoved(shapeId: String) {
+        editorViewModel.removeShape(shapeId)
     }
     
     private fun updatePaginationExclusionZones() {
-        editorViewModel?.let { viewModel ->
+        editorViewModel.let { viewModel ->
             val currentExcludeRects = viewModel.excludeRects.value.toMutableList()
             val pageSeparatorRects = viewModel.getPageSeparatorRects()
             

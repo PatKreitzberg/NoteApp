@@ -41,7 +41,8 @@ class OnyxStylusHandler(
     private val rxManager: RxManager,
     private val bitmapManager: BitmapManager,
     private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
-    private val onShapeCompleted: (points: List<PointF>, pressures: List<Float>) -> Unit
+    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>) -> Unit,
+    private val onShapeRemoved: (shapeId: String) -> Unit
 ) {
     companion object {
         private const val TAG = "OnyxStylusHandler"
@@ -153,6 +154,9 @@ class OnyxStylusHandler(
             
             // Remove intersecting shapes from our shape list
             drawnShapes.removeAll(intersectingShapes.toSet())
+            for (shape in intersectingShapes) {
+                onShapeRemoved(shape.id)
+            }
             
             // Perform partial refresh of the erased area
             refreshRect?.let { rect: RectF ->
@@ -187,7 +191,8 @@ class OnyxStylusHandler(
             // Update shape with note coordinates
             shape.setTouchPointList(notePointList)
             shape.updateShapeRect()
-            
+
+            // add shape to drawnShapes
             drawnShapes.add(shape)
 
             // Convert TouchPointList to List<PointF> for ViewModel (in NoteCoordinates)
@@ -198,7 +203,7 @@ class OnyxStylusHandler(
                 pointFs.add(PointF(tp.x, tp.y))
                 pressures.add(tp.pressure)
             }
-            onShapeCompleted(pointFs, pressures)
+            onShapeCompleted(shape.id, pointFs, pressures)
 
             // Render the new shape to the bitmap
             bitmapManager.renderShapeToBitmap(shape)

@@ -96,11 +96,14 @@ class EditorViewModel(
         _isDrawing.value = false
     }
     
-    fun addShape(points: List<PointF>, pressures: List<Float> = emptyList()) {
+    fun addShape(id: String, points: List<PointF>, pressures: List<Float> = emptyList()) {
         viewModelScope.launch {
             currentNote.value?.let { note ->
                 Log.d("EditorViewModel", "Adding shape to note: ${note.id}, points: $points, pressures: $pressures")
+
+                // id is generated in the class but each shape has an id !
                 val shape = Shape(
+                    id = id,
                     type = ShapeType.STROKE,
                     points = points,
                     strokeWidth = _currentPenProfile.value.strokeWidth,
@@ -108,6 +111,19 @@ class EditorViewModel(
                     pressure = pressures
                 )
                 noteRepository.addShape(note.id, shape)
+            }
+        }
+    }
+
+    fun removeShape(shapeId: String) {
+        viewModelScope.launch {
+            currentNote.value?.let { note ->
+                Log.d(
+                    "EditorViewModel",
+                    "Adding shape to note: ${note.id}"
+                )
+
+                noteRepository.removeShape(note.id, shapeId)
             }
         }
     }
