@@ -80,7 +80,7 @@ class OnyxStylusHandler(
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             isDrawingInProgress = true
             onDrawingStateChanged(true)
-            viewModel?.startDrawing()
+            viewModel.startDrawing()
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
@@ -102,7 +102,7 @@ class OnyxStylusHandler(
             // moved from onEndRawDraing
             isDrawingInProgress = false
             onDrawingStateChanged(false)
-            viewModel?.endDrawing()
+            viewModel.endDrawing()
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
@@ -176,7 +176,6 @@ class OnyxStylusHandler(
             PenType.CHARCOAL, PenType.CHARCOAL_V2 -> ShapeFactory.SHAPE_CHARCOAL_SCRIBBLE
             PenType.NEO_BRUSH -> ShapeFactory.SHAPE_NEO_BRUSH_SCRIBBLE
             PenType.DASH -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE // Default to pencil for dash
-            else -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE // Default fallback
         }
 
         // Create the shape
@@ -208,27 +207,18 @@ class OnyxStylusHandler(
         val notePointList = TouchPointList()
         val viewportManager = viewModel.viewportManager
         
-        if (viewportManager == null) {
-            Log.w(TAG, "ViewportManager is null in convertTouchPointListToNoteCoordinates")
-        }
-        
         for (i in 0 until surfacePointList.size()) {
             val tp = surfacePointList.get(i)
-            if (viewportManager != null) {
-                // Convert from SurfaceViewCoordinates to NoteCoordinates
-                val notePoint = viewportManager.surfaceToNoteCoordinates(tp.x, tp.y)
-                val noteTouchPoint = TouchPoint(
-                    notePoint.x, 
-                    notePoint.y, 
-                    tp.pressure, 
-                    tp.size, 
-                    tp.timestamp
-                )
-                notePointList.add(noteTouchPoint)
-            } else {
-                // If no viewport manager, use original coordinates
-                notePointList.add(tp)
-            }
+            // Convert from SurfaceViewCoordinates to NoteCoordinates
+            val notePoint = viewportManager.surfaceToNoteCoordinates(tp.x, tp.y)
+            val noteTouchPoint = TouchPoint(
+                notePoint.x,
+                notePoint.y,
+                tp.pressure,
+                tp.size,
+                tp.timestamp
+            )
+            notePointList.add(noteTouchPoint)
         }
         
         return notePointList

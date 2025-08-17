@@ -45,8 +45,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected lateinit var bitmapManager: BitmapManager // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
 
-    protected var isDrawingInProgress = false
-
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun loadShapesAndRefreshScreen()
     abstract fun createDeviceReceiver(): BaseDeviceReceiver
@@ -60,16 +58,16 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         super.onCreate(savedInstanceState)
 
         // init database and repositories
-        var noteRepository_notebookRepository = initializeDatabase()
+        var noteRepositoryAndNotebookRepository = initializeDatabase()
         val notebookId = intent.getStringExtra("notebookId") ?: return // note used but will be
         val noteId = intent.getStringExtra("noteId") ?: return
 
         // Create EditorViewModel with repositories
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
-        editorViewModel = EditorViewModel(noteRepository_notebookRepository.first, noteRepository_notebookRepository.second)
+        editorViewModel = EditorViewModel(noteRepositoryAndNotebookRepository.first, noteRepositoryAndNotebookRepository.second)
 
         // Create the UI
-        setEditorViewAsContent(noteId, noteRepository_notebookRepository.first, noteRepository_notebookRepository.second)
+        setEditorViewAsContent(noteId, noteRepositoryAndNotebookRepository.first, noteRepositoryAndNotebookRepository.second)
         // setEditorViewAsContent will create a SurfaceView and then call handleSurfaceViewCreated
         // which will initialize rest of items.
     }

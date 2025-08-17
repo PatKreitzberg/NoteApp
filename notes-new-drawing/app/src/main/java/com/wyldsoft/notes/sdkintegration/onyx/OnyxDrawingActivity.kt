@@ -44,7 +44,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         // Note: stylus handler will be created in createTouchHelper
         // when surfaceView is available
         lifecycleScope.launch {
-            editorViewModel?.currentNote?.value?.let { note ->
+            editorViewModel.currentNote.value?.let { note ->
                 Log.d(TAG, "loadShapesAndRefreshScreen currentNote has changed, calling refresh")
                 loadShapesFromNote(note)
                 forceScreenRefresh()
@@ -102,11 +102,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             if (!hasStylusOrEraser && !isErasing) {
                 gestureHandler.onTouchEvent(event)
             } else {
-                if (isErasing) {
-                    Log.d(TAG, "Erasing in progress, ignoring gesture handling")
-                } else if (hasStylusOrEraser) {
-                    Log.d(TAG, "Stylus/eraser detected, ignoring gesture handling")
-                }
                 false // Let Onyx SDK handle stylus/eraser events
             }
         }
@@ -158,7 +153,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "onCleanupSDK")
         onyxTouchHelper?.closeRawDrawing()
         stylusHandler.clearDrawing()
-        gestureHandler?.cleanup()
+        gestureHandler.cleanup()
     }
 
     override fun updateActiveSurface() {
@@ -167,15 +162,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun updateTouchHelperWithProfile() {
         Log.d(TAG, "updateTouchHelperWithProfile")
-        stylusHandler?.updatePenProfile(currentPenProfile)
+        stylusHandler.updatePenProfile(currentPenProfile)
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
             helper.closeRawDrawing()
 
             val limit = Rect()
-            surfaceView?.getLocalVisibleRect(limit)
+            surfaceView.getLocalVisibleRect(limit)
 
-            val excludeRects = editorViewModel?.excludeRects?.value ?: emptyList()
+            val excludeRects = editorViewModel.excludeRects.value
             Log.d("ExclusionRects", "updateTouchHelperWithProfile Current exclusion rects ${excludeRects.size}")
 
             helper.setStrokeWidth(currentPenProfile.strokeWidth)
@@ -191,13 +186,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun updateTouchHelperExclusionZones(excludeRects: List<Rect>) {
         Log.d(TAG, "updateTouchHelperExclusionZones")
-        stylusHandler?.updatePenProfile(currentPenProfile)
+        stylusHandler.updatePenProfile(currentPenProfile)
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
             helper.closeRawDrawing()
 
             val limit = Rect()
-            surfaceView?.getLocalVisibleRect(limit)
+            surfaceView.getLocalVisibleRect(limit)
 
             Log.d("ExclusionRects", "updateTouchHelperExclusionZones Current exclusion rects ${excludeRects.size}")
             helper.setStrokeWidth(currentPenProfile.strokeWidth)
@@ -229,7 +224,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onViewportChanged() {
         Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
         // Recreate bitmap with new viewport transformation
-        bitmapManager.recreateBitmapFromShapes(stylusHandler?.drawnShapes)
+        bitmapManager.recreateBitmapFromShapes(stylusHandler.drawnShapes)
         // Request screen refresh to show the updated shapes
         forceScreenRefresh()
     }
@@ -249,7 +244,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun recreateBitmapFromShapes() {
         Log.d(TAG, "recreateBitmapFromShapes called from OnyxDrawingActivity")
         getOrCreateBitmap() // Ensure bitmap exists
-        bitmapManager.recreateBitmapFromShapes(stylusHandler?.drawnShapes)
+        bitmapManager.recreateBitmapFromShapes(stylusHandler.drawnShapes)
     }
 
     override fun initializeBitmapManagerAndGestureHandler(sv: SurfaceView, vm: EditorViewModel) {
@@ -263,8 +258,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             viewModel = vm,
             rxManager = getRxManager(),
             getBitmap = { getOrCreateBitmap() },
-            getBitmapCanvas = { bitmapCanvas },
-            callToForceRefresh = { forceScreenRefresh() }
+            getBitmapCanvas = { bitmapCanvas }
         )
     }
     
@@ -282,12 +276,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         return rxManager!!
     }
 
-    // Add method to clear all drawings
-    fun clearDrawing() {
-        stylusHandler.clearDrawing()
-        cleanSurfaceView(surfaceView)
-    }
-    
     // Load shapes from note into the drawing
     private fun loadShapesFromNote(note: com.wyldsoft.notes.domain.models.Note) {
         // Clear existing shapes

@@ -12,6 +12,7 @@ import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.viewport.ViewportManager
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.LongArraySerializer
 
+@OptIn(FlowPreview::class)
 class EditorViewModel(
     private val noteRepository: NoteRepository,
     notebookRepository: NotebookRepository
