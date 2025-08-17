@@ -15,6 +15,7 @@ class ScrotesApp : Application() {
     }
 
     private fun checkHiddenApiBypass() {
+        // Necessary for Onyx to compile
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             HiddenApiBypass.addHiddenApiExemptions("")
         }

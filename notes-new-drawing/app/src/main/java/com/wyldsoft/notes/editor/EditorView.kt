@@ -8,8 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 import com.wyldsoft.notes.DrawingCanvas
-import com.wyldsoft.notes.data.repository.NoteRepository
-import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.ViewportInfo

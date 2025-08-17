@@ -37,7 +37,7 @@ fun NoteSettingsDialog(
                     text = "Note Settings",
                     style = MaterialTheme.typography.headlineSmall
                 )
-                
+
                 Divider()
                 
                 // Pagination toggle
@@ -86,7 +86,7 @@ fun NoteSettingsDialog(
                                 expanded = dropdownExpanded,
                                 onDismissRequest = { dropdownExpanded = false }
                             ) {
-                                PaperSize.values().forEach { paperSize ->
+                                PaperSize.entries.forEach { paperSize ->
                                     DropdownMenuItem(
                                         text = { Text(paperSize.displayName) },
                                         onClick = {

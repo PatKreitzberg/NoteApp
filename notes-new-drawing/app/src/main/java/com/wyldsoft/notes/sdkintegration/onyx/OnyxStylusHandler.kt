@@ -9,12 +9,12 @@ import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.viewport.ViewportManager
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.shapemanagement.DrawManager
 
 /**
  * Handles all stylus-related operations for Onyx devices:
@@ -48,6 +48,8 @@ class OnyxStylusHandler(
     init {
         Log.d(TAG, "NEW OnyxStylusHandler")
     }
+
+    private var drawManager = DrawManager(bitmapManager, onShapeCompleted)
 
     // Store all drawn shapes for re-renderings
     val drawnShapes = mutableListOf<BaseShape>()
@@ -93,12 +95,10 @@ class OnyxStylusHandler(
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
             touchPointList?.points?.let { points ->
-                if (!isDrawingInProgress) {
-                    isDrawingInProgress = true
-                }
-                drawScribbleToBitmap(touchPointList)
+                val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
+                val newShape = drawManager.newShape(notePointList)
+                drawnShapes.add(newShape)
             }
-
             // moved from onEndRawDraing
             isDrawingInProgress = false
             onDrawingStateChanged(false)
@@ -127,75 +127,6 @@ class OnyxStylusHandler(
                 eraseManager.handleErasing(noteErasePointList, drawnShapes)
             }
         }
-    }
-
-    /**
-     * Draws scribble to bitmap
-     */
-    private fun drawScribbleToBitmap(touchPointList: TouchPointList) {
-        Log.d("DebugAug11.1", "drawScribbleToBitmap called list size " + touchPointList.size())
-        surfaceView.let { sv: SurfaceView ->
-            // Create shape with original touch points (in SurfaceViewCoordinates)
-            val shape = createShapeFromPenType(touchPointList)
-
-            // Convert touch points to NoteCoordinates for storage
-            val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
-
-            // Update shape with note coordinates
-            shape.setTouchPointList(notePointList)
-            shape.updateShapeRect()
-
-            // add shape to drawnShapes
-            drawnShapes.add(shape)
-
-            // Convert TouchPointList to List<PointF> for ViewModel (in NoteCoordinates)
-            val pointFs = mutableListOf<PointF>()
-            val pressures = mutableListOf<Float>()
-            for (i in 0 until notePointList.size()) {
-                val tp = notePointList.get(i)
-                pointFs.add(PointF(tp.x, tp.y))
-                pressures.add(tp.pressure)
-            }
-            onShapeCompleted(shape.id, pointFs, pressures)
-
-            // Render the new shape to the bitmap
-            bitmapManager.renderShapeToBitmap(shape)
-            bitmapManager.renderBitmapToScreen()
-        }
-    }
-
-    /**
-     * Creates a shape based on the current pen type
-     */
-    private fun createShapeFromPenType(touchPointList: TouchPointList): BaseShape {
-        // Map pen type to shape type
-        val shapeType = when (currentPenProfile.penType) {
-            PenType.BALLPEN, PenType.PENCIL -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE
-            PenType.FOUNTAIN -> ShapeFactory.SHAPE_BRUSH_SCRIBBLE
-            PenType.MARKER -> ShapeFactory.SHAPE_MARKER_SCRIBBLE
-            PenType.CHARCOAL, PenType.CHARCOAL_V2 -> ShapeFactory.SHAPE_CHARCOAL_SCRIBBLE
-            PenType.NEO_BRUSH -> ShapeFactory.SHAPE_NEO_BRUSH_SCRIBBLE
-            PenType.DASH -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE // Default to pencil for dash
-        }
-
-        // Create the shape
-        val shape = ShapeFactory.createShape(shapeType)
-        shape.setTouchPointList(touchPointList)
-            .setStrokeColor(currentPenProfile.getColorAsInt())
-            .setStrokeWidth(currentPenProfile.strokeWidth)
-            .setShapeType(shapeType)
-            
-        // Update bounding rect for hit testing
-        shape.updateShapeRect()
-
-        // Set texture for charcoal if needed
-        if (currentPenProfile.penType == PenType.CHARCOAL_V2) {
-            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V2)
-        } else if (currentPenProfile.penType == PenType.CHARCOAL) {
-            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V1)
-        }
-
-        return shape
     }
 
 

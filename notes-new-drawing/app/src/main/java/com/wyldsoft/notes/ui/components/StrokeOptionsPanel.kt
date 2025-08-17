@@ -114,7 +114,7 @@ fun StrokeOptionsPanel(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(PenType.values()) { penType ->
+            items(PenType.entries.toTypedArray()) { penType ->
                 PenTypeButton(
                     penType = penType,
                     isSelected = selectedPenType == penType,
