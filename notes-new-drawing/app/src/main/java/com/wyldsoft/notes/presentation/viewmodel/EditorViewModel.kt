@@ -23,7 +23,7 @@ import kotlinx.serialization.builtins.LongArraySerializer
 @OptIn(FlowPreview::class)
 class EditorViewModel(
     private val noteRepository: NoteRepository,
-    notebookRepository: NotebookRepository
+    private val notebookRepository: NotebookRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(EditorUiState())
@@ -102,8 +102,6 @@ class EditorViewModel(
         viewModelScope.launch {
             currentNote.value?.let { note ->
                 Log.d("EditorViewModel", "Adding shape to note: ${note.id}, points: $points, pressures: $pressures")
-
-                // id is generated in the class but each shape has an id !
                 val shape = Shape(
                     id = id,
                     type = ShapeType.STROKE,
@@ -120,11 +118,6 @@ class EditorViewModel(
     fun removeShape(shapeId: String) {
         viewModelScope.launch {
             currentNote.value?.let { note ->
-                Log.d(
-                    "EditorViewModel",
-                    "Adding shape to note: ${note.id}"
-                )
-
                 noteRepository.removeShape(note.id, shapeId)
             }
         }

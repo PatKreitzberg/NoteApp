@@ -21,6 +21,7 @@ import com.onyx.android.sdk.api.device.epd.EpdController
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.shapemanagement.ShapeManager
 
 
 open class OnyxDrawingActivity : BaseDrawingActivity() {
@@ -30,7 +31,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     // Stylus handler for all stylus-related operations
     private lateinit var stylusHandler: OnyxStylusHandler
-    
+
     // Gesture handler
     private lateinit var gestureHandler: GestureHandler//? = null
 
@@ -59,6 +60,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             editorViewModel,
             getRxManager(),
             bitmapManager,
+            shapeManager,
             onDrawingStateChanged = { isDrawing ->
                 if (isDrawing) {
                     disableFingerTouch()

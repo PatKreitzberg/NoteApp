@@ -29,6 +29,7 @@ import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.shapemanagement.ShapeManager
 
 
 abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterface {
@@ -44,6 +45,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected lateinit var surfaceView: SurfaceView // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var bitmapManager: BitmapManager // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
+    protected lateinit var shapeManager: ShapeManager
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun loadShapesAndRefreshScreen()
@@ -148,20 +150,20 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     private fun handleSurfaceViewCreated(sv: SurfaceView, vm: EditorViewModel) {
         surfaceView = sv
         initializeBitmapManagerAndGestureHandler(surfaceView, vm)
-        Log.d(TAG, "Setting View model from handleSurfaceViewCreated")
         setViewModel(vm)
 
         // Create items used for drawing
         loadShapesAndRefreshScreen() // loads shapes, sets currentNote change listener. Importantly, refreshes screen so has to be called here
         initializePaint() // init paint, really not much
         initializeDeviceReceiver() // init device receiver for pen events
+        shapeManager = ShapeManager(editorViewModel)
         initializeTouchHelper(surfaceView)
         createTouchHelper(surfaceView)
+
         // Set observers for:
         // 1. When pen profile changes
         // 2. Pagination is enabled or disabled
         // 3. ViewportState changes
-
         setObservers()
     }
 
