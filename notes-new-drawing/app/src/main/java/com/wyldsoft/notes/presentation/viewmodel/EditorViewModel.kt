@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
-import kotlinx.serialization.builtins.LongArraySerializer
 
 @OptIn(FlowPreview::class)
 class EditorViewModel(
@@ -74,17 +74,16 @@ class EditorViewModel(
         // Save viewport state when it changes (with debounce to avoid too frequent saves)
         viewModelScope.launch {
             viewportState
-                .debounce(1) // Wait 500ms after last change before saving
+                .drop(1) // Skip initial because currentNote is not the actual note yet, just a default one
+                .debounce(100) // Wait 100ms after last change before saving
                 .collect { state ->
-                    currentNote.value?.let { note ->
-                        Log.d("EditorViewModel", "Saving viewport state for note: ${note.id}, scale: ${state.scale}, offsetX: ${state.offsetX}, offsetY: ${state.offsetY}")
-                        noteRepository.updateViewportState(
-                            note.id,
-                            state.scale,
-                            state.offsetX,
-                            state.offsetY
-                        )
-                    }
+                    Log.d("EditorViewModel", "Saving viewport state for note: ${currentNote.value.id}, scale: ${state.scale}, offsetX: ${state.offsetX}, offsetY: ${state.offsetY}")
+                    noteRepository.updateViewportState(
+                        currentNote.value.id,
+                        state.scale,
+                        state.offsetX,
+                        state.offsetY
+                    )
                 }
         }
     }
@@ -100,24 +99,22 @@ class EditorViewModel(
     
     fun addShape(id: String, points: List<PointF>, pressures: List<Float> = emptyList()) {
         viewModelScope.launch {
-            currentNote.value?.let { note ->
-                Log.d("EditorViewModel", "Adding shape to note: ${note.id}, points: $points, pressures: $pressures")
-                val shape = Shape(
-                    id = id,
-                    type = ShapeType.STROKE,
-                    points = points,
-                    strokeWidth = _currentPenProfile.value.strokeWidth,
-                    strokeColor = _currentPenProfile.value.getColorAsInt(),
-                    pressure = pressures
-                )
-                noteRepository.addShape(note.id, shape)
-            }
+            Log.d("EditorViewModel", "Adding shape to note: ${currentNote.value.id}, points: $points, pressures: $pressures")
+            val shape = Shape(
+                id = id,
+                type = ShapeType.STROKE,
+                points = points,
+                strokeWidth = _currentPenProfile.value.strokeWidth,
+                strokeColor = _currentPenProfile.value.getColorAsInt(),
+                pressure = pressures
+            )
+            noteRepository.addShape(currentNote.value.id, shape)
         }
     }
 
     fun removeShape(shapeId: String) {
         viewModelScope.launch {
-            currentNote.value?.let { note ->
+            currentNote.value.let { note ->
                 noteRepository.removeShape(note.id, shapeId)
             }
         }
@@ -155,10 +152,8 @@ class EditorViewModel(
     fun updatePaginationEnabled(enabled: Boolean) {
         _isPaginationEnabled.value = enabled
         viewModelScope.launch {
-            currentNote.value?.let { note ->
-                Log.d("EditorViewModel", "Updating pagination settings for note: ${note.id}, enabled: $enabled, paperSize: ${_paperSize.value.name}")
-                noteRepository.updatePaginationSettings(note.id, enabled, _paperSize.value.name)
-            }
+            Log.d("EditorViewModel", "Updating pagination settings for note: ${currentNote.value.id}, enabled: $enabled, paperSize: ${_paperSize.value.name}")
+            noteRepository.updatePaginationSettings(currentNote.value.id, enabled, _paperSize.value.name)
         }
         // Update viewport restrictions
         if (enabled) {
@@ -172,7 +167,7 @@ class EditorViewModel(
         _paperSize.value = paperSize
         calculatePageDimensions()
         viewModelScope.launch {
-            currentNote.value?.let { note ->
+            currentNote.value.let { note ->
                 Log.d("EditorViewModel", "Updating paper size for note: ${note.id}, new size: ${paperSize.name}")
                 noteRepository.updatePaginationSettings(note.id, _isPaginationEnabled.value, paperSize.name)
             }

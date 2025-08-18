@@ -30,6 +30,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapeManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 
 abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterface {
@@ -48,7 +50,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected lateinit var shapeManager: ShapeManager
 
     // Abstract methods that must be implemented by SDK-specific classes
-    abstract fun loadShapesAndRefreshScreen()
+    abstract fun initializeShapeMaanager()
+    abstract fun initializeGestureHandler()
+    abstract fun initializeStylusHandler()
     abstract fun createDeviceReceiver(): BaseDeviceReceiver
     abstract fun enableFingerTouch()
     abstract fun disableFingerTouch()
@@ -63,6 +67,10 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         var noteRepositoryAndNotebookRepository = initializeDatabase()
         val notebookId = intent.getStringExtra("notebookId") ?: return // note used but will be
         val noteId = intent.getStringExtra("noteId") ?: return
+
+        CoroutineScope(Dispatchers.IO).launch {
+            noteRepositoryAndNotebookRepository.first.setCurrentNote(noteId)
+        }
 
         // Create EditorViewModel with repositories
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
@@ -100,6 +108,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     color = MaterialTheme.colorScheme.background
                 ) {
                     LaunchedEffect(noteId) {
+                        Log.d("DebugAug17", "LaunchedEffect(noteId): Setting current note in ViewModel: $noteId")
                         noteRepository.setCurrentNote(noteId)
                     }
 
@@ -115,9 +124,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         }
     }
 
-    open fun createTouchHelper(surfaceView: SurfaceView) { }
+    open fun createTouchHelper() { }
 
-    open fun initializeBitmapManagerAndGestureHandler(surfaceView: SurfaceView, editorViewModel: EditorViewModel) { }
+    open fun initializeBitmapManager(surfaceView: SurfaceView, editorViewModel: EditorViewModel) { }
 
     override fun onResume() {
         super.onResume()
@@ -149,16 +158,54 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     private fun handleSurfaceViewCreated(sv: SurfaceView, vm: EditorViewModel) {
         surfaceView = sv
-        initializeBitmapManagerAndGestureHandler(surfaceView, vm)
+        initializeBitmapManager(surfaceView, vm)
+        /* NEEDS
+        1. surfaceView
+        2. editorViewModel
+         */
+
+        initializeGestureHandler()
+        /* NEEDS
+        1. surfaceView
+        2. editorViewModel
+         */
         setViewModel(vm)
 
         // Create items used for drawing
-        loadShapesAndRefreshScreen() // loads shapes, sets currentNote change listener. Importantly, refreshes screen so has to be called here
-        initializePaint() // init paint, really not much
-        initializeDeviceReceiver() // init device receiver for pen events
-        shapeManager = ShapeManager(editorViewModel)
-        initializeTouchHelper(surfaceView)
-        createTouchHelper(surfaceView)
+        initializeShapeMaanager()
+        /* NEEDS
+        1. editorViewModel
+         */
+
+        initializeStylusHandler()
+        /*  NEEDS
+        1. surfaceView
+        2. editorViewModel
+        3. bitmapManager
+        4. shapeManager
+         */
+
+        initializePaint()
+
+        initializeDeviceReceiver()
+        /* NEEDS
+        1. surfaceView
+        2. onyxTouchHelper
+        3. bitmap (can be null maybe?)
+        */
+
+        initializeSurfaceCallback()
+        /* NEEDS
+        1. surfaceView
+        2. bitmap
+        3. bitmapCanvas
+         */
+
+        createTouchHelper()
+        /* NEEDS
+        1. surfaceView
+        2. stylusHandler
+         */
 
         // Set observers for:
         // 1. When pen profile changes
@@ -167,7 +214,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         setObservers()
     }
 
-    protected open fun initializeTouchHelper(surfaceView: SurfaceView) {
+    protected open fun initializeSurfaceCallback() {
         Log.d("DebugAug12", "Initializing touch helper")
 
         surfaceView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->

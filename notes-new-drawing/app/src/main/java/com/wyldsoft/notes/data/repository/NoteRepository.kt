@@ -11,15 +11,15 @@ import kotlinx.coroutines.flow.*
 import java.util.UUID
 
 interface NoteRepository {
-    suspend fun getNote(id: String): Note?
+    suspend fun getNote(id: String): Note
     suspend fun saveNote(note: Note)
     suspend fun deleteNote(id: String)
     suspend fun addShape(noteId: String, shape: Shape)
     suspend fun removeShape(noteId: String, shapeId: String)
-    fun getCurrentNote(): StateFlow<Note?>
+    fun getCurrentNote(): StateFlow<Note>
     suspend fun createNewNote(): Note
     suspend fun setCurrentNote(noteId: String)
-    fun getNoteFlow(noteId: String): Flow<Note?>
+    fun getNoteFlow(noteId: String): Flow<Note>
     suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float)
     suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String)
 }
@@ -28,20 +28,20 @@ class NoteRepositoryImpl(
     private val noteDao: NoteDao,
     private val shapeDao: ShapeDao
 ) : NoteRepository {
-    private val _currentNote = MutableStateFlow<Note?>(null)
-    override fun getCurrentNote(): StateFlow<Note?> = _currentNote.asStateFlow()
+    private var _currentNote = MutableStateFlow(Note()) // set a default empty note
+    override fun getCurrentNote(): StateFlow<Note> = _currentNote.asStateFlow()
     
-    override suspend fun getNote(id: String): Note? {
-        val noteEntity = noteDao.getNote(id) ?: return null
+    override suspend fun getNote(id: String): Note {
+        val noteEntity = noteDao.getNote(id)
         val shapes = shapeDao.getShapesForNoteOnce(id)
         return noteEntity.toNote(shapes)
     }
     
-    override fun getNoteFlow(noteId: String): Flow<Note?> {
+    override fun getNoteFlow(noteId: String): Flow<Note> {
         return noteDao.getNoteFlow(noteId).combine(
             shapeDao.getShapesForNote(noteId)
         ) { noteEntity, shapes ->
-            noteEntity?.toNote(shapes)
+            noteEntity.toNote(shapes)
         }
     }
     
@@ -50,7 +50,7 @@ class NoteRepositoryImpl(
         noteDao.update(noteEntity)
         
         // Update current note if it's the same
-        if (_currentNote.value?.id == note.id) {
+        if (_currentNote.value.id == note.id) {
             Log.d("NoteRepository", "Updating current note: ${note.id}")
             _currentNote.value = note
         }
@@ -58,10 +58,6 @@ class NoteRepositoryImpl(
     
     override suspend fun deleteNote(id: String) {
         noteDao.deleteById(id)
-        if (_currentNote.value?.id == id) {
-            Log.d("NoteRepository", "Deleting current note: $id")
-            _currentNote.value = null
-        }
     }
     
     override suspend fun addShape(noteId: String, shape: Shape) {
@@ -69,7 +65,7 @@ class NoteRepositoryImpl(
         shapeDao.insert(shapeEntity)
         
         // Update current note if needed
-        if (_currentNote.value?.id == noteId) {
+        if (_currentNote.value.id == noteId) {
             Log.d("NoteRepository", "Adding shape to current note: $noteId")
             _currentNote.value = getNote(noteId)
         }
@@ -79,7 +75,7 @@ class NoteRepositoryImpl(
         shapeDao.deleteById(shapeId)
         
         // Update current note if needed
-        if (_currentNote.value?.id == noteId) {
+        if (_currentNote.value.id == noteId) {
             Log.d("NoteRepository", "Removing shape from current note: $noteId")
             _currentNote.value = getNote(noteId)
         }
@@ -104,7 +100,19 @@ class NoteRepositoryImpl(
     }
     
     override suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float) {
-        val noteEntity = noteDao.getNote(noteId) ?: return
+        val notes = noteDao.getAllNotes()
+        notes.forEach { Log.d("NoteRepository", "Note id: ${it.id}") }
+        Log.d("NoteRepository", "There are ${notes.size} notes in the database")
+
+        Log.d("NoteRepository", "Updating viewport state for note: $noteId, scale: $scale, offsetX: $offsetX, offsetY: $offsetY")
+        val noteEntity = noteDao.getNote(noteId)
+
+        if (noteEntity == null) {
+            Log.e("NoteRepository", "Note with ID $noteId not found")
+            return
+        }
+
+        Log.d("NoteRepository", "Current note entity: $noteEntity")
         val updatedEntity = noteEntity.copy(
             viewportScale = scale,
             viewportOffsetX = offsetX,
@@ -114,14 +122,14 @@ class NoteRepositoryImpl(
         noteDao.update(updatedEntity)
         
         // Update current note if it's the same
-        if (_currentNote.value?.id == noteId) {
+        if (_currentNote.value.id == noteId) {
             Log.d("NoteRepository", "Updating viewport state for current note: $noteId")
             setCurrentNote(noteId)
         }
     }
     
     override suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String) {
-        val noteEntity = noteDao.getNote(noteId) ?: return
+        val noteEntity = noteDao.getNote(noteId)
         val updatedEntity = noteEntity.copy(
             isPaginationEnabled = isPaginationEnabled,
             paperSize = paperSize,
@@ -130,7 +138,8 @@ class NoteRepositoryImpl(
         noteDao.update(updatedEntity)
         
         // Update current note if it's the same
-        if (_currentNote.value?.id == noteId) {
+        if (_currentNote.value.id == noteId) {
+            Log.d("NoteRepository", "Updating pagination settings for current note: $noteId")
             setCurrentNote(noteId)
         }
     }

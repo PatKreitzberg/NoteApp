@@ -16,9 +16,7 @@ import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import com.wyldsoft.notes.gestures.GestureHandler
 import android.view.MotionEvent
-import androidx.lifecycle.lifecycleScope
 import com.onyx.android.sdk.api.device.epd.EpdController
-import kotlinx.coroutines.launch
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapeManager
@@ -38,19 +36,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "NEW OnyxDrawingActivity")
-    }
-
-    override fun loadShapesAndRefreshScreen() {
-        // Onyx-specific initialization
-        // Note: stylus handler will be created in createTouchHelper
-        // when surfaceView is available
-        lifecycleScope.launch {
-            editorViewModel.currentNote.value?.let { note ->
-                Log.d(TAG, "loadShapesAndRefreshScreen currentNote has changed, calling refresh")
-                loadShapesFromNote(note)
-                forceScreenRefresh()
-            }
-        }
     }
 
     fun createOnyxStylusHandler(): OnyxStylusHandler {
@@ -78,7 +63,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    override fun createTouchHelper(surfaceView: SurfaceView) {
+    override fun createTouchHelper() {
         Log.d(TAG, "createTouchHelper")
         
         val callback = stylusHandler.createOnyxCallback()
@@ -107,6 +92,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 false // Let Onyx SDK handle stylus/eraser events
             }
         }
+    }
+
+    override fun initializeStylusHandler() {
+        stylusHandler = createOnyxStylusHandler()
+        stylusHandler.updatePenProfile(currentPenProfile)
+    }
+
+    override fun initializeShapeMaanager() {
+        shapeManager = ShapeManager(editorViewModel)
+        forceScreenRefresh()
     }
 
     override fun createDeviceReceiver(): BaseDeviceReceiver {
@@ -226,7 +221,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onViewportChanged() {
         Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
         // Recreate bitmap with new viewport transformation
-        bitmapManager.recreateBitmapFromShapes(stylusHandler.drawnShapes)
+        bitmapManager.recreateBitmapFromShapes(shapeManager.shapes)
         // Request screen refresh to show the updated shapes
         forceScreenRefresh()
     }
@@ -246,15 +241,18 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun recreateBitmapFromShapes() {
         Log.d(TAG, "recreateBitmapFromShapes called from OnyxDrawingActivity")
         getOrCreateBitmap() // Ensure bitmap exists
-        bitmapManager.recreateBitmapFromShapes(stylusHandler.drawnShapes)
+        bitmapManager.recreateBitmapFromShapes(shapeManager.shapes)
     }
 
-    override fun initializeBitmapManagerAndGestureHandler(sv: SurfaceView, vm: EditorViewModel) {
+    override fun initializeGestureHandler() {
+        Log.d(TAG, "initializeGestureHandler called")
+        // Initialize gesture handler with the current surface view
+        gestureHandler = GestureHandler(this, surfaceView)
+        // Set the viewport manager to the gesture handler
+        gestureHandler.setViewportManager(editorViewModel.viewportManager)
+    }
+    override fun initializeBitmapManager(sv: SurfaceView, vm: EditorViewModel) {
         Log.d(TAG, "BitmapManager initialized with current bitmap")
-        // Initialize gesture handler (viewportManager will be set later when viewModel is available)
-        gestureHandler = GestureHandler(this, sv)
-        gestureHandler.setViewportManager(vm.viewportManager)
-
         this.bitmapManager = BitmapManager(
             surfaceView = sv,
             viewModel = vm,
@@ -267,8 +265,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun setViewModel(viewModel: EditorViewModel) {
         super.setViewModel(viewModel)
             Log.d(TAG, "setViewModel called")
-            stylusHandler = createOnyxStylusHandler()
-            stylusHandler.updatePenProfile(currentPenProfile)
+
     }
 
     private fun getRxManager(): RxManager {
@@ -278,19 +275,4 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         return rxManager!!
     }
 
-    // Load shapes from note into the drawing
-    private fun loadShapesFromNote(note: com.wyldsoft.notes.domain.models.Note) {
-        // Clear existing shapes
-        stylusHandler.drawnShapes.clear()
-        
-        // Convert domain shapes to SDK shapes
-        for (domainShape in note.shapes) {
-            val sdkShape = stylusHandler.convertDomainShapeToSdkShape(domainShape)
-            sdkShape.let { stylusHandler.drawnShapes.add(it) }
-        }
-        
-        // Recreate bitmap with all shapes
-        forceScreenRefresh()
-    }
-    
 }
