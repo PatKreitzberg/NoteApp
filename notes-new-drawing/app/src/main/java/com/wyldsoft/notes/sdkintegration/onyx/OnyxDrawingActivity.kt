@@ -19,7 +19,7 @@ import android.view.MotionEvent
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
-import com.wyldsoft.notes.shapemanagement.ShapeManager
+import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 
 open class OnyxDrawingActivity : BaseDrawingActivity() {
@@ -45,13 +45,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             editorViewModel,
             getRxManager(),
             bitmapManager,
-            shapeManager,
+            shapesManager,
             onDrawingStateChanged = { isDrawing ->
                 if (isDrawing) {
                     disableFingerTouch()
                 } else {
                     enableFingerTouch()
-                    forceScreenRefresh()
+                    // forceScreenRefresh() // todo should we force screen refresh here? I HIGHLY doubt it
                 }
             },
             onShapeCompleted = { id, points, pressures ->
@@ -100,7 +100,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun initializeShapeMaanager() {
-        shapeManager = ShapeManager(editorViewModel)
+        shapesManager = ShapesManager(editorViewModel)
         forceScreenRefresh()
     }
 
@@ -221,7 +221,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onViewportChanged() {
         Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
         // Recreate bitmap with new viewport transformation
-        bitmapManager.recreateBitmapFromShapes(shapeManager.shapes)
+        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
         // Request screen refresh to show the updated shapes
         forceScreenRefresh()
     }
@@ -241,7 +241,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun recreateBitmapFromShapes() {
         Log.d(TAG, "recreateBitmapFromShapes called from OnyxDrawingActivity")
         getOrCreateBitmap() // Ensure bitmap exists
-        bitmapManager.recreateBitmapFromShapes(shapeManager.shapes)
+        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
     }
 
     override fun initializeGestureHandler() {

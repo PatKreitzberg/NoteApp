@@ -15,7 +15,7 @@ import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.DrawManager
-import com.wyldsoft.notes.shapemanagement.ShapeManager
+import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 /**
  * Handles all stylus-related operations for Onyx devices:
@@ -38,9 +38,9 @@ class OnyxStylusHandler(
     private val viewModel: EditorViewModel,
     private val rxManager: RxManager,
     private val bitmapManager: BitmapManager,
-    private val shapeManager: ShapeManager,
-    private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
-    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>) -> Unit,
+    private val shapesManager: ShapesManager,
+    private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit, // if false then enableFingerTouch and force screen refresh. If true then disableFingerTouch
+    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>) -> Unit, //
     private val onShapeRemoved: (shapeId: String) -> Unit
 ) {
     companion object {
@@ -96,7 +96,7 @@ class OnyxStylusHandler(
             touchPointList?.points?.let { points ->
                 val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
                 val newShape = drawManager.newShape(notePointList)
-                shapeManager.shapes.add(newShape)
+                shapesManager.addShape(newShape)
             }
             // moved from onEndRawDraing
             isDrawingInProgress = false
@@ -123,7 +123,7 @@ class OnyxStylusHandler(
         override fun onRawErasingTouchPointListReceived(touchPointList: TouchPointList?) {
             touchPointList?.let { erasePointList ->
                 val noteErasePointList = convertTouchPointListToNoteCoordinates(erasePointList)
-                eraseManager.handleErasing(noteErasePointList, shapeManager)
+                eraseManager.handleErasing(noteErasePointList, shapesManager)
             }
         }
     }
@@ -159,7 +159,7 @@ class OnyxStylusHandler(
      * Clears all drawings
      */
     fun clearDrawing() {
-        shapeManager.shapes.clear()
+        shapesManager.clear()
         bitmapManager.clearDrawing()
     }
 

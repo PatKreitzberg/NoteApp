@@ -29,7 +29,7 @@ import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.rendering.BitmapManager
-import com.wyldsoft.notes.shapemanagement.ShapeManager
+import com.wyldsoft.notes.shapemanagement.ShapesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -47,7 +47,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected lateinit var surfaceView: SurfaceView // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var bitmapManager: BitmapManager // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
-    protected lateinit var shapeManager: ShapeManager
+    protected lateinit var shapesManager: ShapesManager
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun initializeShapeMaanager()
@@ -182,7 +182,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         1. surfaceView
         2. editorViewModel
         3. bitmapManager
-        4. shapeManager
+        4. shapesManager
          */
 
         initializePaint()

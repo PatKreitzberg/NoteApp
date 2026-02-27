@@ -24,11 +24,11 @@ class EraseManager(
         private const val TAG = "EraseManager"
     }
 
-    internal fun handleErasing(noteErasePointList: TouchPointList, shapeManager: ShapeManager) {
+    internal fun handleErasing(noteErasePointList: TouchPointList, shapesManager: ShapesManager) {
         // Find shapes that intersect with the erase touch points
         val intersectingShapes = findIntersectingShapes(
             noteErasePointList,
-            shapeManager.shapes
+            shapesManager.shapes()
         )
 
         if (intersectingShapes.isNotEmpty()) {
@@ -38,7 +38,7 @@ class EraseManager(
             val refreshRect = calculateRefreshRect(intersectingShapes)
 
             // Remove intersecting shapes from our shape list
-            shapeManager.shapes.removeAll(intersectingShapes.toSet())
+            shapesManager.removeAll(intersectingShapes.toSet())
             for (shape in intersectingShapes) {
                 onShapeRemoved(shape.id)
             }
@@ -48,14 +48,14 @@ class EraseManager(
                 partialEraseRefresh.performPartialRefresh(
                     surfaceView,
                     rect,
-                    shapeManager.shapes, // Pass remaining shapes
+                    shapesManager.shapes(), // Pass remaining shapes
                     rendererHelper,
                     rxManager
                 )
             }
 
             // Also update the main bitmap by recreating it from remaining shapes
-            bitmapManager.recreateBitmapFromShapes(shapeManager.shapes)
+            bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
         }
     }
 
