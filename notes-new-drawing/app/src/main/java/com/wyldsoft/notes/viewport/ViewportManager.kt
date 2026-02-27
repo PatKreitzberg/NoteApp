@@ -22,7 +22,7 @@ class ViewportManager {
     
     companion object {
         private const val MIN_SCALE = 0.5f
-        private const val MAX_SCALE = 5.0f
+        private const val MAX_SCALE = 2.0f
         private const val TOP_LIMIT = 0f // Top limit in NoteCoordinates
     }
     

@@ -51,29 +51,26 @@ fun ViewportInfo(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
-                
-                // Separator
-                Text(
-                    text = "|",
-                    color = Color.White.copy(alpha = 0.5f),
-                    fontSize = 14.sp
-                )
-            } else {
-                // Zoom info (only when pagination is disabled)
-                Text(
-                    text = "Zoom: $zoomPercent%",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                
-                // Separator
+
                 Text(
                     text = "|",
                     color = Color.White.copy(alpha = 0.5f),
                     fontSize = 14.sp
                 )
             }
+
+            Text(
+                text = "Zoom: $zoomPercent%",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Text(
+                text = "|",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 14.sp
+            )
             
             // Scroll position
             Text(
