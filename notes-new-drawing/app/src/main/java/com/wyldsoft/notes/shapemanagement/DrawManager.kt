@@ -21,6 +21,10 @@ class DrawManager(
 ) {
     private var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
 
+    fun updatePenProfile(penProfile: PenProfile) {
+        currentPenProfile = penProfile
+    }
+
     fun newShape(noteCoordinateTouchPointList: TouchPointList): BaseShape {
         Log.d("DrawManager", "Creating new shape with ${noteCoordinateTouchPointList.size()} points")
         // Create shape and add to bitmap then render to screen
@@ -47,15 +51,7 @@ class DrawManager(
      * Creates a shape based on the current pen type
      */
     private fun createShapeFromPenType(touchPointList: TouchPointList): BaseShape {
-        // Map pen type to shape type
-        val shapeType = when (currentPenProfile.penType) {
-            PenType.BALLPEN, PenType.PENCIL -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE
-            PenType.FOUNTAIN -> ShapeFactory.SHAPE_BRUSH_SCRIBBLE
-            PenType.MARKER -> ShapeFactory.SHAPE_MARKER_SCRIBBLE
-            PenType.CHARCOAL, PenType.CHARCOAL_V2 -> ShapeFactory.SHAPE_CHARCOAL_SCRIBBLE
-            PenType.NEO_BRUSH -> ShapeFactory.SHAPE_NEO_BRUSH_SCRIBBLE
-            PenType.DASH -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE // Default to pencil for dash
-        }
+        val shapeType = ShapesManager.penTypeToShapeType(currentPenProfile.penType)
 
         // Create the shape
         val shape = ShapeFactory.createShape(shapeType)

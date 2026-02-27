@@ -7,6 +7,7 @@ import androidx.room.Index
 import androidx.room.TypeConverters
 import com.wyldsoft.notes.data.database.converters.Converters
 import com.wyldsoft.notes.domain.models.ShapeType
+import com.wyldsoft.notes.pen.PenType
 import android.graphics.PointF
 
 @Entity(
@@ -30,6 +31,7 @@ data class ShapeEntity(
     val points: List<PointF>,
     val strokeWidth: Float,
     val strokeColor: Int,
+    val penType: PenType = PenType.BALLPEN,
     val pressure: List<Float> = emptyList(),
     val timestamp: Long = System.currentTimeMillis()
 )

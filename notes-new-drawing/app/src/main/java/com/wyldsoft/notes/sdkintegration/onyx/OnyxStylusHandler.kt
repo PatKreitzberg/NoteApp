@@ -10,7 +10,6 @@ import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.EraseManager
-import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
@@ -71,6 +70,7 @@ class OnyxStylusHandler(
      */
     fun updatePenProfile(penProfile: PenProfile) {
         currentPenProfile = penProfile
+        drawManager.updatePenProfile(penProfile)
     }
 
     /**
@@ -164,30 +164,10 @@ class OnyxStylusHandler(
     }
 
     /**
-     * Converts domain model shape to Onyx SDK shape
+     * Converts domain model shape to Onyx SDK shape.
+     * Delegates to ShapesManager for consistent conversion.
      */
     fun convertDomainShapeToSdkShape(domainShape: com.wyldsoft.notes.domain.models.Shape): BaseShape {
-        // Create TouchPointList from domain shape points
-        val touchPointList = TouchPointList()
-        for (i in domainShape.points.indices) {
-            val point = domainShape.points[i]
-            val pressure = if (i < domainShape.pressure.size) domainShape.pressure[i] else 0.5f
-            val touchPoint = TouchPoint(point.x, point.y, pressure, 1f, System.currentTimeMillis())
-            touchPointList.add(touchPoint)
-        }
-        
-        // Map shape type - for now assuming all are strokes
-        val shapeType = ShapeFactory.SHAPE_PENCIL_SCRIBBLE
-        
-        val shape = ShapeFactory.createShape(shapeType)
-        shape.setTouchPointList(touchPointList)
-            .setStrokeColor(domainShape.strokeColor)
-            .setStrokeWidth(domainShape.strokeWidth)
-            .setShapeType(shapeType)
-            
-        // Update bounding rect for hit testing
-        shape.updateShapeRect()
-        
-        return shape
+        return shapesManager.convertDomainShapeToSdkShape(domainShape)
     }
 }

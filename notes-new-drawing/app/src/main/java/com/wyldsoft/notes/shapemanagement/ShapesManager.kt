@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.shapemanagement
 
 import android.util.Log
+import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.onyx.android.sdk.pen.data.TouchPointList
@@ -14,7 +15,19 @@ import com.onyx.android.sdk.data.note.TouchPoint
 class ShapesManager(
     private val editorViewModel: EditorViewModel
 ) {
-    companion object { val TAG = "ShapeManager"}
+    companion object {
+        val TAG = "ShapeManager"
+
+        fun penTypeToShapeType(penType: PenType): Int {
+            return when (penType) {
+                PenType.BALLPEN, PenType.PENCIL, PenType.DASH -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE
+                PenType.FOUNTAIN -> ShapeFactory.SHAPE_BRUSH_SCRIBBLE
+                PenType.MARKER -> ShapeFactory.SHAPE_MARKER_SCRIBBLE
+                PenType.CHARCOAL, PenType.CHARCOAL_V2 -> ShapeFactory.SHAPE_CHARCOAL_SCRIBBLE
+                PenType.NEO_BRUSH -> ShapeFactory.SHAPE_NEO_BRUSH_SCRIBBLE
+            }
+        }
+    }
     private val shapes: MutableList<BaseShape> = mutableListOf<BaseShape>()
 
     init {
@@ -41,14 +54,21 @@ class ShapesManager(
             touchPointList.add(touchPoint)
         }
 
-        // Map shape type - for now assuming all are strokes
-        val shapeType = ShapeFactory.SHAPE_PENCIL_SCRIBBLE
+        // Map pen type to SDK shape type
+        val shapeType = penTypeToShapeType(domainShape.penType)
 
         val shape = ShapeFactory.createShape(shapeType)
         shape.setTouchPointList(touchPointList)
             .setStrokeColor(domainShape.strokeColor)
             .setStrokeWidth(domainShape.strokeWidth)
             .setShapeType(shapeType)
+
+        // Set texture for charcoal pen types
+        if (domainShape.penType == PenType.CHARCOAL_V2) {
+            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V2)
+        } else if (domainShape.penType == PenType.CHARCOAL) {
+            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V1)
+        }
 
         // Update bounding rect for hit testing
         shape.updateShapeRect()

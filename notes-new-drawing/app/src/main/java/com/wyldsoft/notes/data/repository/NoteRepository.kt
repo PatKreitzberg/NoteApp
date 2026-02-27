@@ -181,11 +181,12 @@ class NoteRepositoryImpl(
             points = points,
             strokeWidth = strokeWidth,
             strokeColor = strokeColor,
+            penType = penType,
             pressure = pressure,
             timestamp = timestamp
         )
     }
-    
+
     private fun Shape.toEntity(noteId: String): ShapeEntity {
         Log.d("NoteRepository","Shape.toEntity id is ${id}")
         return ShapeEntity(
@@ -195,6 +196,7 @@ class NoteRepositoryImpl(
             points = points,
             strokeWidth = strokeWidth,
             strokeColor = strokeColor,
+            penType = penType,
             pressure = pressure,
             timestamp = timestamp
         )

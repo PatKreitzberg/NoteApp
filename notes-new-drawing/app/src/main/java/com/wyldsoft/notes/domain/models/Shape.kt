@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.domain.models
 
 import android.graphics.PointF
+import com.wyldsoft.notes.pen.PenType
 import java.util.UUID
 
 /**
@@ -11,6 +12,7 @@ import java.util.UUID
  * @property points List of points defining the shape's geometry.
  * @property strokeWidth Width of the stroke used to draw the shape.
  * @property strokeColor Color of the stroke used to draw the shape.
+ * @property penType The pen type used to draw this shape (for correct rendering style on redraw).
  * @property pressure Pressure values for each point, if applicable.
  * @property timestamp Timestamp when the shape was created or modified.
  */
@@ -20,6 +22,7 @@ data class Shape(
     val points: List<PointF>, // saved in NoteCoordinates
     val strokeWidth: Float,
     val strokeColor: Int,
+    val penType: PenType = PenType.BALLPEN,
     val pressure: List<Float> = emptyList(),
     val timestamp: Long = System.currentTimeMillis()
 )

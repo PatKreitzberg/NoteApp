@@ -106,6 +106,7 @@ class EditorViewModel(
                 points = points,
                 strokeWidth = _currentPenProfile.value.strokeWidth,
                 strokeColor = _currentPenProfile.value.getColorAsInt(),
+                penType = _currentPenProfile.value.penType,
                 pressure = pressures
             )
             noteRepository.addShape(currentNote.value.id, shape)

@@ -23,7 +23,7 @@ import java.util.UUID
         NoteNotebookCrossRef::class,
         ShapeEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -37,7 +37,13 @@ abstract class NotesDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: NotesDatabase? = null
-        
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE shapes ADD COLUMN penType TEXT NOT NULL DEFAULT 'BALLPEN'")
+            }
+        }
+
         fun getDatabase(context: Context): NotesDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -45,6 +51,7 @@ abstract class NotesDatabase : RoomDatabase() {
                     NotesDatabase::class.java,
                     "notes_database"
                 )
+                .addMigrations(MIGRATION_1_2)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
