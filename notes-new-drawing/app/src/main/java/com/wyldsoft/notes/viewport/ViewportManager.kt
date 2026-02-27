@@ -50,11 +50,6 @@ class ViewportManager {
      * @param focusY The Y coordinate in SurfaceViewCoordinates to zoom around
      */
     fun updateScale(scaleFactor: Float, focusX: Float, focusY: Float) {
-        // Disable zoom in pagination mode
-        if (isPaginationMode) {
-            return
-        }
-        
         Log.d("ViewportManager", "updateScale: scaleFactor=$scaleFactor, focusX=$focusX, focusY=$focusY")
         val currentState = _viewportState.value
         val newScale = (currentState.scale * scaleFactor).coerceIn(MIN_SCALE, MAX_SCALE)
@@ -196,21 +191,12 @@ class ViewportManager {
     
     /**
      * Sets pagination mode on or off.
-     * When pagination is on, zoom is disabled and horizontal scrolling is restricted.
+     * When pagination is on, horizontal scrolling is restricted.
      */
     fun setPaginationMode(enabled: Boolean, screenWidth: Int) {
         isPaginationMode = enabled
         maxWidth = screenWidth
         Log.d("ViewportManager", "setPaginationMode: enabled=$enabled, screenWidth=$screenWidth")
-
-        if (enabled) {
-            // Reset to default scale and horizontal offset when enabling pagination
-            _viewportState.value = _viewportState.value.copy(
-                scale = 1.0f,
-                offsetX = 0f
-            )
-            updateMatrices()
-        }
     }
 }
 

@@ -47,11 +47,13 @@ class EditorViewModel(
     val viewportManager = ViewportManager()
     val viewportState = viewportManager.viewportState
     
-    // Pagination state
-    private val _isPaginationEnabled = MutableStateFlow(true)
+    // Pagination state - initialized from the current note's settings
+    private val _isPaginationEnabled = MutableStateFlow(currentNote.value.isPaginationEnabled)
     val isPaginationEnabled: StateFlow<Boolean> = _isPaginationEnabled.asStateFlow()
-    
-    private val _paperSize = MutableStateFlow(PaperSize.LETTER)
+
+    private val _paperSize = MutableStateFlow(
+        PaperSize.entries.find { it.name == currentNote.value.paperSize } ?: PaperSize.LETTER
+    )
     val paperSize: StateFlow<PaperSize> = _paperSize.asStateFlow()
     
     private val _currentPageNumber = MutableStateFlow(1)
@@ -142,6 +144,7 @@ class EditorViewModel(
     fun setScreenWidth(width: Int) {
         _screenWidth.value = width
         calculatePageDimensions()
+        viewportManager.setPaginationMode(_isPaginationEnabled.value, width)
     }
     
     private fun calculatePageDimensions() {
