@@ -19,7 +19,7 @@ class PaginationRendererToScreenRequest(
     private val viewModel: EditorViewModel?
 ) : RxRequest() {
     
-    private val drawingManager = DrawingManager()
+    private val drawingManager = DrawingManager(viewModel?.viewportManager)
     
     override fun execute() {
         renderToScreen()
@@ -48,8 +48,7 @@ class PaginationRendererToScreenRequest(
                         canvas = canvas,
                         screenWidth = vm.screenWidth.value,
                         pageHeight = vm.pageHeight.value,
-                        isPaginationEnabled = true,
-                        viewportOffsetY = vm.viewportState.value.offsetY
+                        isPaginationEnabled = true
                     )
                 }
             }
