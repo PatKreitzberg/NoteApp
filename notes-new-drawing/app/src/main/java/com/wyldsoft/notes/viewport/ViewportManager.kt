@@ -34,10 +34,6 @@ class ViewportManager {
     private val transformMatrix = Matrix()
     private val inverseMatrix = Matrix()
     
-    // Pagination mode settings
-    private var isPaginationMode = false
-    private var maxWidth = 0
-    
     // View dimensions (set by the activity)
     var viewWidth = 0
     var viewHeight = 0
@@ -93,12 +89,6 @@ class ViewportManager {
         // Apply top limit constraint (can't scroll above y=0 in NoteCoordinates)
         // When offsetY >= 0, we're at or above the top
         newOffsetY = min(newOffsetY, TOP_LIMIT * currentState.scale)
-        
-        // In pagination mode, restrict horizontal scrolling
-        if (isPaginationMode) {
-            // Keep X offset at 0 (no horizontal scrolling)
-            newOffsetX = 0f
-        }
         
         // No bottom limit - infinite scroll down
         
@@ -188,16 +178,7 @@ class ViewportManager {
      * Gets the current zoom percentage (100% = 1.0 scale).
      */
     fun getZoomPercentage(): Int = (_viewportState.value.scale * 100).toInt()
-    
-    /**
-     * Sets pagination mode on or off.
-     * When pagination is on, horizontal scrolling is restricted.
-     */
-    fun setPaginationMode(enabled: Boolean, screenWidth: Int) {
-        isPaginationMode = enabled
-        maxWidth = screenWidth
-        Log.d("ViewportManager", "setPaginationMode: enabled=$enabled, screenWidth=$screenWidth")
-    }
+
 }
 
 /**

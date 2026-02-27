@@ -144,7 +144,6 @@ class EditorViewModel(
     fun setScreenWidth(width: Int) {
         _screenWidth.value = width
         calculatePageDimensions()
-        viewportManager.setPaginationMode(_isPaginationEnabled.value, width)
     }
     
     private fun calculatePageDimensions() {
@@ -158,12 +157,6 @@ class EditorViewModel(
         viewModelScope.launch {
             Log.d("EditorViewModel", "Updating pagination settings for note: ${currentNote.value.id}, enabled: $enabled, paperSize: ${_paperSize.value.name}")
             noteRepository.updatePaginationSettings(currentNote.value.id, enabled, _paperSize.value.name)
-        }
-        // Update viewport restrictions
-        if (enabled) {
-            viewportManager.setPaginationMode(true, _screenWidth.value)
-        } else {
-            viewportManager.setPaginationMode(false, 0)
         }
     }
     
