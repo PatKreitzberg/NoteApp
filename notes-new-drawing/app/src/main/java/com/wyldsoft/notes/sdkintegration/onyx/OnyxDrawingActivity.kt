@@ -160,30 +160,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun updateTouchHelperWithProfile() {
         Log.d(TAG, "updateTouchHelperWithProfile")
         stylusHandler.updatePenProfile(currentPenProfile)
-        onyxTouchHelper?.let { helper ->
-            helper.setRawDrawingEnabled(false)
-            helper.closeRawDrawing()
-
-            val limit = Rect()
-            surfaceView.getLocalVisibleRect(limit)
-
-            val excludeRects = editorViewModel.excludeRects.value
-            Log.d("ExclusionRects", "updateTouchHelperWithProfile Current exclusion rects ${excludeRects.size}")
-
-            helper.setStrokeWidth(currentPenProfile.strokeWidth)
-                .setStrokeColor(currentPenProfile.getColorAsInt())
-                .setLimitRect(limit, ArrayList(excludeRects))
-                .openRawDrawing()
-
-            helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
-            helper.setRawDrawingEnabled(true)
-            helper.setRawDrawingRenderEnabled(true)
-        }
+        reconfigureTouchHelper(editorViewModel.excludeRects.value, applyColor = true)
     }
 
     override fun updateTouchHelperExclusionZones(excludeRects: List<Rect>) {
         Log.d(TAG, "updateTouchHelperExclusionZones")
         stylusHandler.updatePenProfile(currentPenProfile)
+        reconfigureTouchHelper(excludeRects, applyColor = false)
+    }
+
+    private fun reconfigureTouchHelper(excludeRects: List<Rect>, applyColor: Boolean) {
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
             helper.closeRawDrawing()
@@ -191,12 +177,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             val limit = Rect()
             surfaceView.getLocalVisibleRect(limit)
 
-            Log.d("ExclusionRects", "updateTouchHelperExclusionZones Current exclusion rects ${excludeRects.size}")
-            helper.setStrokeWidth(currentPenProfile.strokeWidth)
-                .setLimitRect(limit, ArrayList(excludeRects))
+            val strokeConfig = helper.setStrokeWidth(currentPenProfile.strokeWidth)
+            if (applyColor) {
+                strokeConfig.setStrokeColor(currentPenProfile.getColorAsInt())
+            }
+            strokeConfig.setLimitRect(limit, ArrayList(excludeRects))
                 .openRawDrawing()
-            helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
 
+            helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
             helper.setRawDrawingEnabled(true)
             helper.setRawDrawingRenderEnabled(true)
         }

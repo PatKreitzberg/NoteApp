@@ -27,6 +27,14 @@ class ShapesManager(
                 PenType.NEO_BRUSH -> ShapeFactory.SHAPE_NEO_BRUSH_SCRIBBLE
             }
         }
+
+        fun applyCharcoalTexture(shape: BaseShape, penType: PenType) {
+            if (penType == PenType.CHARCOAL_V2) {
+                shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V2)
+            } else if (penType == PenType.CHARCOAL) {
+                shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V1)
+            }
+        }
     }
     private val shapes: MutableList<BaseShape> = mutableListOf<BaseShape>()
 
@@ -63,12 +71,7 @@ class ShapesManager(
             .setStrokeWidth(domainShape.strokeWidth)
             .setShapeType(shapeType)
 
-        // Set texture for charcoal pen types
-        if (domainShape.penType == PenType.CHARCOAL_V2) {
-            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V2)
-        } else if (domainShape.penType == PenType.CHARCOAL) {
-            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V1)
-        }
+        applyCharcoalTexture(shape, domainShape.penType)
 
         // Update bounding rect for hit testing
         shape.updateShapeRect()
@@ -92,14 +95,6 @@ class ShapesManager(
         Remove shape from note repository
          */
         shapes.remove(shape)
-    }
-
-    fun translateShape(shape: BaseShape, deltaX: Float, deltaY: Float) {
-        //shape.translate(deltaX, deltaY)
-    }
-
-    fun scaleShape(shape: BaseShape) {
-
     }
 
     fun shapes() : MutableList<BaseShape> {

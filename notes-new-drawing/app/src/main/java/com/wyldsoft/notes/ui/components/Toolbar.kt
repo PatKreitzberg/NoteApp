@@ -44,9 +44,6 @@ fun Toolbar(
         isStrokeSelectionOpen = isStrokeOptionsOpen
     }
     
-    // Force refresh counter for debugging
-    val refreshTriggerForUI by viewModel.refreshUi.collectAsState()
-
     fun forceUIRefresh() {
         Log.d("Toolbar:", "UI Refresh triggered WARNING: CURRENTLY DOES NOTHING")
         viewModel.forceRefresh()
@@ -70,12 +67,12 @@ fun Toolbar(
     }
 
     fun openStrokeOptionsPanel() {
-        println("Opening stroke options panel for profile $selectedProfileIndex")
+        Log.d("Toolbar", "Opening stroke options panel for profile $selectedProfileIndex")
         viewModel.toggleStrokeOptions()
     }
 
     fun closeStrokeOptionsPanel() {
-        println("Closing stroke options panel")
+        Log.d("Toolbar", "Closing stroke options panel")
         if (isStrokeSelectionOpen) {
             viewModel.toggleStrokeOptions()
         }
@@ -109,14 +106,14 @@ fun Toolbar(
         // Immediately apply the new profile
         viewModel.updatePenProfile(newProfile)
 
-        println("Profile $selectedProfileIndex updated: $newProfile")
+        Log.d("Toolbar", "Profile $selectedProfileIndex updated: $newProfile")
     }
 
     // Listen for drawing events to close panel
     val isDrawing by viewModel.isDrawing.collectAsState()
     LaunchedEffect(isDrawing) {
         if (isDrawing && isStrokeSelectionOpen) {
-            println("Drawing started - closing stroke options panel")
+            Log.d("Toolbar", "Drawing started - closing stroke options panel")
             closeStrokeOptionsPanel()
         }
     }
@@ -176,7 +173,7 @@ fun Toolbar(
                 DisposableEffect(Unit) {
                     onDispose {
                         // This runs when the panel is actually removed from composition
-                        println("StrokeOptionsPanel removed from composition")
+                        Log.d("Toolbar", "StrokeOptionsPanel removed from composition")
                         removeStrokeOptionPanelRect()
                         forceUIRefresh()
                     }

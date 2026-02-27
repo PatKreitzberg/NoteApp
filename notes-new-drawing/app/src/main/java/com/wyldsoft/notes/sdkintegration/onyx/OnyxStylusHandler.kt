@@ -10,7 +10,6 @@ import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.EraseManager
-import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.DrawManager
@@ -163,11 +162,4 @@ class OnyxStylusHandler(
         bitmapManager.clearDrawing()
     }
 
-    /**
-     * Converts domain model shape to Onyx SDK shape.
-     * Delegates to ShapesManager for consistent conversion.
-     */
-    fun convertDomainShapeToSdkShape(domainShape: com.wyldsoft.notes.domain.models.Shape): BaseShape {
-        return shapesManager.convertDomainShapeToSdkShape(domainShape)
-    }
 }

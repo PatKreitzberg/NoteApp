@@ -65,7 +65,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
         // init database and repositories
         var noteRepositoryAndNotebookRepository = initializeDatabase()
-        val notebookId = intent.getStringExtra("notebookId") ?: return // note used but will be
         val noteId = intent.getStringExtra("noteId") ?: return
 
         CoroutineScope(Dispatchers.IO).launch {

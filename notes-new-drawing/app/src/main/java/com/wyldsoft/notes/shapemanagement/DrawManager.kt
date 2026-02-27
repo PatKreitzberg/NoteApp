@@ -63,12 +63,7 @@ class DrawManager(
         // Update bounding rect for hit testing
         shape.updateShapeRect()
 
-        // Set texture for charcoal if needed
-        if (currentPenProfile.penType == PenType.CHARCOAL_V2) {
-            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V2)
-        } else if (currentPenProfile.penType == PenType.CHARCOAL) {
-            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V1)
-        }
+        ShapesManager.applyCharcoalTexture(shape, currentPenProfile.penType)
 
         return shape
     }

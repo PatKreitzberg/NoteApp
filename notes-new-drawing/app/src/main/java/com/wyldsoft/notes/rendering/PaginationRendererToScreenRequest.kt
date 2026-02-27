@@ -26,10 +26,6 @@ class PaginationRendererToScreenRequest(
     }
     
     private fun renderToScreen() {
-        if (surfaceView == null) {
-            return
-        }
-        
         val viewRect = RenderingUtils.checkSurfaceView(surfaceView)
         EpdController.setViewDefaultUpdateMode(surfaceView, UpdateMode.HAND_WRITING_REPAINT_MODE)
         val canvas = surfaceView.holder.lockCanvas() ?: return

@@ -66,19 +66,6 @@ abstract class NotesDatabase : RoomDatabase() {
                                 )
                             )
                         }
-
-
-//                        // Create root folder on first database creation
-//                        INSTANCE?.let { database ->
-//                            CoroutineScope(Dispatchers.IO).launch {
-//                                val rootFolder = FolderEntity(
-//                                    id = "root",
-//                                    name = "Root",
-//                                    parentFolderId = null
-//                                )
-//                                database.folderDao().insert(rootFolder)
-//                            }
-//                        }
                     }
                 })
                 .build()

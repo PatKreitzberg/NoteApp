@@ -33,18 +33,6 @@ import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
  */
 class MainActivity : ComponentActivity() {
 
-    companion object {
-        /**
-         * Factory method to create the appropriate drawing activity
-         * based on device type or configuration
-         */
-        fun createForDevice(): Class<out MainActivity> {
-            // Future: Add device detection logic here
-            // For now, always return Onyx implementation
-            return MainActivity::class.java
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -93,9 +81,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-
-
-    // MainActivity can add any app-specific functionality here
-    // while inheriting all the drawing capabilities from OnyxDrawingActivity
 }

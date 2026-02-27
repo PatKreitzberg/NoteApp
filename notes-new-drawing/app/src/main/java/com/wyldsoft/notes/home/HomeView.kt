@@ -1,6 +1,5 @@
 package com.wyldsoft.notes.home
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -29,9 +28,6 @@ import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import com.wyldsoft.notes.data.repository.FolderRepository
-import com.wyldsoft.notes.data.repository.NoteRepository
-import com.wyldsoft.notes.data.repository.NotebookRepository
 
 @Composable
 fun HomeView(
@@ -47,11 +43,7 @@ fun HomeView(
     var showAppSettingsDialog by remember { mutableStateOf(false) }
     var selectedNotebook by remember { mutableStateOf<NotebookEntity?>(null) }
 
-    LaunchedEffect(viewModel.showCreateNotebookDialog) {
-        viewModel.showCreateNotebookDialog.collect { value ->
-            Log.d("HomeView", "showCreateNotebookDialog changed to $value")
-        }
-    }
+
 
     // Create notebook dialog
     if (showCreateNotebookDialog) {

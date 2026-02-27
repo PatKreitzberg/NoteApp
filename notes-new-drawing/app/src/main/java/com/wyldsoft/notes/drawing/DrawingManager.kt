@@ -1,15 +1,11 @@
 package com.wyldsoft.notes.drawing
 
 import android.graphics.Canvas
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PointF
 import android.graphics.Color
-import android.graphics.Rect
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
-import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.viewport.ViewportManager
 
 class DrawingManager(
@@ -116,17 +112,6 @@ class DrawingManager(
                 endPoint.x, endPoint.y,
                 paint
             )
-        }
-    }
-    
-    fun createPaintFromProfile(profile: PenProfile): Paint {
-        return Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-            color = profile.getColorAsInt()
-            strokeWidth = profile.strokeWidth
         }
     }
     

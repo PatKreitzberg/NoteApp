@@ -1,19 +1,11 @@
 package com.wyldsoft.notes
 
+import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 
 // Helper functions for pen profile management
 fun getDefaultStrokeWidthForPenType(penType: PenType): Float {
-    return when (penType) {
-        PenType.BALLPEN -> 5f
-        PenType.FOUNTAIN -> 8f
-        PenType.MARKER -> 20f
-        PenType.PENCIL -> 3f
-        PenType.CHARCOAL -> 15f
-        PenType.CHARCOAL_V2 -> 15f
-        PenType.NEO_BRUSH -> 25f
-        PenType.DASH -> 6f
-    }
+    return PenProfile.getDefaultProfile(penType).strokeWidth
 }
 
 fun getMaxStrokeSizeForPenType(penType: PenType): Float {

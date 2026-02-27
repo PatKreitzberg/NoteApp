@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.ui.components
 
 import android.graphics.Rect
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,17 +43,7 @@ fun StrokeOptionsPanel(
     var selectedPenType by remember(currentProfile) { mutableStateOf(currentProfile.penType) }
     val density = LocalDensity.current
 
-    // Calculate the maximum stroke size based on pen type
-    val maxStrokeSize = when (selectedPenType) {
-        PenType.BALLPEN -> 20f
-        PenType.FOUNTAIN -> 30f
-        PenType.MARKER -> 60f
-        PenType.PENCIL -> 15f
-        PenType.CHARCOAL -> 40f
-        PenType.CHARCOAL_V2 -> 40f
-        PenType.NEO_BRUSH -> 50f
-        PenType.DASH -> 25f
-    }
+    val maxStrokeSize = getMaxStrokeSizeForPenType(selectedPenType)
 
     // Apply settings immediately when they change
     LaunchedEffect(strokeSize, selectedColor, selectedPenType) {
@@ -81,7 +72,7 @@ fun StrokeOptionsPanel(
                     with(density) { boundingRect.bottom.toDp().value.toInt() }
                 )
 
-                println("StrokeOptionsPanel positioned: $panelRect")
+                Log.d("StrokeOptionsPanel", "Panel positioned: $panelRect")
                 onPanelPositioned(panelRect)
             }
     ) {
