@@ -22,8 +22,7 @@ import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.data.repository.*
-import com.wyldsoft.notes.data.database.NotesDatabase
+import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.drawing.DrawingActivityInterface
 import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
@@ -63,42 +62,26 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // init database and repositories
-        var noteRepositoryAndNotebookRepository = initializeDatabase()
+        val app = application as com.wyldsoft.notes.ScrotesApp
+        val noteRepository = app.noteRepository
+        val notebookRepository = app.notebookRepository
         val noteId = intent.getStringExtra("noteId") ?: return
 
         CoroutineScope(Dispatchers.IO).launch {
-            noteRepositoryAndNotebookRepository.first.setCurrentNote(noteId)
+            noteRepository.setCurrentNote(noteId)
         }
 
         // Create EditorViewModel with repositories
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
-        editorViewModel = EditorViewModel(noteRepositoryAndNotebookRepository.first, noteRepositoryAndNotebookRepository.second)
+        editorViewModel = EditorViewModel(noteRepository, notebookRepository)
 
         // Create the UI
-        setEditorViewAsContent(noteId, noteRepositoryAndNotebookRepository.first, noteRepositoryAndNotebookRepository.second)
+        setEditorViewAsContent(noteId, noteRepository)
         // setEditorViewAsContent will create a SurfaceView and then call handleSurfaceViewCreated
         // which will initialize rest of items.
     }
 
-    fun initializeDatabase(): Pair<NoteRepository, NotebookRepository> {
-        // Initialize database and repositories
-        val database = NotesDatabase.getDatabase(this)
-        val noteRepository = NoteRepositoryImpl(
-            noteDao = database.noteDao(),
-            shapeDao = database.shapeDao()
-        )
-        val folderRepository = FolderRepositoryImpl(
-            folderDao = database.folderDao()
-        )
-        val notebookRepository = NotebookRepositoryImpl(
-            notebookDao = database.notebookDao(),
-            noteDao = database.noteDao()
-        )
-        return Pair(noteRepository, notebookRepository)
-    }
-
-    fun setEditorViewAsContent(noteId: String, noteRepository: NoteRepository, notebookRepository: NotebookRepository) {
+    fun setEditorViewAsContent(noteId: String, noteRepository: NoteRepository) {
         Log.d(TAG, "ViewModel created")
         setContent {
             MinimaleditorTheme {

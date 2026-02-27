@@ -4,9 +4,26 @@ import android.app.Application
 import android.os.Build
 import com.onyx.android.sdk.rx.RxBaseAction
 import com.onyx.android.sdk.utils.ResManager
+import com.wyldsoft.notes.data.database.NotesDatabase
+import com.wyldsoft.notes.data.repository.*
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
 class ScrotesApp : Application() {
+
+    val database: NotesDatabase by lazy { NotesDatabase.getDatabase(this) }
+
+    val noteRepository: NoteRepository by lazy {
+        NoteRepositoryImpl(noteDao = database.noteDao(), shapeDao = database.shapeDao())
+    }
+
+    val folderRepository: FolderRepository by lazy {
+        FolderRepositoryImpl(folderDao = database.folderDao())
+    }
+
+    val notebookRepository: NotebookRepository by lazy {
+        NotebookRepositoryImpl(notebookDao = database.notebookDao(), noteDao = database.noteDao())
+    }
+
     override fun onCreate() {
         super.onCreate()
         ResManager.init(this)
