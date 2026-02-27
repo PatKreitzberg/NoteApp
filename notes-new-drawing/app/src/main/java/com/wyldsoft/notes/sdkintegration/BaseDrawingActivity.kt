@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.LaunchedEffect
 import androidx.core.graphics.createBitmap
 import com.wyldsoft.notes.editor.EditorView
 import com.wyldsoft.notes.pen.PenProfile
@@ -31,6 +30,7 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 
 
 abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterface {
@@ -67,7 +67,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         val notebookRepository = app.notebookRepository
         val noteId = intent.getStringExtra("noteId") ?: return
 
-        CoroutineScope(Dispatchers.IO).launch {
+        // Must complete before creating UI so ShapesManager reads the correct note
+        runBlocking(Dispatchers.IO) {
             noteRepository.setCurrentNote(noteId)
         }
 
@@ -76,12 +77,12 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         editorViewModel = EditorViewModel(noteRepository, notebookRepository)
 
         // Create the UI
-        setEditorViewAsContent(noteId, noteRepository)
+        setEditorViewAsContent()
         // setEditorViewAsContent will create a SurfaceView and then call handleSurfaceViewCreated
         // which will initialize rest of items.
     }
 
-    fun setEditorViewAsContent(noteId: String, noteRepository: NoteRepository) {
+    fun setEditorViewAsContent() {
         Log.d(TAG, "ViewModel created")
         setContent {
             MinimaleditorTheme {
@@ -89,11 +90,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LaunchedEffect(noteId) {
-                        Log.d("DebugAug17", "LaunchedEffect(noteId): Setting current note in ViewModel: $noteId")
-                        noteRepository.setCurrentNote(noteId)
-                    }
-
                     EditorView(
                         editorViewModel,
                         onSurfaceViewCreated = { sv, vm ->
