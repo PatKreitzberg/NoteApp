@@ -189,6 +189,30 @@ class DrawingManager(
             canvas.drawText("Page 1", pageNumberX, pageNumberY, textPaint)
         }
 
+        // Draw left and right page borders
+        val borderPaint = Paint().apply {
+            color = Color.DKGRAY
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+        }
+
+        // Calculate the visible page range to draw borders for
+        val firstVisiblePage = maxOf(0, (visibleTop / pageHeight).toInt())
+        val lastVisiblePage = ((visibleBottom / pageHeight).toInt()) + 1
+
+        for (page in firstVisiblePage..lastVisiblePage) {
+            val pageTop = page * pageHeight + if (page > 0) separatorHeight else 0f
+            val pageBottom = (page + 1) * pageHeight
+
+            // Only draw if this page overlaps the visible area
+            if (pageBottom >= visibleTop && pageTop <= visibleBottom) {
+                // Left border
+                canvas.drawLine(0f, pageTop, 0f, pageBottom, borderPaint)
+                // Right border
+                canvas.drawLine(noteWidth, pageTop, noteWidth, pageBottom, borderPaint)
+            }
+        }
+
         canvas.restore()
     }
 }
