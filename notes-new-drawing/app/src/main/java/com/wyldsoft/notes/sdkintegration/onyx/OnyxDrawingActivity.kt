@@ -238,6 +238,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         gestureHandler = GestureHandler(this, surfaceView)
         // Set the viewport manager to the gesture handler
         gestureHandler.setViewportManager(editorViewModel.viewportManager)
+
+        // Three-finger double tap: reset zoom to 100% and center page if pagination is enabled
+        gestureHandler.onThreeFingerDoubleTap = {
+            val vm = editorViewModel
+            val isPagination = vm.isPaginationEnabled.value
+            val pageWidth = vm.screenWidth.value.toFloat()
+            vm.viewportManager.resetZoomAndCenter(isPagination, pageWidth)
+            forceScreenRefresh()
+        }
     }
     override fun initializeBitmapManager(sv: SurfaceView, vm: EditorViewModel) {
         Log.d(TAG, "BitmapManager initialized with current bitmap")

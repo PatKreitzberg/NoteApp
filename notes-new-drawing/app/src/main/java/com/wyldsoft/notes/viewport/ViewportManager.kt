@@ -133,6 +133,37 @@ class ViewportManager {
         _viewportState.value = ViewportState()
         updateMatrices()
     }
+
+    /**
+     * Resets zoom to 100% while keeping the current vertical scroll position.
+     * If pagination is enabled, also centers the page horizontally on screen.
+     *
+     * @param isPaginationEnabled Whether pagination mode is active
+     * @param pageWidth The page width in NoteCoordinates (typically equals screenWidth)
+     */
+    fun resetZoomAndCenter(isPaginationEnabled: Boolean, pageWidth: Float = 0f) {
+        val currentState = _viewportState.value
+
+        // Keep current vertical scroll position in NoteCoordinates, then recalculate for scale=1.0
+        val currentScrollY = -currentState.offsetY / currentState.scale
+
+        val newOffsetX = if (isPaginationEnabled && pageWidth > 0 && viewWidth > 0) {
+            // Center the page horizontally: offset so that the page center aligns with screen center
+            (viewWidth - pageWidth) / 2f
+        } else {
+            0f
+        }
+
+        val newOffsetY = min(-currentScrollY, TOP_LIMIT)
+
+        _viewportState.value = ViewportState(
+            scale = 1.0f,
+            offsetX = newOffsetX,
+            offsetY = newOffsetY
+        )
+        updateMatrices()
+        Log.d("ViewportManager", "resetZoomAndCenter: pagination=$isPaginationEnabled, pageWidth=$pageWidth, newOffsetX=$newOffsetX, newOffsetY=$newOffsetY")
+    }
     
     /**
      * Sets the viewport state (used for persistence/restoration).

@@ -71,6 +71,9 @@ class GestureHandler(
     private var pinchCenterX = 0f
     private var pinchCenterY = 0f
     private var currentScale = 1f
+
+    // Callback for three-finger double tap (reset zoom)
+    var onThreeFingerDoubleTap: (() -> Unit)? = null
     
     init {
         // Scale gesture detector for pinch/expand
@@ -284,7 +287,13 @@ class GestureHandler(
                     else -> "$tapCount"
                 }
                 Log.d(TAG, "TAP detected - $pendingTapFingerCount finger(s), $tapName tap")
-                
+
+                // Three-finger double tap: reset zoom and center page
+                if (tapCount == 2 && pendingTapFingerCount == 3) {
+                    Log.d(TAG, "Three-finger double tap detected - resetting zoom")
+                    onThreeFingerDoubleTap?.invoke()
+                }
+
                 // Reset tap count after logging
                 tapCount = 0
             }
