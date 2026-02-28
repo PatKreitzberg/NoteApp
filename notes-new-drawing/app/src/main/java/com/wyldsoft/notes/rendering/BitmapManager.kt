@@ -83,9 +83,7 @@ class BitmapManager(
                     val originalTouchPoints = shape.touchPointList
                     shape.touchPointList = surfaceTouchPoints
 
-                    renderContext.canvas = this
-                    renderContext.paint = createStrokePaint()
-                    renderContext.viewPoint = android.graphics.Point(0, 0)
+                    initRenderContext(renderContext, this)
 
                     shape.render(renderContext)
 
@@ -149,11 +147,14 @@ class BitmapManager(
 
         // Don't apply viewport transformation here since shape is in surface coordinates
         renderContext.bitmap = bmp
-        renderContext.canvas = canvas
-        renderContext.paint = createStrokePaint()
-        // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
-        renderContext.viewPoint = android.graphics.Point(0, 0)
+        initRenderContext(renderContext, canvas)
 
         shape.render(renderContext)
+    }
+
+    private fun initRenderContext(renderContext: RendererHelper.RenderContext, canvas: Canvas) {
+        renderContext.canvas = canvas
+        renderContext.paint = createStrokePaint()
+        renderContext.viewPoint = android.graphics.Point(0, 0)
     }
 }

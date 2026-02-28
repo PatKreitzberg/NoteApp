@@ -1,8 +1,6 @@
 package com.wyldsoft.notes.rendering
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Rect
 import android.view.SurfaceView
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
@@ -35,7 +33,7 @@ class PaginationRendererToScreenRequest(
             RenderingUtils.renderBackground(canvas, viewRect)
             
             // Draw the main content bitmap
-            drawRendererContent(bitmap, canvas)
+            RenderingUtils.drawRendererContent(bitmap, canvas)
             
             // Draw page separators if pagination is enabled
             viewModel?.let { vm ->
@@ -54,10 +52,5 @@ class PaginationRendererToScreenRequest(
             surfaceView.holder.unlockCanvasAndPost(canvas)
             EpdController.resetViewUpdateMode(surfaceView)
         }
-    }
-    
-    private fun drawRendererContent(bitmap: Bitmap, canvas: Canvas) {
-        val rect = Rect(0, 0, bitmap.width, bitmap.height)
-        canvas.drawBitmap(bitmap, rect, rect, null)
     }
 }

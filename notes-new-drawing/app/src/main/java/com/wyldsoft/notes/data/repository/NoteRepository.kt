@@ -92,40 +92,36 @@ class NoteRepositoryImpl(
     }
     
     override suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float) {
-        val notes = noteDao.getAllNotes()
-        notes.forEach { Log.d("NoteRepository", "Note id: ${it.id}") }
-        Log.d("NoteRepository", "There are ${notes.size} notes in the database")
-
         Log.d("NoteRepository", "Updating viewport state for note: $noteId, scale: $scale, offsetX: $offsetX, offsetY: $offsetY")
-        val noteEntity = noteDao.getNote(noteId)
+        updateNoteFields(noteId) { entity ->
+            entity.copy(
+                viewportScale = scale,
+                viewportOffsetX = offsetX,
+                viewportOffsetY = offsetY
+            )
+        }
+    }
 
+    override suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String) {
+        updateNoteFields(noteId) { entity ->
+            entity.copy(
+                isPaginationEnabled = isPaginationEnabled,
+                paperSize = paperSize
+            )
+        }
+    }
+    
+    private suspend fun updateNoteFields(noteId: String, transform: (NoteEntity) -> NoteEntity) {
+        val noteEntity = noteDao.getNote(noteId)
         if (noteEntity == null) {
             Log.e("NoteRepository", "Note with ID $noteId not found")
             return
         }
-
-        Log.d("NoteRepository", "Current note entity: $noteEntity")
-        val updatedEntity = noteEntity.copy(
-            viewportScale = scale,
-            viewportOffsetX = offsetX,
-            viewportOffsetY = offsetY,
-            modifiedAt = System.currentTimeMillis()
-        )
+        val updatedEntity = transform(noteEntity).copy(modifiedAt = System.currentTimeMillis())
         noteDao.update(updatedEntity)
         refreshCurrentNoteIfMatch(noteId)
     }
 
-    override suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String) {
-        val noteEntity = noteDao.getNote(noteId)
-        val updatedEntity = noteEntity.copy(
-            isPaginationEnabled = isPaginationEnabled,
-            paperSize = paperSize,
-            modifiedAt = System.currentTimeMillis()
-        )
-        noteDao.update(updatedEntity)
-        refreshCurrentNoteIfMatch(noteId)
-    }
-    
     private suspend fun refreshCurrentNoteIfMatch(noteId: String) {
         if (_currentNote.value.id == noteId) {
             _currentNote.value = getNote(noteId)
@@ -150,13 +146,9 @@ class NoteRepositoryImpl(
     }
 
     override suspend fun updatePaperTemplate(noteId: String, paperTemplate: String) {
-        val noteEntity = noteDao.getNote(noteId)
-        val updatedEntity = noteEntity.copy(
-            paperTemplate = paperTemplate,
-            modifiedAt = System.currentTimeMillis()
-        )
-        noteDao.update(updatedEntity)
-        refreshCurrentNoteIfMatch(noteId)
+        updateNoteFields(noteId) { entity ->
+            entity.copy(paperTemplate = paperTemplate)
+        }
     }
 
     private fun Note.toEntity(): NoteEntity {

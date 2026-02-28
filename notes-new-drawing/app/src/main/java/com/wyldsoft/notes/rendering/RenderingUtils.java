@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.rendering;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -27,6 +28,11 @@ public class RenderingUtils {
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.WHITE);
         canvas.drawRect(rect, paint);
+    }
+
+    public static void drawRendererContent(Bitmap bitmap, Canvas canvas) {
+        Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        canvas.drawBitmap(bitmap, rect, rect, null);
     }
 
     public static Matrix getPointMatrix(final RendererHelper.RenderContext renderContext) {

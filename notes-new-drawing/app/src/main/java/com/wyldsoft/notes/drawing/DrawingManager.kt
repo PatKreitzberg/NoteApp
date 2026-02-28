@@ -6,7 +6,10 @@ import android.graphics.Paint
 import android.graphics.Path
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
+import com.wyldsoft.notes.utils.PaginationConstants
 import com.wyldsoft.notes.utils.createStrokePaint
+import com.wyldsoft.notes.utils.getPageBounds
+import com.wyldsoft.notes.utils.getVisiblePageRange
 import com.wyldsoft.notes.viewport.ViewportManager
 
 class DrawingManager(
@@ -148,7 +151,7 @@ class DrawingManager(
             visibleBottom = canvas.height.toFloat()
         }
 
-        val separatorHeight = 10f
+        val separatorHeight = PaginationConstants.SEPARATOR_HEIGHT
         val noteWidth = screenWidth.toFloat()
 
         // Draw separators for visible pages (all in note coordinates)
@@ -189,13 +192,8 @@ class DrawingManager(
             strokeWidth = 2f
         }
 
-        // Calculate the visible page range to draw borders for
-        val firstVisiblePage = maxOf(0, (visibleTop / pageHeight).toInt())
-        val lastVisiblePage = ((visibleBottom / pageHeight).toInt()) + 1
-
-        for (page in firstVisiblePage..lastVisiblePage) {
-            val pageTop = page * pageHeight + if (page > 0) separatorHeight else 0f
-            val pageBottom = (page + 1) * pageHeight
+        for (page in getVisiblePageRange(visibleTop, visibleBottom, pageHeight)) {
+            val (pageTop, pageBottom) = getPageBounds(page, pageHeight)
 
             // Only draw if this page overlaps the visible area
             if (pageBottom >= visibleTop && pageTop <= visibleBottom) {

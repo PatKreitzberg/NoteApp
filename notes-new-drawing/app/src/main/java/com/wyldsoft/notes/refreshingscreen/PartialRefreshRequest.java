@@ -48,18 +48,13 @@ public class PartialRefreshRequest extends RxRequest {
         try {
             canvas.clipRect(renderRect);
             RenderingUtils.renderBackground(canvas, viewRect);
-            drawRendererContent(bitmap, canvas);
+            RenderingUtils.drawRendererContent(bitmap, canvas);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             surfaceView.getHolder().unlockCanvasAndPost(canvas);
             EpdController.resetViewUpdateMode(surfaceView);
         }
-    }
-
-    private void drawRendererContent(Bitmap bitmap, Canvas canvas) {
-        Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-        canvas.drawBitmap(bitmap, rect, rect, null);
     }
 
 }

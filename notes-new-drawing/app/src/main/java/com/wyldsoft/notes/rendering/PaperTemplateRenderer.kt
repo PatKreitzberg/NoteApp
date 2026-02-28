@@ -4,6 +4,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import com.wyldsoft.notes.domain.models.PaperTemplate
+import com.wyldsoft.notes.utils.getPageBounds
+import com.wyldsoft.notes.utils.getVisiblePageRange
 import com.wyldsoft.notes.viewport.ViewportManager
 
 /**
@@ -108,20 +110,12 @@ class PaperTemplateRenderer(
         val marginX = noteWidth * MARGIN_FRACTION
         val screenWidth = canvas.width
         val screenHeight = canvas.height
-        // Page separator height must match DrawingManager's separator
-        val separatorHeight = 10f
-
         // Calculate visible range in note coordinates
         val bounds = viewportManager.getVisibleBounds(screenWidth.toFloat(), screenHeight.toFloat())
 
         if (isPaginationEnabled && pageHeight > 0f) {
-            // Determine which pages are visible
-            val firstVisiblePage = maxOf(0, (bounds.top / pageHeight).toInt())
-            val lastVisiblePage = (bounds.bottom / pageHeight).toInt() + 1
-
-            for (page in firstVisiblePage..lastVisiblePage) {
-                val pageTop = page * pageHeight + if (page > 0) separatorHeight else 0f
-                val pageBottom = (page + 1) * pageHeight
+            for (page in getVisiblePageRange(bounds.top, bounds.bottom, pageHeight)) {
+                val (pageTop, pageBottom) = getPageBounds(page, pageHeight)
 
                 // Draw horizontal ruled lines for this page
                 var y = pageTop + topMargin

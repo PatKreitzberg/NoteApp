@@ -15,6 +15,7 @@ import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
 import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
+import com.wyldsoft.notes.utils.PaginationConstants
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.viewport.ViewportManager
@@ -273,7 +274,7 @@ class EditorViewModel(
             return emptyList()
         }
         
-        val separatorHeight = 10 // 10dp as specified
+        val separatorHeight = PaginationConstants.SEPARATOR_HEIGHT.toInt()
         val rects = mutableListOf<Rect>()
         val pageHeightInt = _pageHeight.value.toInt()
         
