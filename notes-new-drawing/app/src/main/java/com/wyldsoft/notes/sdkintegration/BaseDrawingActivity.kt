@@ -273,6 +273,19 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                 onViewportChanged()
             }
         }
+
+        // Observe undo/redo state changes to refresh toolbar on e-ink display
+        lifecycleScope.launch {
+            editorViewModel.canUndo.collect { _ ->
+                refreshUIChrome()
+            }
+        }
+        lifecycleScope.launch {
+            editorViewModel.canRedo.collect { _ ->
+                refreshUIChrome()
+            }
+        }
+
         Log.d("DebugAug12", "DONE Setting ViewModel in BaseDrawingActivity")
     }
 
@@ -338,6 +351,14 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         bitmap?.recycle()
         bitmap = null
         onCleanupDeviceReceiver()
+    }
+
+    /**
+     * Refresh the UI chrome (toolbar, etc.) on e-ink display.
+     * Override in SDK-specific classes for device-specific refresh behavior.
+     */
+    protected open fun refreshUIChrome() {
+        window.decorView.postInvalidate()
     }
 
     // Abstract methods for SDK-specific lifecycle

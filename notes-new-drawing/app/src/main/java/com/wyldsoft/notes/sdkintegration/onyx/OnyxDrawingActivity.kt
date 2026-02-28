@@ -206,6 +206,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         onyxDeviceReceiver?.enable(this, false)
     }
     
+    override fun refreshUIChrome() {
+        // Force e-ink display to refresh the Compose UI layer (toolbar buttons, etc.)
+        EpdController.enablePost(window.decorView, 1)
+        window.decorView.postInvalidate()
+    }
+
     override fun onViewportChanged() {
         Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
         // Recreate bitmap with new viewport transformation
