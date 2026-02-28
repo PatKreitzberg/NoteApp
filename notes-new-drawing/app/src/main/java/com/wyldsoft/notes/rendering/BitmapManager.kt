@@ -51,7 +51,10 @@ class BitmapManager(
         // Draw paper template background before shapes
         val template = viewModel.paperTemplate.value
         if (template != PaperTemplate.BLANK) {
-            templateRenderer.drawTemplate(canvas, template, viewModel.screenWidth.value)
+            templateRenderer.drawTemplate(
+                canvas, template, viewModel.screenWidth.value,
+                viewModel.isPaginationEnabled.value, viewModel.pageHeight.value
+            )
         }
 
         // Get render context

@@ -52,16 +52,24 @@ class PaperTemplateRenderer(
      * @param canvas The bitmap canvas to draw on (surface coordinates)
      * @param template The template type to draw
      * @param noteWidth The width of the note in note coordinates (typically screen width)
+     * @param isPaginationEnabled Whether pagination is on
+     * @param pageHeight The height of a page in note coordinates (only used when paginated)
      */
-    fun drawTemplate(canvas: Canvas, template: PaperTemplate, noteWidth: Int) {
+    fun drawTemplate(
+        canvas: Canvas,
+        template: PaperTemplate,
+        noteWidth: Int,
+        isPaginationEnabled: Boolean = false,
+        pageHeight: Float = 0f
+    ) {
         when (template) {
             PaperTemplate.BLANK -> { /* nothing to draw */ }
-            PaperTemplate.GRID -> drawGrid(canvas, noteWidth)
-            PaperTemplate.RULED -> drawRuled(canvas, noteWidth)
+            PaperTemplate.GRID -> drawGrid(canvas, noteWidth, isPaginationEnabled, pageHeight)
+            PaperTemplate.RULED -> drawRuled(canvas, noteWidth, isPaginationEnabled, pageHeight)
         }
     }
 
-    private fun drawGrid(canvas: Canvas, noteWidth: Int) {
+    private fun drawGrid(canvas: Canvas, noteWidth: Int, isPaginationEnabled: Boolean, pageHeight: Float) {
         val spacing = noteWidth * RULED_SPACING_FRACTION
         val screenWidth = canvas.width
         val screenHeight = canvas.height
@@ -97,12 +105,14 @@ class PaperTemplateRenderer(
         }
     }
 
-    private fun drawRuled(canvas: Canvas, noteWidth: Int) {
+    private fun drawRuled(canvas: Canvas, noteWidth: Int, isPaginationEnabled: Boolean, pageHeight: Float) {
         val spacing = noteWidth * RULED_SPACING_FRACTION
         val topMargin = noteWidth * TOP_MARGIN_FRACTION
         val marginX = noteWidth * MARGIN_FRACTION
         val screenWidth = canvas.width
         val screenHeight = canvas.height
+        // Page separator height must match DrawingManager's separator
+        val separatorHeight = 10f
 
         // Calculate visible range in note coordinates
         val topLeft = viewportManager.surfaceToNoteCoordinates(0f, 0f)
@@ -110,19 +120,50 @@ class PaperTemplateRenderer(
             screenWidth.toFloat(), screenHeight.toFloat()
         )
 
-        // Draw horizontal ruled lines
-        val firstLineIndex = maxOf(0, ((topLeft.y - topMargin) / spacing).toInt())
-        var y = topMargin + firstLineIndex * spacing
-        while (y <= bottomRight.y) {
-            val surfaceStart = viewportManager.noteToSurfaceCoordinates(0f, y)
-            val surfaceEnd = viewportManager.noteToSurfaceCoordinates(noteWidth.toFloat(), y)
-            canvas.drawLine(surfaceStart.x, surfaceStart.y, surfaceEnd.x, surfaceEnd.y, linePaint)
-            y += spacing
-        }
+        if (isPaginationEnabled && pageHeight > 0f) {
+            // Determine which pages are visible
+            val firstVisiblePage = maxOf(0, (topLeft.y / pageHeight).toInt())
+            val lastVisiblePage = (bottomRight.y / pageHeight).toInt() + 1
 
-        // Draw red margin line
-        val marginTop = viewportManager.noteToSurfaceCoordinates(marginX, maxOf(0f, topLeft.y))
-        val marginBottom = viewportManager.noteToSurfaceCoordinates(marginX, bottomRight.y)
-        canvas.drawLine(marginTop.x, marginTop.y, marginBottom.x, marginBottom.y, marginPaint)
+            for (page in firstVisiblePage..lastVisiblePage) {
+                val pageTop = page * pageHeight + if (page > 0) separatorHeight else 0f
+                val pageBottom = (page + 1) * pageHeight
+
+                // Draw horizontal ruled lines for this page
+                var y = pageTop + topMargin
+                while (y <= pageBottom && y <= bottomRight.y) {
+                    if (y >= topLeft.y) {
+                        val surfaceStart = viewportManager.noteToSurfaceCoordinates(0f, y)
+                        val surfaceEnd = viewportManager.noteToSurfaceCoordinates(noteWidth.toFloat(), y)
+                        canvas.drawLine(surfaceStart.x, surfaceStart.y, surfaceEnd.x, surfaceEnd.y, linePaint)
+                    }
+                    y += spacing
+                }
+
+                // Draw red margin line for this page
+                val visibleTop = maxOf(pageTop, topLeft.y)
+                val visibleBottom = minOf(pageBottom, bottomRight.y)
+                if (visibleTop < visibleBottom) {
+                    val marginSurfaceTop = viewportManager.noteToSurfaceCoordinates(marginX, visibleTop)
+                    val marginSurfaceBottom = viewportManager.noteToSurfaceCoordinates(marginX, visibleBottom)
+                    canvas.drawLine(marginSurfaceTop.x, marginSurfaceTop.y, marginSurfaceBottom.x, marginSurfaceBottom.y, marginPaint)
+                }
+            }
+        } else {
+            // No pagination: continuous ruled lines from the top
+            val firstLineIndex = maxOf(0, ((topLeft.y - topMargin) / spacing).toInt())
+            var y = topMargin + firstLineIndex * spacing
+            while (y <= bottomRight.y) {
+                val surfaceStart = viewportManager.noteToSurfaceCoordinates(0f, y)
+                val surfaceEnd = viewportManager.noteToSurfaceCoordinates(noteWidth.toFloat(), y)
+                canvas.drawLine(surfaceStart.x, surfaceStart.y, surfaceEnd.x, surfaceEnd.y, linePaint)
+                y += spacing
+            }
+
+            // Draw red margin line
+            val marginTop = viewportManager.noteToSurfaceCoordinates(marginX, maxOf(0f, topLeft.y))
+            val marginBottom = viewportManager.noteToSurfaceCoordinates(marginX, bottomRight.y)
+            canvas.drawLine(marginTop.x, marginTop.y, marginBottom.x, marginBottom.y, marginPaint)
+        }
     }
 }
