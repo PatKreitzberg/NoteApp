@@ -8,19 +8,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.wyldsoft.notes.domain.models.PaperSize
+import com.wyldsoft.notes.domain.models.PaperTemplate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteSettingsDialog(
     isPaginationEnabled: Boolean,
     currentPaperSize: PaperSize,
+    currentPaperTemplate: PaperTemplate,
     onPaginationToggle: (Boolean) -> Unit,
     onPaperSizeChange: (PaperSize) -> Unit,
+    onPaperTemplateChange: (PaperTemplate) -> Unit,
     onDismiss: () -> Unit
 ) {
     var paginationEnabled by remember { mutableStateOf(isPaginationEnabled) }
     var selectedPaperSize by remember { mutableStateOf(currentPaperSize) }
+    var selectedTemplate by remember { mutableStateOf(currentPaperTemplate) }
     var dropdownExpanded by remember { mutableStateOf(false) }
+    var templateDropdownExpanded by remember { mutableStateOf(false) }
     
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -101,6 +106,47 @@ fun NoteSettingsDialog(
                     }
                 }
                 
+                // Paper template dropdown
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Paper Template",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = templateDropdownExpanded,
+                        onExpandedChange = { templateDropdownExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedTemplate.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = templateDropdownExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor()
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = templateDropdownExpanded,
+                            onDismissRequest = { templateDropdownExpanded = false }
+                        ) {
+                            PaperTemplate.entries.forEach { template ->
+                                DropdownMenuItem(
+                                    text = { Text(template.displayName) },
+                                    onClick = {
+                                        selectedTemplate = template
+                                        onPaperTemplateChange(template)
+                                        templateDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End

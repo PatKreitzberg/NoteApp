@@ -23,7 +23,7 @@ import java.util.UUID
         NoteNotebookCrossRef::class,
         ShapeEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -44,6 +44,12 @@ abstract class NotesDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN paperTemplate TEXT NOT NULL DEFAULT 'BLANK'")
+            }
+        }
+
         fun getDatabase(context: Context): NotesDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -51,7 +57,7 @@ abstract class NotesDatabase : RoomDatabase() {
                     NotesDatabase::class.java,
                     "notes_database"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)

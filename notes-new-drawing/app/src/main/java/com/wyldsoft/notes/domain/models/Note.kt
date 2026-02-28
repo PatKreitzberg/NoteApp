@@ -8,7 +8,7 @@ data class Note(
     val shapes: MutableList<Shape> = mutableListOf(),
     val createdAt: Long = System.currentTimeMillis(),
     val modifiedAt: Long = System.currentTimeMillis(),
-    val template: Template? = null,
+    val paperTemplate: PaperTemplate = PaperTemplate.BLANK,
     val viewportScale: Float = 1.0f,
     val viewportOffsetX: Float = 0f,
     val viewportOffsetY: Float = 0f,
@@ -16,14 +16,14 @@ data class Note(
     val paperSize: String = "LETTER"
 )
 
-data class Template(
-    val type: TemplateType,
-    val spacing: Float = 20f
-)
+enum class PaperTemplate(val displayName: String) {
+    BLANK("Blank"),
+    GRID("Grid"),
+    RULED("Ruled (College)");
 
-enum class TemplateType {
-    BLANK,
-    GRID,
-    RULED,
-    DOTTED
+    companion object {
+        fun fromString(value: String): PaperTemplate {
+            return entries.find { it.name == value } ?: BLANK
+        }
+    }
 }

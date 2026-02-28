@@ -10,6 +10,7 @@ import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 
+import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.viewport.ViewportManager
@@ -32,6 +33,7 @@ class BitmapManager(
         private var TAG = "BitmapManager"
     }
     private val rendererHelper = RendererHelper()
+    private val templateRenderer = PaperTemplateRenderer(viewModel.viewportManager)
 
     /**
      * Recreates the bitmap from the list of drawn shapes.
@@ -45,6 +47,12 @@ class BitmapManager(
 
         // Clear the bitmap
         canvas.drawColor(Color.WHITE)
+
+        // Draw paper template background before shapes
+        val template = viewModel.paperTemplate.value
+        if (template != PaperTemplate.BLANK) {
+            templateRenderer.drawTemplate(canvas, template, viewModel.screenWidth.value)
+        }
 
         // Get render context
         val renderContext = rendererHelper.getRenderContext() ?: return

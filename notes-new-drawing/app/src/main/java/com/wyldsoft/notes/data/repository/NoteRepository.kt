@@ -6,6 +6,7 @@ import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.ShapeEntity
 import com.wyldsoft.notes.domain.models.Note
+import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.domain.models.Shape
 import kotlinx.coroutines.flow.*
 import java.util.UUID
@@ -22,6 +23,7 @@ interface NoteRepository {
     fun getNoteFlow(noteId: String): Flow<Note>
     suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float)
     suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String)
+    suspend fun updatePaperTemplate(noteId: String, paperTemplate: String)
 }
 
 class NoteRepositoryImpl(
@@ -156,10 +158,24 @@ class NoteRepositoryImpl(
             viewportOffsetX = viewportOffsetX,
             viewportOffsetY = viewportOffsetY,
             isPaginationEnabled = isPaginationEnabled,
-            paperSize = paperSize
+            paperSize = paperSize,
+            paperTemplate = PaperTemplate.fromString(paperTemplate)
         )
     }
-    
+
+    override suspend fun updatePaperTemplate(noteId: String, paperTemplate: String) {
+        val noteEntity = noteDao.getNote(noteId)
+        val updatedEntity = noteEntity.copy(
+            paperTemplate = paperTemplate,
+            modifiedAt = System.currentTimeMillis()
+        )
+        noteDao.update(updatedEntity)
+
+        if (_currentNote.value.id == noteId) {
+            setCurrentNote(noteId)
+        }
+    }
+
     private fun Note.toEntity(): NoteEntity {
         return NoteEntity(
             id = id,
@@ -170,7 +186,8 @@ class NoteRepositoryImpl(
             viewportOffsetX = viewportOffsetX,
             viewportOffsetY = viewportOffsetY,
             isPaginationEnabled = isPaginationEnabled,
-            paperSize = paperSize
+            paperSize = paperSize,
+            paperTemplate = paperTemplate.name
         )
     }
     

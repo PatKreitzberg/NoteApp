@@ -30,5 +30,6 @@ data class NoteEntity(
     val viewportOffsetX: Float = 0f,
     val viewportOffsetY: Float = 0f,
     val isPaginationEnabled: Boolean = true,
-    val paperSize: String = "LETTER"
+    val paperSize: String = "LETTER",
+    val paperTemplate: String = "BLANK"
 )

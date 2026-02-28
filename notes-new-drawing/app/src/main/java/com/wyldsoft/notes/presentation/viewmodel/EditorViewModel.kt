@@ -13,6 +13,7 @@ import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
+import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
@@ -63,6 +64,11 @@ class EditorViewModel(
     
     private val _currentPageNumber = MutableStateFlow(1)
     val currentPageNumber: StateFlow<Int> = _currentPageNumber.asStateFlow()
+
+    private val _paperTemplate = MutableStateFlow(
+        PaperTemplate.fromString(currentNote.value.paperTemplate.name)
+    )
+    val paperTemplate: StateFlow<PaperTemplate> = _paperTemplate.asStateFlow()
     
     private val _screenWidth = MutableStateFlow(0)
     val screenWidth: StateFlow<Int> = _screenWidth.asStateFlow()
@@ -249,6 +255,13 @@ class EditorViewModel(
         }
     }
     
+    fun updatePaperTemplate(template: PaperTemplate) {
+        _paperTemplate.value = template
+        viewModelScope.launch {
+            noteRepository.updatePaperTemplate(currentNote.value.id, template.name)
+        }
+    }
+
     fun updateCurrentPage(scrollY: Float) {
         if (_isPaginationEnabled.value && _pageHeight.value > 0) {
             _currentPageNumber.value = (scrollY / _pageHeight.value).toInt() + 1

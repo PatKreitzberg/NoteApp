@@ -23,6 +23,7 @@ fun EditorView(
     val viewportState by viewModel.viewportState.collectAsState()
     val isPaginationEnabled by viewModel.isPaginationEnabled.collectAsState()
     val paperSize by viewModel.paperSize.collectAsState()
+    val paperTemplate by viewModel.paperTemplate.collectAsState()
     val currentPageNumber by viewModel.currentPageNumber.collectAsState()
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
 
@@ -63,11 +64,15 @@ fun EditorView(
         NoteSettingsDialog(
             isPaginationEnabled = isPaginationEnabled,
             currentPaperSize = paperSize,
+            currentPaperTemplate = paperTemplate,
             onPaginationToggle = { enabled ->
                 viewModel.updatePaginationEnabled(enabled)
             },
             onPaperSizeChange = { newPaperSize ->
                 viewModel.updatePaperSize(newPaperSize)
+            },
+            onPaperTemplateChange = { newTemplate ->
+                viewModel.updatePaperTemplate(newTemplate)
             },
             onDismiss = { showNoteSettingsDialog = false }
         )
