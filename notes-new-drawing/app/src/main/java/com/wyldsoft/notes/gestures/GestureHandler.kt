@@ -147,6 +147,7 @@ class GestureHandler(
                 activeTouchCount = 1
                 maxTouchCount = 1
                 handleDown(event)
+                Log.d(TAG, "Finger down - Active fingers: $activeTouchCount")
             }
 
             MotionEvent.ACTION_POINTER_DOWN -> {
@@ -156,7 +157,9 @@ class GestureHandler(
             }
 
             MotionEvent.ACTION_MOVE -> {
+                Log.d(TAG, "Move event - Active fingers: $activeTouchCount, Max fingers during gesture: $maxTouchCount")
                 if (!isPinching && activeTouchCount == 1) {
+                    Log.d(TAG, "Processing move for potential pan/scroll")
                     handleMove(event)
                 }
             }
@@ -167,11 +170,16 @@ class GestureHandler(
             }
 
             MotionEvent.ACTION_UP -> {
+                Log.d(TAG, "Finger up - Active fingers: $activeTouchCount")
                 handleUp(event)
                 activeTouchCount = 0
             }
 
             MotionEvent.ACTION_CANCEL -> {
+                // Treat cancel as end of gesture
+                Log.d(TAG, "Touch event cancelled")
+                handleUp(event)
+                activeTouchCount = 0
                 resetStates()
             }
         }
@@ -242,6 +250,7 @@ class GestureHandler(
     }
     
     private fun handleUp(event: MotionEvent) {
+        Log.d(TAG, "Touch up event - Active fingers: $activeTouchCount, Max fingers during gesture: $maxTouchCount")
         val x = event.x
         val y = event.y
         val currentTime = System.currentTimeMillis()
@@ -249,6 +258,7 @@ class GestureHandler(
         // Check for flick
         val duration = currentTime - flickStartTime
         if (duration < FLICK_MAX_DURATION && isPanning) {
+            Log.d(TAG, "Evaluating for FLICK - Duration: $duration ms, Total pan distance: ${sqrt(totalPanX * totalPanX + totalPanY * totalPanY)}")
             velocityTracker.computeCurrentVelocity(1000) // pixels per second
             val velocityX = velocityTracker.xVelocity
             val velocityY = velocityTracker.yVelocity
@@ -264,6 +274,7 @@ class GestureHandler(
         
         // Check for tap (allow if no panning and no meaningful scaling occurred)
         if (!isPanning && !hasScaledMeaningfully) {
+            Log.d(TAG, "Potential TAP detected at ($x, $y) with $activeTouchCount finger(s)")
             val timeSinceLastTap = currentTime - lastTapTime
             val distanceFromLastTap = sqrt((x - lastTapX) * (x - lastTapX) + (y - lastTapY) * (y - lastTapY))
             
@@ -285,6 +296,7 @@ class GestureHandler(
             
             // Schedule tap detection after timeout
             tapRunnable = Runnable {
+                Log.d(TAG, "Evaluating TAP - Count: $tapCount, Fingers: $pendingTapFingerCount")
                 val tapName = when(tapCount) {
                     1 -> "single"
                     2 -> "double"
