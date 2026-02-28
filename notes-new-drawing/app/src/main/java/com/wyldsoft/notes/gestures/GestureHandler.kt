@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.VelocityTracker
@@ -30,6 +29,9 @@ class GestureHandler(
         private const val FLICK_THRESHOLD_VELOCITY = 1000 // pixels per second
         private const val FLICK_MAX_DURATION = 200L // ms
         
+        // Scale threshold - cumulative scale must differ from 1.0 by this much to count as real pinch
+        private const val MEANINGFUL_SCALE_THRESHOLD = 0.05f
+
         // Direction constants
         private const val DIRECTION_UP = "UP"
         private const val DIRECTION_DOWN = "DOWN"
@@ -71,6 +73,7 @@ class GestureHandler(
     private var pinchCenterX = 0f
     private var pinchCenterY = 0f
     private var currentScale = 1f
+    private var hasScaledMeaningfully = false // true if actual zoom occurred during pinch
 
     // Callback for three-finger double tap (reset zoom)
     var onThreeFingerDoubleTap: (() -> Unit)? = null
@@ -80,16 +83,11 @@ class GestureHandler(
         scaleGestureDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
                 isPinching = true
+                hasScaledMeaningfully = false
                 pinchCenterX = detector.focusX
                 pinchCenterY = detector.focusY
                 currentScale = 1f
                 Log.d(TAG, "Pinch gesture started at center: ($pinchCenterX, $pinchCenterY)")
-                
-                // Cancel any pending tap detection since we're now pinching
-                tapRunnable?.let {
-                    tapHandler.removeCallbacks(it)
-                    tapCount = 0
-                }
                 return true
             }
             
@@ -97,22 +95,34 @@ class GestureHandler(
                 currentScale *= detector.scaleFactor
                 pinchCenterX = detector.focusX
                 pinchCenterY = detector.focusY
-                
-                // Update viewport with scale change
-                if (viewportManager != null) {
-                    viewportManager?.updateScale(detector.scaleFactor, pinchCenterX, pinchCenterY)
-                    Log.d(TAG, "ViewportManager.updateScale called successfully")
-                } else {
-                    Log.w(TAG, "ViewportManager is null - cannot update scale!")
-                }
-                
-                // Trigger view refresh
-                (view.context as? com.wyldsoft.notes.drawing.DrawingActivityInterface)?.forceScreenRefresh()
-                
-                if (currentScale > 1f) {
-                    Log.d(TAG, "Pinch EXPAND - Scale: $currentScale, Center: ($pinchCenterX, $pinchCenterY)")
-                } else {
-                    Log.d(TAG, "Pinch COLLAPSE - Scale: $currentScale, Center: ($pinchCenterX, $pinchCenterY)")
+
+                // Check if scale change is meaningful (not just finger jitter)
+                if (abs(currentScale - 1f) > MEANINGFUL_SCALE_THRESHOLD) {
+                    if (!hasScaledMeaningfully) {
+                        hasScaledMeaningfully = true
+                        // Cancel pending taps only once we know it's a real pinch
+                        tapRunnable?.let {
+                            tapHandler.removeCallbacks(it)
+                            tapCount = 0
+                        }
+                    }
+
+                    // Update viewport with scale change
+                    if (viewportManager != null) {
+                        viewportManager?.updateScale(detector.scaleFactor, pinchCenterX, pinchCenterY)
+                        Log.d(TAG, "ViewportManager.updateScale called successfully")
+                    } else {
+                        Log.w(TAG, "ViewportManager is null - cannot update scale!")
+                    }
+
+                    // Trigger view refresh
+                    (view.context as? com.wyldsoft.notes.drawing.DrawingActivityInterface)?.forceScreenRefresh()
+
+                    if (currentScale > 1f) {
+                        Log.d(TAG, "Pinch EXPAND - Scale: $currentScale, Center: ($pinchCenterX, $pinchCenterY)")
+                    } else {
+                        Log.d(TAG, "Pinch COLLAPSE - Scale: $currentScale, Center: ($pinchCenterX, $pinchCenterY)")
+                    }
                 }
                 return true
             }
@@ -131,40 +141,36 @@ class GestureHandler(
         // Handle scale gestures
         scaleGestureDetector.onTouchEvent(event)
         
-        // If pinching, don't process other gestures
-        if (isPinching && event.pointerCount > 1) {
-            return true
-        }
-        
+        // Always track finger count, even during pinch
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 activeTouchCount = 1
                 maxTouchCount = 1
                 handleDown(event)
             }
-            
+
             MotionEvent.ACTION_POINTER_DOWN -> {
                 activeTouchCount++
                 maxTouchCount = maxOf(maxTouchCount, activeTouchCount)
                 Log.d(TAG, "Pointer down - Active fingers: $activeTouchCount")
             }
-            
+
             MotionEvent.ACTION_MOVE -> {
                 if (!isPinching) {
                     handleMove(event)
                 }
             }
-            
+
             MotionEvent.ACTION_POINTER_UP -> {
                 activeTouchCount--
                 Log.d(TAG, "Pointer up - Active fingers: $activeTouchCount")
             }
-            
+
             MotionEvent.ACTION_UP -> {
                 handleUp(event)
                 activeTouchCount = 0
             }
-            
+
             MotionEvent.ACTION_CANCEL -> {
                 resetStates()
             }
@@ -256,8 +262,8 @@ class GestureHandler(
             }
         }
         
-        // Check for tap
-        if (!isPanning && !isPinching) {
+        // Check for tap (allow if no panning and no meaningful scaling occurred)
+        if (!isPanning && !hasScaledMeaningfully) {
             val timeSinceLastTap = currentTime - lastTapTime
             val distanceFromLastTap = sqrt((x - lastTapX) * (x - lastTapX) + (y - lastTapY) * (y - lastTapY))
             
@@ -323,6 +329,8 @@ class GestureHandler(
     
     private fun resetStates() {
         isPanning = false
+        isPinching = false
+        hasScaledMeaningfully = false
         maxTouchCount = 0
         activeTouchCount = 0
     }
