@@ -104,14 +104,14 @@ class OnyxStylusHandler(
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
-            // Handle erasing start
             isErasingInProgress = true
+            viewModel.startErasing()
             Log.d(TAG, "Erasing started")
         }
 
         override fun onEndRawErasing(b: Boolean, touchPoint: TouchPoint?) {
-            // Handle erasing end
             isErasingInProgress = false
+            viewModel.endErasing()
             Log.d(TAG, "Erasing ended")
         }
 

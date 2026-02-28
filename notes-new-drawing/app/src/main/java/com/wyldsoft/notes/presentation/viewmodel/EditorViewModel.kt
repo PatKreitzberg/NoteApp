@@ -5,12 +5,17 @@ import android.graphics.Rect
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wyldsoft.notes.actions.ActionManager
+import com.wyldsoft.notes.actions.DrawAction
+import com.wyldsoft.notes.actions.EraseAction
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
 import com.wyldsoft.notes.pen.PenProfile
+import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.viewport.ViewportManager
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +69,25 @@ class EditorViewModel(
     
     private val _pageHeight = MutableStateFlow(0f)
     val pageHeight: StateFlow<Float> = _pageHeight.asStateFlow()
-    
+
+    // Undo/Redo
+    val actionManager = ActionManager()
+    val canUndo: StateFlow<Boolean> = actionManager.canUndo
+    val canRedo: StateFlow<Boolean> = actionManager.canRedo
+
+    // Late-initialized references needed by actions (set from BaseDrawingActivity)
+    private var shapesManager: ShapesManager? = null
+    private var bitmapManager: BitmapManager? = null
+
+    // Erase stroke grouping: accumulates erased shapes during one erase gesture
+    private val pendingErasedShapes = mutableListOf<Shape>()
+    private var isErasingInProgress = false
+
+    fun setDrawingReferences(shapesManager: ShapesManager, bitmapManager: BitmapManager) {
+        this.shapesManager = shapesManager
+        this.bitmapManager = bitmapManager
+    }
+
     init {
         viewModelScope.launch {
             if (currentNote.value == null) {
@@ -112,14 +135,63 @@ class EditorViewModel(
                 pressure = pressures
             )
             noteRepository.addShape(currentNote.value.id, shape)
+
+            // Record action for undo/redo
+            val sm = shapesManager
+            val bm = bitmapManager
+            if (sm != null && bm != null) {
+                val action = DrawAction(currentNote.value.id, shape, noteRepository, sm, bm)
+                actionManager.recordAction(action)
+            }
         }
     }
 
     fun removeShape(shapeId: String) {
         viewModelScope.launch {
             currentNote.value.let { note ->
+                // Capture the full shape before deleting (needed for undo)
+                val shape = note.shapes.find { it.id == shapeId }
+                if (shape != null && isErasingInProgress) {
+                    pendingErasedShapes.add(shape)
+                }
                 noteRepository.removeShape(note.id, shapeId)
             }
+        }
+    }
+
+    fun startErasing() {
+        isErasingInProgress = true
+        pendingErasedShapes.clear()
+    }
+
+    fun endErasing() {
+        isErasingInProgress = false
+        if (pendingErasedShapes.isNotEmpty()) {
+            val sm = shapesManager
+            val bm = bitmapManager
+            if (sm != null && bm != null) {
+                val action = EraseAction(
+                    currentNote.value.id,
+                    pendingErasedShapes.toList(),
+                    noteRepository, sm, bm
+                )
+                actionManager.recordAction(action)
+            }
+            pendingErasedShapes.clear()
+        }
+    }
+
+    fun undo() {
+        viewModelScope.launch {
+            actionManager.undo()
+            forceRefresh()
+        }
+    }
+
+    fun redo() {
+        viewModelScope.launch {
+            actionManager.redo()
+            forceRefresh()
         }
     }
     

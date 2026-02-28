@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -147,6 +149,32 @@ fun Toolbar(
             }
 
             Spacer(modifier = Modifier.weight(1f))
+
+            // Undo/Redo buttons
+            val canUndo by viewModel.canUndo.collectAsState()
+            val canRedo by viewModel.canRedo.collectAsState()
+
+            IconButton(
+                onClick = { viewModel.undo() },
+                enabled = canUndo
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = "Undo",
+                    tint = if (canUndo) Color.Black else Color.LightGray
+                )
+            }
+
+            IconButton(
+                onClick = { viewModel.redo() },
+                enabled = canRedo
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Redo,
+                    contentDescription = "Redo",
+                    tint = if (canRedo) Color.Black else Color.LightGray
+                )
+            }
 
             // Settings icon
             IconButton(onClick = onSettingsClick) {

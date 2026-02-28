@@ -163,6 +163,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         4. shapesManager
          */
 
+        // Wire up drawing references for undo/redo actions
+        editorViewModel.setDrawingReferences(shapesManager, bitmapManager)
+
         initializePaint()
 
         initializeDeviceReceiver()
