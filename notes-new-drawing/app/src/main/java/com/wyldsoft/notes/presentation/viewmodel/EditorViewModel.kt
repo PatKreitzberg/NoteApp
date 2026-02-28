@@ -78,14 +78,20 @@ class EditorViewModel(
     // Late-initialized references needed by actions (set from BaseDrawingActivity)
     private var shapesManager: ShapesManager? = null
     private var bitmapManager: BitmapManager? = null
+    private var onScreenRefreshNeeded: (() -> Unit)? = null
 
     // Erase stroke grouping: accumulates erased shapes during one erase gesture
     private val pendingErasedShapes = mutableListOf<Shape>()
     private var isErasingInProgress = false
 
-    fun setDrawingReferences(shapesManager: ShapesManager, bitmapManager: BitmapManager) {
+    fun setDrawingReferences(
+        shapesManager: ShapesManager,
+        bitmapManager: BitmapManager,
+        onScreenRefreshNeeded: () -> Unit
+    ) {
         this.shapesManager = shapesManager
         this.bitmapManager = bitmapManager
+        this.onScreenRefreshNeeded = onScreenRefreshNeeded
     }
 
     init {
@@ -184,14 +190,14 @@ class EditorViewModel(
     fun undo() {
         viewModelScope.launch {
             actionManager.undo()
-            forceRefresh()
+            onScreenRefreshNeeded?.invoke()
         }
     }
 
     fun redo() {
         viewModelScope.launch {
             actionManager.redo()
-            forceRefresh()
+            onScreenRefreshNeeded?.invoke()
         }
     }
     
