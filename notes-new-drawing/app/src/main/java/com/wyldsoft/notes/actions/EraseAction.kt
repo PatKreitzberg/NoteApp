@@ -14,26 +14,16 @@ class EraseAction(
 ) : ActionInterface {
 
     override suspend fun undo() {
-        // Re-add all erased shapes to database and in-memory
         for (shape in erasedShapes) {
-            noteRepository.addShape(noteId, shape)
-            val sdkShape = shapesManager.convertDomainShapeToSdkShape(shape)
-            shapesManager.addShape(sdkShape)
+            ActionUtils.addShapeToNoteAndMemory(noteId, shape, noteRepository, shapesManager)
         }
-        // Recreate bitmap with restored shapes
         bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
     }
 
     override suspend fun redo() {
-        // Re-remove all shapes
         for (shape in erasedShapes) {
-            noteRepository.removeShape(noteId, shape.id)
-            val sdkShape = shapesManager.shapes().find { it.id == shape.id }
-            if (sdkShape != null) {
-                shapesManager.removeShape(sdkShape)
-            }
+            ActionUtils.removeShapeFromNoteAndMemory(noteId, shape, noteRepository, shapesManager)
         }
-        // Recreate bitmap without erased shapes
         bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
     }
 }

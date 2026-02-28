@@ -2,6 +2,7 @@ package com.wyldsoft.notes.viewport
 
 import android.graphics.Matrix
 import android.graphics.PointF
+import android.graphics.RectF
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -205,6 +206,15 @@ class ViewportManager {
         )
     }
     
+    /**
+     * Returns the visible bounds in note coordinates for the given canvas size.
+     */
+    fun getVisibleBounds(canvasWidth: Float, canvasHeight: Float): RectF {
+        val topLeft = surfaceToNoteCoordinates(0f, 0f)
+        val bottomRight = surfaceToNoteCoordinates(canvasWidth, canvasHeight)
+        return RectF(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y)
+    }
+
     /**
      * Gets the current zoom percentage (100% = 1.0 scale).
      */

@@ -1,22 +1,18 @@
 package com.wyldsoft.notes.drawing
 
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.Color
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
+import com.wyldsoft.notes.utils.createStrokePaint
 import com.wyldsoft.notes.viewport.ViewportManager
 
 class DrawingManager(
     private val viewportManager: ViewportManager? = null
 ) {
-    private val paint = Paint().apply {
-        isAntiAlias = true
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
+    private val paint = createStrokePaint()
     
     fun drawShape(canvas: Canvas, shape: Shape) {
         paint.color = shape.strokeColor
@@ -144,12 +140,9 @@ class DrawingManager(
         val visibleTop: Float
         val visibleBottom: Float
         if (viewportManager != null) {
-            val topLeft = viewportManager.surfaceToNoteCoordinates(0f, 0f)
-            val bottomRight = viewportManager.surfaceToNoteCoordinates(
-                canvas.width.toFloat(), canvas.height.toFloat()
-            )
-            visibleTop = topLeft.y
-            visibleBottom = bottomRight.y
+            val bounds = viewportManager.getVisibleBounds(canvas.width.toFloat(), canvas.height.toFloat())
+            visibleTop = bounds.top
+            visibleBottom = bounds.bottom
         } else {
             visibleTop = 0f
             visibleBottom = canvas.height.toFloat()

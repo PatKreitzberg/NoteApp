@@ -3,16 +3,15 @@ package com.wyldsoft.notes.rendering
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.util.Log
 import android.view.SurfaceView
-import com.onyx.android.sdk.data.note.TouchPoint
-import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 
 import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
+import com.wyldsoft.notes.utils.createStrokePaint
+import com.wyldsoft.notes.utils.notePointsToSurfaceTouchPoints
 import com.wyldsoft.notes.viewport.ViewportManager
 import androidx.core.graphics.withSave
 
@@ -78,35 +77,14 @@ class BitmapManager(
                 canvas.withSave {
 
                     // Create a temporary shape with surface coordinates
-                    val surfaceTouchPoints = TouchPointList()
-                    for (i in 0 until shape.touchPointList.size()) {
-                        val notePoint = shape.touchPointList.get(i)
-                        Log.d(TAG, "notePoint ${notePoint.x}, ${notePoint.y}")
-
-                        val surfacePoint =
-                            viewportManager.noteToSurfaceCoordinates(notePoint.x, notePoint.y)
-                        surfaceTouchPoints.add(
-                            TouchPoint(
-                                surfacePoint.x,
-                                surfacePoint.y,
-                                notePoint.pressure,
-                                notePoint.size,
-                                notePoint.timestamp
-                            )
-                        )
-                    }
+                    val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
 
                     // Temporarily replace the shape's touch points
                     val originalTouchPoints = shape.touchPointList
                     shape.touchPointList = surfaceTouchPoints
 
                     renderContext.canvas = this
-                    renderContext.paint = Paint().apply {
-                        isAntiAlias = true
-                        style = Paint.Style.STROKE
-                        strokeCap = Paint.Cap.ROUND
-                        strokeJoin = Paint.Join.ROUND
-                    }
+                    renderContext.paint = createStrokePaint()
                     renderContext.viewPoint = android.graphics.Point(0, 0)
 
                     shape.render(renderContext)
@@ -172,12 +150,7 @@ class BitmapManager(
         // Don't apply viewport transformation here since shape is in surface coordinates
         renderContext.bitmap = bmp
         renderContext.canvas = canvas
-        renderContext.paint = Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-        }
+        renderContext.paint = createStrokePaint()
         // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
         renderContext.viewPoint = android.graphics.Point(0, 0)
 

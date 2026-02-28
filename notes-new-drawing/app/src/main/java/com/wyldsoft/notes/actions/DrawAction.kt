@@ -14,24 +14,12 @@ class DrawAction(
 ) : ActionInterface {
 
     override suspend fun undo() {
-        // Remove from database
-        noteRepository.removeShape(noteId, shape.id)
-        // Remove from in-memory SDK shapes
-        val sdkShape = shapesManager.shapes().find { it.id == shape.id }
-        if (sdkShape != null) {
-            shapesManager.removeShape(sdkShape)
-        }
-        // Recreate bitmap from remaining shapes
+        ActionUtils.removeShapeFromNoteAndMemory(noteId, shape, noteRepository, shapesManager)
         bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
     }
 
     override suspend fun redo() {
-        // Re-add to database
-        noteRepository.addShape(noteId, shape)
-        // Re-add to in-memory SDK shapes
-        val sdkShape = shapesManager.convertDomainShapeToSdkShape(shape)
-        shapesManager.addShape(sdkShape)
-        // Recreate bitmap
+        ActionUtils.addShapeToNoteAndMemory(noteId, shape, noteRepository, shapesManager)
         bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
     }
 }

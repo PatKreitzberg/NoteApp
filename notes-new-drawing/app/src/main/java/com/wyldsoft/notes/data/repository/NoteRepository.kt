@@ -65,22 +65,12 @@ class NoteRepositoryImpl(
     override suspend fun addShape(noteId: String, shape: Shape) {
         val shapeEntity = shape.toEntity(noteId)
         shapeDao.insert(shapeEntity)
-        
-        // Update current note if needed
-        if (_currentNote.value.id == noteId) {
-            Log.d("NoteRepository", "Adding shape to current note: $noteId")
-            _currentNote.value = getNote(noteId)
-        }
+        refreshCurrentNoteIfMatch(noteId)
     }
 
     override suspend fun removeShape(noteId: String, shapeId: String) {
         shapeDao.deleteById(shapeId)
-        
-        // Update current note if needed
-        if (_currentNote.value.id == noteId) {
-            Log.d("NoteRepository", "Removing shape from current note: $noteId")
-            _currentNote.value = getNote(noteId)
-        }
+        refreshCurrentNoteIfMatch(noteId)
     }
     
     override suspend fun createNewNote(): Note {
@@ -122,14 +112,9 @@ class NoteRepositoryImpl(
             modifiedAt = System.currentTimeMillis()
         )
         noteDao.update(updatedEntity)
-        
-        // Update current note if it's the same
-        if (_currentNote.value.id == noteId) {
-            Log.d("NoteRepository", "Updating viewport state for current note: $noteId")
-            setCurrentNote(noteId)
-        }
+        refreshCurrentNoteIfMatch(noteId)
     }
-    
+
     override suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String) {
         val noteEntity = noteDao.getNote(noteId)
         val updatedEntity = noteEntity.copy(
@@ -138,14 +123,15 @@ class NoteRepositoryImpl(
             modifiedAt = System.currentTimeMillis()
         )
         noteDao.update(updatedEntity)
-        
-        // Update current note if it's the same
-        if (_currentNote.value.id == noteId) {
-            Log.d("NoteRepository", "Updating pagination settings for current note: $noteId")
-            setCurrentNote(noteId)
-        }
+        refreshCurrentNoteIfMatch(noteId)
     }
     
+    private suspend fun refreshCurrentNoteIfMatch(noteId: String) {
+        if (_currentNote.value.id == noteId) {
+            _currentNote.value = getNote(noteId)
+        }
+    }
+
     // Extension functions for converting between domain models and entities
     private fun NoteEntity.toNote(shapes: List<ShapeEntity>): Note {
         return Note(
@@ -170,10 +156,7 @@ class NoteRepositoryImpl(
             modifiedAt = System.currentTimeMillis()
         )
         noteDao.update(updatedEntity)
-
-        if (_currentNote.value.id == noteId) {
-            setCurrentNote(noteId)
-        }
+        refreshCurrentNoteIfMatch(noteId)
     }
 
     private fun Note.toEntity(): NoteEntity {
