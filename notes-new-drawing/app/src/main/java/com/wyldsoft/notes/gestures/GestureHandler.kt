@@ -75,8 +75,9 @@ class GestureHandler(
     private var currentScale = 1f
     private var hasScaledMeaningfully = false // true if actual zoom occurred during pinch
 
-    // Callback for three-finger double tap (reset zoom)
-    var onThreeFingerDoubleTap: (() -> Unit)? = null
+    // Gesture mappings and action callback
+    var gestureMappings: List<GestureMapping> = GestureSettingsRepository.DEFAULT_MAPPINGS
+    var onGestureAction: ((GestureAction) -> Unit)? = null
     
     init {
         // Scale gesture detector for pinch/expand
@@ -96,8 +97,11 @@ class GestureHandler(
                 pinchCenterX = detector.focusX
                 pinchCenterY = detector.focusY
 
+                // Check if pinch is configured to zoom
+                val pinchAction = gestureMappings.find { it.gesture == GestureType.PINCH }?.action
+
                 // Check if scale change is meaningful (not just finger jitter)
-                if (abs(currentScale - 1f) > MEANINGFUL_SCALE_THRESHOLD) {
+                if (abs(currentScale - 1f) > MEANINGFUL_SCALE_THRESHOLD && pinchAction == GestureAction.ZOOM) {
                     if (!hasScaledMeaningfully) {
                         hasScaledMeaningfully = true
                         // Cancel pending taps only once we know it's a real pinch
@@ -208,30 +212,34 @@ class GestureHandler(
     private fun handleMove(event: MotionEvent) {
         val x = event.x
         val y = event.y
-        
+
         val deltaX = x - panStartX
         val deltaY = y - panStartY
         val distance = sqrt(deltaX * deltaX + deltaY * deltaY)
-        
+
         if (distance > 10 && !isPanning) { // Threshold to start panning
             isPanning = true
             Log.d(TAG, "Pan/Scroll gesture started")
-            
+
             // Cancel any pending tap detection since we're now panning
             tapRunnable?.let {
                 tapHandler.removeCallbacks(it)
                 tapCount = 0
             }
         }
-        
+
         if (isPanning) {
+            // Check if pan is configured to scroll
+            val panAction = gestureMappings.find { it.gesture == GestureType.PAN }?.action
+            if (panAction != GestureAction.SCROLL) return
+
             Log.d(TAG, "Pan/Scroll gesture in progress - Delta: ($deltaX, $deltaY), Distance: $distance")
             val currentDeltaX = x - (panStartX + totalPanX)
             val currentDeltaY = y - (panStartY + totalPanY)
-            
+
             totalPanX += currentDeltaX
             totalPanY += currentDeltaY
-            
+
             // Update viewport with pan offset
             Log.d(TAG, "Updating viewport with pan offset: ($currentDeltaX, $currentDeltaY)")
             if (viewportManager != null) {
@@ -240,10 +248,10 @@ class GestureHandler(
             } else {
                 Log.w(TAG, "ViewportManager is null - cannot update offset!")
             }
-            
+
             // Trigger view refresh
             (view.context as? com.wyldsoft.notes.drawing.DrawingActivityInterface)?.forceScreenRefresh()
-            
+
             val direction = getDirection(totalPanX, totalPanY)
             Log.d(TAG, "Pan/Scroll - Direction: $direction, Distance: ${sqrt(totalPanX * totalPanX + totalPanY * totalPanY)}, Delta: ($totalPanX, $totalPanY)")
         }
@@ -267,6 +275,16 @@ class GestureHandler(
             if (velocity > FLICK_THRESHOLD_VELOCITY) {
                 val direction = getDirection(velocityX, velocityY)
                 Log.d(TAG, "FLICK detected - Direction: $direction, Velocity: $velocity")
+
+                val flickGesture = getFlickGestureType(direction)
+                if (flickGesture != null) {
+                    val action = gestureMappings.find { it.gesture == flickGesture }?.action
+                    if (action != null && action != GestureAction.NONE) {
+                        Log.d(TAG, "Executing action $action for flick $direction")
+                        onGestureAction?.invoke(action)
+                    }
+                }
+
                 resetStates()
                 return
             }
@@ -306,10 +324,14 @@ class GestureHandler(
                 }
                 Log.d(TAG, "TAP detected - $pendingTapFingerCount finger(s), $tapName tap")
 
-                // Three-finger double tap: reset zoom and center page
-                if (tapCount == 2 && pendingTapFingerCount == 3) {
-                    Log.d(TAG, "Three-finger double tap detected - resetting zoom")
-                    onThreeFingerDoubleTap?.invoke()
+                // Look up configured action for this tap gesture
+                val gestureType = getTapGestureType(pendingTapFingerCount, tapCount)
+                if (gestureType != null) {
+                    val action = gestureMappings.find { it.gesture == gestureType }?.action
+                    if (action != null && action != GestureAction.NONE) {
+                        Log.d(TAG, "Executing action $action for gesture $gestureType")
+                        onGestureAction?.invoke(action)
+                    }
                 }
 
                 // Reset tap count after logging
@@ -347,6 +369,27 @@ class GestureHandler(
         activeTouchCount = 0
     }
     
+    private fun getTapGestureType(fingerCount: Int, tapCount: Int): GestureType? {
+        if (tapCount > 2) return null // Only single and double taps are mapped
+        return when (fingerCount) {
+            1 -> if (tapCount == 1) GestureType.ONE_FINGER_SINGLE_TAP else GestureType.ONE_FINGER_DOUBLE_TAP
+            2 -> if (tapCount == 1) GestureType.TWO_FINGER_SINGLE_TAP else GestureType.TWO_FINGER_DOUBLE_TAP
+            3 -> if (tapCount == 1) GestureType.THREE_FINGER_SINGLE_TAP else GestureType.THREE_FINGER_DOUBLE_TAP
+            4 -> if (tapCount == 1) GestureType.FOUR_FINGER_SINGLE_TAP else null
+            else -> null
+        }
+    }
+
+    private fun getFlickGestureType(direction: String): GestureType? {
+        return when (direction) {
+            DIRECTION_UP -> GestureType.FLICK_UP
+            DIRECTION_DOWN -> GestureType.FLICK_DOWN
+            DIRECTION_LEFT -> GestureType.FLICK_LEFT
+            DIRECTION_RIGHT -> GestureType.FLICK_RIGHT
+            else -> null
+        }
+    }
+
     fun cleanup() {
         velocityTracker.recycle()
         tapRunnable?.let {

@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
+import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -33,6 +34,7 @@ import androidx.compose.foundation.combinedClickable
 @Composable
 fun HomeView(
     viewModel: HomeViewModel,
+    gestureSettingsRepository: GestureSettingsRepository,
     onNotebookSelected: (String, String) -> Unit // notebookId, noteId
 ) {
     val currentFolder by viewModel.currentFolder.collectAsState()
@@ -150,6 +152,7 @@ fun HomeView(
     // App settings dialog
     if (showAppSettingsDialog) {
         AppSettingsDialog(
+            gestureSettingsRepository = gestureSettingsRepository,
             onDismiss = { showAppSettingsDialog = false }
         )
     }

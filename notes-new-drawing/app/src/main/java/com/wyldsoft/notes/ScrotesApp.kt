@@ -6,6 +6,7 @@ import com.onyx.android.sdk.rx.RxBaseAction
 import com.onyx.android.sdk.utils.ResManager
 import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.data.repository.*
+import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
 class ScrotesApp : Application() {
@@ -22,6 +23,10 @@ class ScrotesApp : Application() {
 
     val notebookRepository: NotebookRepository by lazy {
         NotebookRepositoryImpl(notebookDao = database.notebookDao(), noteDao = database.noteDao())
+    }
+
+    val gestureSettingsRepository: GestureSettingsRepository by lazy {
+        GestureSettingsRepository(this)
     }
 
     override fun onCreate() {

@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
                             val context = LocalContext.current
                             HomeView(
                                 viewModel,
+                                gestureSettingsRepository = app.gestureSettingsRepository,
                                 onNotebookSelected = { notebookId, noteId ->
                                     val intent = Intent(context, OnyxDrawingActivity::class.java).apply {
                                         putExtra("notebookId", notebookId)
