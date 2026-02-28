@@ -156,7 +156,7 @@ class GestureHandler(
             }
 
             MotionEvent.ACTION_MOVE -> {
-                if (!isPinching) {
+                if (!isPinching && activeTouchCount == 1) {
                     handleMove(event)
                 }
             }
