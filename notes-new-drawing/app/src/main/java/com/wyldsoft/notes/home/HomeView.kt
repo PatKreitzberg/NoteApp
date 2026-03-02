@@ -31,6 +31,7 @@ import com.wyldsoft.notes.ui.components.dialogs.GoogleDriveDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
 import android.content.Intent
 import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.runtime.State
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -41,6 +42,7 @@ fun HomeView(
     viewModel: HomeViewModel,
     gestureSettingsRepository: GestureSettingsRepository,
     signInLauncher: ActivityResultLauncher<Intent>,
+    signInError: State<String?>,
     onNotebookSelected: (String, String) -> Unit // notebookId, noteId
 ) {
     val currentFolder by viewModel.currentFolder.collectAsState()
@@ -172,6 +174,7 @@ fun HomeView(
     if (showGoogleDriveDialog) {
         GoogleDriveDialog(
             signInLauncher = signInLauncher,
+            signInError = signInError,
             onDismiss = { showGoogleDriveDialog = false }
         )
     }

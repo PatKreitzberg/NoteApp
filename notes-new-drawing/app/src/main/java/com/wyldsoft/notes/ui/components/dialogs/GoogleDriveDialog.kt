@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun GoogleDriveDialog(
     signInLauncher: ActivityResultLauncher<Intent>,
+    signInError: State<String?>,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -24,6 +26,7 @@ fun GoogleDriveDialog(
     var statusText by remember { mutableStateOf("") }
     var isBackingUp by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val errorText by signInError
 
     // Refresh account when activity resumes (e.g., after sign-in intent returns)
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -94,6 +97,15 @@ fun GoogleDriveDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Sign In")
+            }
+
+            if (errorText != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = errorText!!,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Red
+                )
             }
         }
 
