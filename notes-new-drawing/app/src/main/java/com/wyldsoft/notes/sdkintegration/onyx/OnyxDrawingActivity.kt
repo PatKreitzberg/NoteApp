@@ -18,8 +18,11 @@ import com.wyldsoft.notes.gestures.GestureHandler
 import android.view.MotionEvent
 import com.wyldsoft.notes.rendering.RenderingUtils
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 
 open class OnyxDrawingActivity : BaseDrawingActivity() {
@@ -58,38 +61,54 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 // add shape to NoteRepository
                 onShapeCompleted(id, points, pressures)
             },
-            onShapeRemoved = {shapeId -> onShapeRemoved(shapeId)}
+            onShapeRemoved = {shapeId -> onShapeRemoved(shapeId)},
+            onSetRawDrawingRenderEnabled = { enabled ->
+                onyxTouchHelper?.setRawDrawingRenderEnabled(enabled)
+            },
+            onForceScreenRefresh = { forceScreenRefresh() }
         )
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun createTouchHelper() {
         Log.d(TAG, "createTouchHelper")
-        
+
         val callback = stylusHandler.createOnyxCallback()
         onyxTouchHelper = TouchHelper.create(surfaceView, callback)
-        
+
         // Set touch listener on the surface view to capture gestures
         surfaceView.setOnTouchListener { _, event ->
             // Check if any pointer is a stylus or eraser
             var hasStylusOrEraser = false
             for (i in 0 until event.pointerCount) {
                 val toolType = event.getToolType(i)
-                if (toolType == MotionEvent.TOOL_TYPE_STYLUS || 
+                if (toolType == MotionEvent.TOOL_TYPE_STYLUS ||
                     toolType == MotionEvent.TOOL_TYPE_ERASER) {
                     hasStylusOrEraser = true
                     break
                 }
             }
-            
+
             // Check if erasing is in progress
             val isErasing = stylusHandler.isErasing()
-            
+
             // Only handle events if no stylus/eraser is detected and not erasing
             if (!hasStylusOrEraser && !isErasing) {
                 gestureHandler.onTouchEvent(event)
             } else {
                 false // Let Onyx SDK handle stylus/eraser events
+            }
+        }
+
+        // Observe tool changes to reconfigure touch helper for selection mode
+        lifecycleScope.launch {
+            editorViewModel.uiState.collect { state ->
+                if (state.selectedTool == Tool.SELECTOR) {
+                    reconfigureTouchHelperForSelection()
+                } else {
+                    // Restore normal pen profile rendering
+                    reconfigureTouchHelper(editorViewModel.excludeRects.value, applyColor = true)
+                }
             }
         }
     }
@@ -167,6 +186,27 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "updateTouchHelperExclusionZones")
         stylusHandler.updatePenProfile(currentPenProfile)
         reconfigureTouchHelper(excludeRects, applyColor = false)
+    }
+
+    /**
+     * Reconfigure touch helper for selection mode: thin grey stroke for lasso visibility.
+     */
+    private fun reconfigureTouchHelperForSelection() {
+        onyxTouchHelper?.let { helper ->
+            helper.setRawDrawingEnabled(false)
+            helper.closeRawDrawing()
+
+            val limit = Rect()
+            surfaceView.getLocalVisibleRect(limit)
+
+            helper.setStrokeWidth(2f)
+                .setStrokeColor(android.graphics.Color.GRAY)
+                .setLimitRect(limit, ArrayList(editorViewModel.excludeRects.value))
+                .openRawDrawing()
+
+            helper.setRawDrawingEnabled(true)
+            helper.setRawDrawingRenderEnabled(true)
+        }
     }
 
     private fun reconfigureTouchHelper(excludeRects: List<Rect>, applyColor: Boolean) {

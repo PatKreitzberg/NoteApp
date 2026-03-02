@@ -40,7 +40,9 @@ class OnyxStylusHandler(
     private val shapesManager: ShapesManager,
     private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit, // if false then enableFingerTouch and force screen refresh. If true then disableFingerTouch
     private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>) -> Unit, //
-    private val onShapeRemoved: (shapeId: String) -> Unit
+    private val onShapeRemoved: (shapeId: String) -> Unit,
+    private val onSetRawDrawingRenderEnabled: (Boolean) -> Unit, // toggle SDK stroke rendering on/off
+    private val onForceScreenRefresh: () -> Unit // force e-ink display refresh
 ) {
     companion object {
         private const val TAG = "OnyxStylusHandler"
@@ -152,7 +154,8 @@ class OnyxStylusHandler(
         val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
 
         if (selectionManager.hasSelection && selectionManager.isInsideBoundingBox(notePoint.x, notePoint.y)) {
-            // Start dragging selected shapes
+            // Start dragging selected shapes - disable SDK rendering so no ink appears
+            onSetRawDrawingRenderEnabled(false)
             // Snapshot original domain shapes before move (for undo)
             preMoveShapeSnapshots = viewModel.currentNote.value.shapes
                 .filter { it.id in selectionManager.selectedShapeIds }
@@ -165,6 +168,8 @@ class OnyxStylusHandler(
                 // Redraw to remove old bounding box
                 bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
             }
+            // Enable SDK rendering for lasso (thin grey line configured by touch helper)
+            onSetRawDrawingRenderEnabled(true)
             selectionManager.beginLasso()
             Log.d(TAG, "Selection: lasso started")
         }
@@ -185,20 +190,24 @@ class OnyxStylusHandler(
 
                 // Persist moved shapes to DB
                 viewModel.persistMovedShapes(selectionManager.selectedShapeIds, delta.x, delta.y)
-
-                // Redraw bitmap with shapes at new positions + bounding box
-                redrawWithSelectionOverlay()
-            } else {
-                // No meaningful move; just redraw overlay
-                redrawWithSelectionOverlay()
             }
+            // Redraw bitmap with shapes at new positions + bounding box, then refresh e-ink
+            redrawWithSelectionOverlay()
+            onForceScreenRefresh()
         } else if (selectionManager.isLassoInProgress) {
             // Feed lasso points
             selectionManager.addLassoPoints(notePointList)
             // Finish lasso
             selectionManager.finishLasso(shapesManager.shapes())
-            // Redraw with bounding box (lasso line is transient)
+
+            // If shapes were selected, disable SDK rendering for next stroke (drag phase)
+            if (selectionManager.hasSelection) {
+                onSetRawDrawingRenderEnabled(false)
+            }
+
+            // Redraw with bounding box (lasso line is transient) and refresh e-ink
             redrawWithSelectionOverlay()
+            onForceScreenRefresh()
         }
     }
 
