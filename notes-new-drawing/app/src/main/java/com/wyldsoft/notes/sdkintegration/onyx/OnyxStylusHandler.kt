@@ -166,7 +166,7 @@ class OnyxStylusHandler(
             if (selectionManager.hasSelection) {
                 selectionManager.clearSelection()
                 // Redraw to remove old bounding box
-                bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+                onForceScreenRefresh()
             }
             // Enable SDK rendering for lasso (thin grey line configured by touch helper)
             onSetRawDrawingRenderEnabled(true)
@@ -191,8 +191,7 @@ class OnyxStylusHandler(
                 // Persist moved shapes to DB
                 viewModel.persistMovedShapes(selectionManager.selectedShapeIds, delta.x, delta.y)
             }
-            // Redraw bitmap with shapes at new positions + bounding box, then refresh e-ink
-            redrawWithSelectionOverlay()
+            // Refresh e-ink to show shapes at new positions + bounding box
             onForceScreenRefresh()
         } else if (selectionManager.isLassoInProgress) {
             // Feed lasso points
@@ -205,18 +204,10 @@ class OnyxStylusHandler(
                 onSetRawDrawingRenderEnabled(false)
             }
 
-            // Redraw with bounding box (lasso line is transient) and refresh e-ink
-            redrawWithSelectionOverlay()
+            // Refresh e-ink to show bounding box
             onForceScreenRefresh()
         }
     }
-
-    private fun redrawWithSelectionOverlay() {
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
-        // Draw selection overlay on top of shapes
-        bitmapManager.drawSelectionOverlay(selectionManager, viewModel.viewportManager)
-    }
-
 
     /**
      * Converts a TouchPointList from SurfaceViewCoordinates to NoteCoordinates

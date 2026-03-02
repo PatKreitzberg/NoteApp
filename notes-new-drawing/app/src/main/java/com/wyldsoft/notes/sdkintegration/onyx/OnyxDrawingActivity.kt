@@ -254,14 +254,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun onViewportChanged() {
         Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
-        // Recreate bitmap with new viewport transformation
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
-        // Redraw selection overlay if active
-        val selMgr = editorViewModel.selectionManager
-        if (selMgr.hasSelection) {
-            bitmapManager.drawSelectionOverlay(selMgr, editorViewModel.viewportManager)
-        }
-        // Request screen refresh to show the updated shapes
+        // Recreate bitmap with new viewport transformation (includes selection overlay via recreateBitmapFromShapes)
         forceScreenRefresh()
     }
 
@@ -281,6 +274,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "recreateBitmapFromShapes called from OnyxDrawingActivity")
         getOrCreateBitmap() // Ensure bitmap exists
         bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        // Re-draw selection overlay so bounding box persists across redraws
+        val selMgr = editorViewModel.selectionManager
+        if (selMgr.hasSelection) {
+            bitmapManager.drawSelectionOverlay(selMgr, editorViewModel.viewportManager)
+        }
     }
 
     override fun initializeGestureHandler() {
