@@ -17,7 +17,8 @@ import com.wyldsoft.notes.gestures.GestureType
 @Composable
 fun AppSettingsDialog(
     gestureSettingsRepository: GestureSettingsRepository,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOpenGoogleDrive: () -> Unit = {}
 ) {
     val savedMappings by gestureSettingsRepository.mappings.collectAsState()
     var mappings by remember { mutableStateOf(savedMappings) }
@@ -74,6 +75,23 @@ fun AppSettingsDialog(
             ) {
                 Text("Add Gesture")
             }
+        }
+
+        Divider()
+
+        Text(
+            text = "Sync",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        OutlinedButton(
+            onClick = {
+                gestureSettingsRepository.saveMappings(mappings)
+                onOpenGoogleDrive()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Google Drive")
         }
     }
 }

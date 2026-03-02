@@ -108,6 +108,9 @@ android {
 
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += '/META-INF/DEPENDENCIES'
+            excludes += '/META-INF/INDEX.LIST'
+            pickFirsts += ['mozilla/public-suffix-list.txt']
         }
         jniLibs {
             pickFirsts += ['**/*.so']
@@ -192,6 +195,11 @@ dependencies {
     // For xopp file format
     implementation("org.apache.commons:commons-compress:1.27.1") // GZip support
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
+
+    // Google Drive sync
+    implementation 'com.google.android.gms:play-services-auth:21.3.0'
+    implementation 'com.google.api-client:google-api-client-android:2.7.0'
+    implementation 'com.google.apis:google-api-services-drive:v3-rev20241027-2.0.0'
 }
 
 tasks.register('printVersionName') {

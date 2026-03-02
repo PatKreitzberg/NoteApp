@@ -27,7 +27,10 @@ import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
+import com.wyldsoft.notes.ui.components.dialogs.GoogleDriveDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
+import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -37,6 +40,7 @@ import androidx.compose.foundation.combinedClickable
 fun HomeView(
     viewModel: HomeViewModel,
     gestureSettingsRepository: GestureSettingsRepository,
+    signInLauncher: ActivityResultLauncher<Intent>,
     onNotebookSelected: (String, String) -> Unit // notebookId, noteId
 ) {
     val currentFolder by viewModel.currentFolder.collectAsState()
@@ -46,6 +50,7 @@ fun HomeView(
     val showCreateFolderDialog by viewModel.showCreateFolderDialog.collectAsState()
     val showCreateNotebookDialog by viewModel.showCreateNotebookDialog.collectAsState()
     var showAppSettingsDialog by remember { mutableStateOf(false) }
+    var showGoogleDriveDialog by remember { mutableStateOf(false) }
     var selectedNotebook by remember { mutableStateOf<NotebookEntity?>(null) }
 
 
@@ -155,7 +160,19 @@ fun HomeView(
     if (showAppSettingsDialog) {
         AppSettingsDialog(
             gestureSettingsRepository = gestureSettingsRepository,
-            onDismiss = { showAppSettingsDialog = false }
+            onDismiss = { showAppSettingsDialog = false },
+            onOpenGoogleDrive = {
+                showAppSettingsDialog = false
+                showGoogleDriveDialog = true
+            }
+        )
+    }
+
+    // Google Drive dialog
+    if (showGoogleDriveDialog) {
+        GoogleDriveDialog(
+            signInLauncher = signInLauncher,
+            onDismiss = { showGoogleDriveDialog = false }
         )
     }
     
