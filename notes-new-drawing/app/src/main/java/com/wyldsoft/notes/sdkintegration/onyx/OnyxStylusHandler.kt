@@ -65,6 +65,7 @@ class OnyxStylusHandler(
     // Drawing state
     private var isDrawingInProgress = false
     private var isErasingInProgress = false
+    private var selectionCancelledThisStroke = false
     private var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
 
     /**
@@ -106,6 +107,12 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
+            // If selection was cancelled during this stroke, discard the points
+            if (selectionCancelledThisStroke) {
+                selectionCancelledThisStroke = false
+                onDrawingStateChanged(false)
+                return
+            }
             val tool = viewModel.uiState.value.selectedTool
             if (tool == Tool.SELECTOR) {
                 touchPointList?.let { handleSelectionInput(it) }
@@ -162,16 +169,19 @@ class OnyxStylusHandler(
             selectionManager.beginDrag(notePoint)
             Log.d(TAG, "Selection: drag started")
         } else {
-            // If touch is outside bounding box while shapes are selected, clear and start new lasso
             if (selectionManager.hasSelection) {
-                selectionManager.clearSelection()
-                // Redraw to remove old bounding box
+                // Touch outside bounding box - exit selection mode entirely
+                selectionCancelledThisStroke = true
+                viewModel.cancelSelection()
                 onForceScreenRefresh()
+                Log.d(TAG, "Selection: cancelled, exiting selection mode")
+            } else {
+                // No selection yet - start new lasso
+                // Enable SDK rendering for lasso (thin grey line configured by touch helper)
+                onSetRawDrawingRenderEnabled(true)
+                selectionManager.beginLasso()
+                Log.d(TAG, "Selection: lasso started")
             }
-            // Enable SDK rendering for lasso (thin grey line configured by touch helper)
-            onSetRawDrawingRenderEnabled(true)
-            selectionManager.beginLasso()
-            Log.d(TAG, "Selection: lasso started")
         }
     }
 
