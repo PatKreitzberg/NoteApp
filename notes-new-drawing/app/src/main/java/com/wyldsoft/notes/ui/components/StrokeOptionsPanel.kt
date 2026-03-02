@@ -2,7 +2,6 @@ package com.wyldsoft.notes.ui.components
 
 import android.graphics.Rect
 import android.util.Log
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -21,7 +20,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.wyldsoft.notes.PenIconUtils
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.getColorName
 import com.wyldsoft.notes.getDefaultStrokeWidthForPenType
@@ -210,25 +208,11 @@ fun PenTypeButton(
     isSelected: Boolean = false,
     onSelect: () -> Unit
 ) {
-    Button(
-        onClick = onSelect,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) Color.Black else Color.Transparent,
-            contentColor = if (isSelected) Color.White else Color.Black
-        ),
-        border = BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) Color.Black else Color.Gray
-        ),
-        modifier = Modifier.size(40.dp),
-        contentPadding = PaddingValues(4.dp)
-    ) {
-        Icon(
-            imageVector = PenIconUtils.getIconForPenType(penType),
-            contentDescription = PenIconUtils.getContentDescriptionForPenType(penType),
-            modifier = Modifier.size(20.dp)
-        )
-    }
+    PenButton(
+        penType = penType,
+        isSelected = isSelected,
+        onClick = onSelect
+    )
 }
 
 @Composable

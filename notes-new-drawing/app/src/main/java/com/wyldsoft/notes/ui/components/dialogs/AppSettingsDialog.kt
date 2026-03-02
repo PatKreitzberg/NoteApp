@@ -1,8 +1,6 @@
 package com.wyldsoft.notes.ui.components.dialogs
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -10,7 +8,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.gestures.GestureMapping
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
@@ -25,86 +22,57 @@ fun AppSettingsDialog(
     val savedMappings by gestureSettingsRepository.mappings.collectAsState()
     var mappings by remember { mutableStateOf(savedMappings) }
 
-    Dialog(onDismissRequest = {
+    val saveAndDismiss = {
         gestureSettingsRepository.saveMappings(mappings)
         onDismiss()
-    }) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            shape = MaterialTheme.shapes.medium,
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "App Settings",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+    }
 
-                Divider()
+    SettingsDialogShell(
+        title = "App Settings",
+        onDismiss = saveAndDismiss,
+        scrollable = true
+    ) {
+        Text(
+            text = "Gestures",
+            style = MaterialTheme.typography.titleMedium
+        )
 
-                Text(
-                    text = "Gestures",
-                    style = MaterialTheme.typography.titleMedium
-                )
+        val usedGestures = mappings.map { it.gesture }.toSet()
 
-                val usedGestures = mappings.map { it.gesture }.toSet()
+        mappings.forEachIndexed { index, mapping ->
+            GestureMappingRow(
+                mapping = mapping,
+                usedGestures = usedGestures,
+                onGestureChange = { newGesture ->
+                    mappings = mappings.toMutableList().apply {
+                        this[index] = mapping.copy(gesture = newGesture)
+                    }
+                },
+                onActionChange = { newAction ->
+                    mappings = mappings.toMutableList().apply {
+                        this[index] = mapping.copy(action = newAction)
+                    }
+                },
+                onRemove = {
+                    mappings = mappings.toMutableList().apply {
+                        removeAt(index)
+                    }
+                }
+            )
+        }
 
-                mappings.forEachIndexed { index, mapping ->
-                    GestureMappingRow(
-                        mapping = mapping,
-                        usedGestures = usedGestures,
-                        onGestureChange = { newGesture ->
-                            mappings = mappings.toMutableList().apply {
-                                this[index] = mapping.copy(gesture = newGesture)
-                            }
-                        },
-                        onActionChange = { newAction ->
-                            mappings = mappings.toMutableList().apply {
-                                this[index] = mapping.copy(action = newAction)
-                            }
-                        },
-                        onRemove = {
-                            mappings = mappings.toMutableList().apply {
-                                removeAt(index)
-                            }
-                        }
+        val availableGestures = GestureType.entries.filter { it !in usedGestures }
+        if (availableGestures.isNotEmpty()) {
+            OutlinedButton(
+                onClick = {
+                    mappings = mappings + GestureMapping(
+                        availableGestures.first(),
+                        GestureAction.NONE
                     )
-                }
-
-                val availableGestures = GestureType.entries.filter { it !in usedGestures }
-                if (availableGestures.isNotEmpty()) {
-                    OutlinedButton(
-                        onClick = {
-                            mappings = mappings + GestureMapping(
-                                availableGestures.first(),
-                                GestureAction.NONE
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Add Gesture")
-                    }
-                }
-
-                Divider()
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = {
-                        gestureSettingsRepository.saveMappings(mappings)
-                        onDismiss()
-                    }) {
-                        Text("Close")
-                    }
-                }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Add Gesture")
             }
         }
     }

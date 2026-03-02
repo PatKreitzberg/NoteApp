@@ -28,6 +28,8 @@ import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 
@@ -251,32 +253,13 @@ fun FolderItem(
     folder: FolderEntity,
     onClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .width(100.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onClick() }
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.Folder,
-            contentDescription = folder.name,
-            modifier = Modifier.size(48.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
-            text = folder.name,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
-        )
-    }
+    ItemCard(
+        name = folder.name,
+        icon = Icons.Default.Folder,
+        iconTint = MaterialTheme.colorScheme.primary,
+        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.clickable { onClick() }
+    )
 }
 
 @Composable
@@ -312,37 +295,53 @@ fun NotebookItem(
     onLongClick: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    
+
+    ItemCard(
+        name = notebook.name,
+        icon = Icons.Default.Book,
+        iconTint = MaterialTheme.colorScheme.secondary,
+        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.combinedClickable(
+            onClick = {
+                coroutineScope.launch {
+                    val noteId = viewModel.getFirstNoteInNotebook(notebook.id)
+                    noteId?.let {
+                        onNotebookSelected(notebook.id, it)
+                    }
+                }
+            },
+            onLongClick = onLongClick
+        )
+    )
+}
+
+@Composable
+fun ItemCard(
+    name: String,
+    icon: ImageVector,
+    iconTint: Color,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .width(100.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .combinedClickable(
-                onClick = { 
-                    coroutineScope.launch {
-                        val noteId = viewModel.getFirstNoteInNotebook(notebook.id)
-                        noteId?.let {
-                            onNotebookSelected(notebook.id, it)
-                        }
-                    }
-                },
-                onLongClick = onLongClick
-            )
+            .background(backgroundColor)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            imageVector = Icons.Default.Book,
-            contentDescription = notebook.name,
+            imageVector = icon,
+            contentDescription = name,
             modifier = Modifier.size(48.dp),
-            tint = MaterialTheme.colorScheme.secondary
+            tint = iconTint
         )
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         Text(
-            text = notebook.name,
+            text = name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

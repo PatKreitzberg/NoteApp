@@ -13,7 +13,6 @@ interface NotebookRepository {
     fun getNotebooksInFolder(folderId: String): Flow<List<NotebookEntity>>
     suspend fun createNotebook(name: String, folderId: String): NotebookEntity
     suspend fun renameNotebook(notebookId: String, newName: String)
-    suspend fun updateNotebookName(notebookId: String, newName: String)
     suspend fun deleteNotebook(notebookId: String)
     fun getNotesInNotebook(notebookId: String): Flow<List<NoteEntity>>
     suspend fun getFirstNoteInNotebook(notebookId: String): NoteEntity?
@@ -81,7 +80,4 @@ class NotebookRepositoryImpl(
         return notebookDao.getFirstNoteInNotebook(notebookId)
     }
     
-    override suspend fun updateNotebookName(notebookId: String, newName: String) {
-        renameNotebook(notebookId, newName)
-    }
 }

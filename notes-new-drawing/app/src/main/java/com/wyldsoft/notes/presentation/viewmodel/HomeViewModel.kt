@@ -110,7 +110,7 @@ class HomeViewModel(
     
     fun renameNotebook(notebookId: String, newName: String) {
         viewModelScope.launch {
-            notebookRepository.updateNotebookName(notebookId, newName)
+            notebookRepository.renameNotebook(notebookId, newName)
         }
     }
 }

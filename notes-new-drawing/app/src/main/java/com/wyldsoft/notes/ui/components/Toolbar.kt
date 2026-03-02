@@ -2,7 +2,6 @@ package com.wyldsoft.notes.ui.components
 
 import android.graphics.Rect
 import android.util.Log
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -17,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.wyldsoft.notes.PenIconUtils
 import kotlinx.coroutines.launch
 
 import com.wyldsoft.notes.pen.PenProfile
@@ -235,23 +233,12 @@ fun ProfileButton(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Button(
+    PenButton(
+        penType = profile.penType,
+        isSelected = isSelected,
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) profile.strokeColor else Color.Transparent,
-            contentColor = if (isSelected) Color.White else Color.Black
-        ),
-        border = BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) Color.Black else Color.Gray
-        ),
-        modifier = Modifier.size(48.dp),
-        contentPadding = PaddingValues(4.dp)
-    ) {
-        Icon(
-            imageVector = PenIconUtils.getIconForPenType(profile.penType),
-            contentDescription = PenIconUtils.getContentDescriptionForPenType(profile.penType),
-            modifier = Modifier.size(24.dp)
-        )
-    }
+        selectedColor = profile.strokeColor,
+        size = 48.dp,
+        iconSize = 24.dp
+    )
 }
