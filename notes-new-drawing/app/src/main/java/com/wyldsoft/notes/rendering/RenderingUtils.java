@@ -8,6 +8,9 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.view.SurfaceView;
+import android.view.View;
+
+import com.onyx.android.sdk.api.device.epd.EpdController;
 
 public class RenderingUtils {
 
@@ -33,6 +36,14 @@ public class RenderingUtils {
     public static void drawRendererContent(Bitmap bitmap, Canvas canvas) {
         Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
         canvas.drawBitmap(bitmap, rect, rect, null);
+    }
+
+    /**
+     * Signals the e-ink controller to allow pending screen updates on the given view.
+     * Must be called before unlocking a canvas or enqueuing a refresh request.
+     */
+    public static void enableScreenPost(View view) {
+        EpdController.enablePost(view, 1);
     }
 
     public static Matrix getPointMatrix(final RendererHelper.RenderContext renderContext) {

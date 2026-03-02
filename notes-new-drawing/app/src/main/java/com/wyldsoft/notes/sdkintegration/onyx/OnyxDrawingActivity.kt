@@ -16,7 +16,7 @@ import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import com.wyldsoft.notes.gestures.GestureHandler
 import android.view.MotionEvent
-import com.onyx.android.sdk.api.device.epd.EpdController
+import com.wyldsoft.notes.rendering.RenderingUtils
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
@@ -208,7 +208,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     
     override fun refreshUIChrome() {
         // Force e-ink display to refresh the Compose UI layer (toolbar buttons, etc.)
-        EpdController.enablePost(window.decorView, 1)
+        RenderingUtils.enableScreenPost(window.decorView)
         window.decorView.postInvalidate()
     }
 
@@ -221,15 +221,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun forceScreenRefresh() {
-        EpdController.enablePost(surfaceView, 1) // this is absolutely necessary to ensure the screen refreshes properly
+        RenderingUtils.enableScreenPost(surfaceView) // absolutely necessary to ensure the screen refreshes properly
         surfaceView.let { sv ->
             cleanSurfaceView(sv)
             // Recreate bitmap from all stored shapes
             recreateBitmapFromShapes()
             bitmap?.let { renderToScreen(sv, it) }
         }
-        // fixme: should we have the following line?
-        // EpdController.enablePost(surfaceView, 0)
+        // fixme: should we disable screen post after refresh?
+        // RenderingUtils.enableScreenPost(surfaceView) with 0 instead of 1
     }
     
     override fun recreateBitmapFromShapes() {

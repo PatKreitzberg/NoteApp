@@ -4,9 +4,9 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.RectF
 import android.view.SurfaceView
-import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.rendering.RendererHelper
+import com.wyldsoft.notes.rendering.RenderingUtils
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.utils.createStrokePaint
 
@@ -26,8 +26,7 @@ class PartialEraseRefresh {
             remainingShapes,
             rendererHelper
         )
-        //
-        EpdController.enablePost(surfaceView, 1);
+        RenderingUtils.enableScreenPost(surfaceView)
         rxManager.enqueue(partialRefreshRequest, null)
     }
     

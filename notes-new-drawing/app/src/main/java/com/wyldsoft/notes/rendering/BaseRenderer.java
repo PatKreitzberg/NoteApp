@@ -9,7 +9,6 @@ import android.view.SurfaceView;
 import androidx.annotation.Nullable;
 
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape;
-import com.onyx.android.sdk.api.device.epd.EpdController;
 import com.onyx.android.sdk.utils.BitmapUtils;
 import com.onyx.android.sdk.utils.CanvasUtils;
 
@@ -43,7 +42,7 @@ public abstract class BaseRenderer implements Renderer {
     }
 
     protected void beforeUnlockCanvas(SurfaceView surfaceView) {
-        EpdController.enablePost(surfaceView, 1);
+        RenderingUtils.enableScreenPost(surfaceView);
     }
 
 }
