@@ -1,0 +1,595 @@
+#+TITLE: Notes App Architecture Diagram
+#+AUTHOR: Generated from codebase analysis
+#+DATE: 2026-02-27
+
+* Shape Handling
+
+** Domain Model (Kotlin)
+
+#+begin_example
+  Shape (data class)
+  ├── id: String
+  ├── type: ShapeType
+  ├── points: List<PointF>
+  ├── strokeWidth: Float
+  ├── strokeColor: String
+  ├── penType: PenType
+  ├── pressure: List<Float>
+  └── timestamp: Long
+
+  ShapeType (enum)
+  ├── STROKE
+  ├── RECTANGLE
+  ├── CIRCLE
+  ├── TRIANGLE
+  └── LINE
+#+end_example
+
+** SDK Shape Hierarchy (Java)
+
+#+begin_example
+  BaseShape (abstract)
+  ├── render()
+  ├── hitTest()
+  ├── hitTestPoints()
+  ├── updateShapeRect()
+  ├── getBoundingRect()
+  │
+  ├── NormalPencilShape
+  ├── BrushScribbleShape
+  ├── MarkerScribbleShape
+  ├── CharcoalScribbleShape
+  └── NewBrushScribbleShape
+#+end_example
+
+** Shape Management Classes
+
+#+begin_example
+  ShapesManager
+  ├── addShape()
+  ├── removeShape()
+  ├── removeAll()
+  ├── convertDomainShapeToSdkShape()   ← bridges Domain Shape ↔ SDK BaseShape
+  ├── penTypeToShapeType()
+  └── uses: EditorViewModel
+
+  ShapeFactory
+  ├── createShape(int) → BaseShape     ← factory for SDK shapes
+  ├── getStrokeStyle()
+  └── isMarkerShape()
+
+  DrawManager
+  ├── newShape()                        ← called when stroke finishes
+  ├── createShapeFromPenType()
+  ├── updatePenProfile()
+  └── uses: BitmapManager, ShapeFactory, onShapeCompleted callback
+
+  EraseManager
+  ├── handleErasing()
+  ├── findIntersectingShapes()
+  ├── calculateRefreshRect()
+  └── uses: SurfaceView, RxManager, BitmapManager, ShapesManager
+#+end_example
+
+** Relationships
+
+#+begin_example
+  Stylus input
+    → DrawManager.newShape()
+      → ShapeFactory.createShape()     (creates SDK BaseShape)
+      → onShapeCompleted callback
+        → EditorViewModel.addShape()   (creates domain Shape)
+          → NoteRepository.addShape()  (persists ShapeEntity)
+
+  ShapesManager bridges the two shape systems:
+    Domain Shape (stored in DB) ←→ SDK BaseShape (used for rendering)
+#+end_example
+
+* Drawing & Rendering to Screen
+
+** Renderer Hierarchy
+
+#+begin_example
+  «interface» Renderer
+  ├── renderToBitmap()
+  └── renderToScreen()
+        │
+        ▼
+  BaseRenderer (abstract)
+  ├── renderToBitmap()
+  ├── renderToScreen()
+  ├── drawRendererContent()
+  ├── lockHardwareCanvas()
+  └── unlockCanvasAndPost()
+        │
+        ├── NormalRenderer        ← standard drawing
+        ├── EraseRenderer         ← erasing strokes
+        └── PartialRefreshRenderer ← partial screen updates
+#+end_example
+
+** Rendering Support Classes
+
+#+begin_example
+  RendererHelper
+  └── RenderContext (inner class)
+      ├── bitmap: Bitmap
+      ├── canvas: Canvas
+      ├── paint: Paint
+      └── shapes: List<BaseShape>
+
+  RenderingUtils (static utilities)
+  ├── renderBackground()
+  ├── checkSurfaceView()
+  ├── clearBackground()
+  ├── drawRendererContent()       ← shared by all RxRequest renderers
+  ├── enableScreenPost()          ← wraps EpdController.enablePost
+  └── getPointMatrix()
+
+  RendererToScreenRequest
+  ├── surfaceView: SurfaceView
+  ├── bitmap: Bitmap
+  └── enqueued to RxManager
+
+  PaginationRendererToScreenRequest
+  ├── extends rendering with pagination awareness
+  └── uses: EditorViewModel (for exclude rects)
+#+end_example
+
+** BitmapManager (Central Rendering Coordinator)
+
+#+begin_example
+  BitmapManager
+  ├── recreateBitmapFromShapes()   ← full redraw of all shapes
+  ├── renderShapeToBitmap()        ← incremental single shape
+  ├── renderBitmapToScreen()       ← push bitmap to SurfaceView
+  ├── clearDrawing()
+  ├── isShapeVisible()
+  │
+  └── uses: SurfaceView, EditorViewModel, RxManager,
+            ViewportManager, RendererHelper, ShapesManager
+#+end_example
+
+** DrawingManager
+
+#+begin_example
+  DrawingManager
+  ├── drawShape()
+  ├── drawStroke()
+  ├── drawRectangle()
+  ├── drawCircle()
+  ├── drawTriangle()
+  ├── drawLine()
+  ├── drawPageSeparators()         ← pagination visual boundaries
+  │
+  └── uses: ViewportManager
+#+end_example
+
+** Rendering Flow
+
+#+begin_example
+  Shape created
+    → BitmapManager.renderShapeToBitmap()
+      → RendererHelper.getRenderContext()
+      → BaseRenderer.renderToBitmap()       (draw to offscreen bitmap)
+      → RendererToScreenRequest enqueued
+        → RxManager processes queue
+          → BaseRenderer.renderToScreen()   (blit bitmap to SurfaceView)
+            → ScreenRefreshManager          (e-ink refresh)
+#+end_example
+
+* Canvas & Viewport Management
+
+** ViewportManager
+
+#+begin_example
+  ViewportManager
+  ├── Coordinate Transformation:
+  │   ├── surfaceToNoteCoordinates()    ← stylus input → storage coords
+  │   ├── noteToSurfaceCoordinates()    ← storage coords → display
+  │   └── getTransformMatrix()
+  │
+  ├── Viewport Control:
+  │   ├── updateScale()                 ← from pinch zoom
+  │   ├── updateOffset()               ← from pan/scroll
+  │   ├── reset()
+  │   └── setState()
+  │
+  ├── Pagination:
+  │   ├── setPaginationMode()          ← locks zoom to 1.0, no horiz scroll
+  │   └── getScrollPosition()
+  │
+  ├── State:
+  │   └── ViewportState (data class)
+  │       ├── scale: Float
+  │       ├── offsetX: Float
+  │       └── offsetY: Float
+  │
+  └── Query:
+      ├── getZoomPercentage()
+      └── getScrollPosition()
+#+end_example
+
+** Coordinate Systems
+
+#+begin_example
+  Three coordinate systems:
+
+  1. NoteCoordinates      ← absolute position in the note (stored with shapes)
+  2. SurfaceViewCoordinates ← position on the screen surface
+  3. ScreenCoordinates    ← for pagination exclusion zones
+
+  Transformation flow:
+  Stylus input (SurfaceView coords)
+    → ViewportManager.surfaceToNoteCoordinates()
+      → stored as Shape in database (Note coords)
+
+  Rendering:
+  Shape from database (Note coords)
+    → ViewportManager.noteToSurfaceCoordinates()
+      → drawn to bitmap/canvas (SurfaceView coords)
+#+end_example
+
+** DrawingCanvas (Composable)
+
+#+begin_example
+  DrawingCanvas
+  ├── creates and manages SurfaceView
+  ├── onSurfaceViewCreated callback
+  └── uses: EditorViewModel
+#+end_example
+
+** Pagination
+
+#+begin_example
+  PaperSize (enum)
+  ├── LETTER  (aspect ratio)
+  ├── A4      (aspect ratio)
+  └── LEGAL   (aspect ratio)
+
+  When pagination enabled:
+  ├── Zoom locked to 1.0
+  ├── Horizontal scroll disabled (offsetX = 0)
+  ├── Vertical scroll drives page number
+  ├── Page separator lines rendered on canvas
+  └── Exclude rects prevent stylus input in separator areas
+#+end_example
+
+* Gesture Handling
+
+#+begin_example
+  GestureHandler
+  ├── onTouchEvent()
+  ├── handleDown()
+  ├── handleMove()
+  ├── handleUp()
+  │
+  ├── Supported Gestures:
+  │   ├── Single finger tap
+  │   ├── Two finger tap
+  │   ├── Three+ finger tap
+  │   ├── Double tap
+  │   ├── Pan / Scroll        → ViewportManager.updateOffset()
+  │   ├── Pinch Zoom          → ViewportManager.updateScale()
+  │   └── Flick
+  │
+  ├── setViewportManager()
+  ├── cleanup()
+  │
+  └── uses: Context, View, ViewportManager
+#+end_example
+
+* Screen Refresh (E-ink)
+
+#+begin_example
+  ScreenRefreshManager
+  ├── forceScreenRefresh()
+  ├── cleanSurfaceView: lambda
+  └── renderToScreen: lambda
+
+  RefreshCoordinator
+  ├── createRefreshingSurfaceCallback()
+  └── uses: ScreenRefreshManager
+
+  PartialEraseRefresh
+  └── performPartialRefresh()     ← refreshes only the erased region
+
+  PartialRefreshRequest
+  ├── surfaceView: SurfaceView
+  ├── rect: Rect (refresh area)
+  ├── bitmap: Bitmap
+  └── enqueued to RxManager
+#+end_example
+
+* UI Layer
+
+** Activities
+
+#+begin_example
+  MainActivity (ComponentActivity)
+  ├── Entry point
+  ├── Displays HomeView
+  └── Launches OnyxDrawingActivity on notebook selection
+
+  BaseDrawingActivity (abstract, ComponentActivity)
+  ├── implements DrawingActivityInterface
+  ├── onShapeCompleted()
+  ├── onShapeRemoved()
+  ├── forceScreenRefresh()
+  ├── Manages: UI creation, SurfaceView, BitmapManager, observers
+  │
+  └── OnyxDrawingActivity (extends BaseDrawingActivity)
+      ├── createOnyxStylusHandler()
+      ├── createTouchHelper()
+      ├── initializeStylusHandler()
+      ├── initializeGestureHandler()
+      ├── initializeBitmapManager()
+      ├── enableFingerTouch() / disableFingerTouch()
+      ├── cleanSurfaceView()
+      ├── renderToScreen()
+      └── recreateBitmapFromShapes()
+#+end_example
+
+** ViewModels
+
+#+begin_example
+  EditorViewModel (ViewModel)
+  ├── StateFlows:
+  │   ├── uiState: EditorUiState
+  │   ├── currentNote: Note
+  │   ├── isDrawing: Boolean
+  │   ├── currentPenProfile: PenProfile
+  │   ├── viewportState: ViewportState
+  │   ├── isPaginationEnabled: Boolean
+  │   ├── paperSize: PaperSize
+  │   ├── currentPageNumber: Int
+  │   ├── screenWidth: Int
+  │   ├── pageHeight: Int
+  │   ├── excludeRects: List<Rect>
+  │   └── refreshUi: SharedFlow
+  │
+  ├── EditorUiState (data class)
+  │   ├── isStrokeOptionsOpen: Boolean
+  │   └── selectedTool: Tool
+  │
+  ├── Tool (enum): PEN | ERASER | SELECTOR | GEOMETRY
+  │
+  └── uses: NoteRepository, NotebookRepository, ViewportManager
+
+  HomeViewModel (ViewModel)
+  ├── StateFlows:
+  │   ├── currentFolderId
+  │   ├── currentFolder
+  │   ├── folderPath
+  │   ├── subfolders
+  │   ├── notebooks
+  │   ├── showCreateFolderDialog
+  │   └── showCreateNotebookDialog
+  │
+  └── uses: NoteRepository, NotebookRepository, FolderRepository
+#+end_example
+
+** Composable UI Components
+
+#+begin_example
+  EditorView
+  ├── Toolbar
+  │   ├── ProfileButton (x5) → delegates to PenButton
+  │   └── StrokeOptionsPanel
+  │       ├── PenTypeButton   → delegates to PenButton
+  │       └── adjusts PenProfile properties
+  ├── DrawingCanvas
+  │   └── wraps SurfaceView
+  ├── ViewportInfo
+  │   └── displays zoom % and page number
+  ├── NoteSettingsDialog      → uses SettingsDialogShell, SettingsDropdown
+  ├── NotebookSettingsDialog  → uses SettingsDialogShell
+  └── AppSettingsDialog       → uses SettingsDialogShell
+
+  Shared UI Components:
+  ├── PenButton               ← shared pen type icon button
+  ├── ItemCard                ← shared card for folders/notebooks
+  ├── SettingsDialogShell     ← shared dialog scaffold (Card+title+Divider+close)
+  └── SettingsDropdown<T>     ← generic dropdown for settings dialogs
+
+  HomeView
+  ├── FolderItem              → uses ItemCard
+  ├── NotebookItem            → uses ItemCard
+  ├── folder navigation
+  ├── notebook list
+  ├── create folder dialog
+  └── create notebook dialog
+#+end_example
+
+** Pen Profiles
+
+#+begin_example
+  PenProfile (data class)
+  ├── strokeWidth: Float
+  ├── penType: PenType
+  ├── strokeColor: String
+  ├── profileId: Int
+  ├── getColorAsInt()
+  └── getOnyxStrokeStyleInternal()
+
+  PenType (enum)
+  ├── BALLPEN
+  ├── FOUNTAIN
+  ├── MARKER
+  ├── PENCIL
+  ├── CHARCOAL
+  ├── CHARCOAL_V2
+  ├── NEO_BRUSH
+  └── DASH
+#+end_example
+
+* Data Layer
+
+** Database
+
+#+begin_example
+  ScrotesApp (Application)
+  └── initializes NotesDatabase + all repositories
+
+  NotesDatabase (Room, version 2)
+  ├── NoteDao      → NoteEntity (notes table)
+  ├── ShapeDao     → ShapeEntity (shapes table)
+  ├── NotebookDao  → NotebookEntity (notebooks table)
+  └── FolderDao    → FolderEntity (folders table)
+                     NoteNotebookCrossRef (junction table)
+#+end_example
+
+** Entity Relationships
+
+#+begin_example
+  Folder ──1:N──→ Folder     (self-referencing, parent folders)
+  Folder ──1:N──→ Notebook
+  Notebook ─1:N─→ Note
+  Note ────1:N──→ Shape
+#+end_example
+
+** Repositories
+
+#+begin_example
+  «interface» NoteRepository          NoteRepositoryImpl
+  ├── getNote()                       ├── uses NoteDao, ShapeDao
+  ├── saveNote()                      ├── _currentNote: MutableStateFlow
+  ├── addShape()                      └── updateNoteFields()  ← shared helper
+  ├── removeShape()
+  ├── setCurrentNote()
+  ├── getNoteFlow()
+  ├── updateViewportState()
+  ├── updatePaginationSettings()
+  └── updatePaperTemplate()
+
+  «interface» NotebookRepository      NotebookRepositoryImpl
+  ├── getNotebook()                   └── uses NotebookDao, NoteDao
+  ├── getNotebooksInFolder()
+  ├── createNotebook()
+  ├── renameNotebook()
+  ├── deleteNotebook()
+  └── getNotesInNotebook()
+  (note: updateNotebookName removed — was redundant with renameNotebook)
+
+  «interface» FolderRepository        FolderRepositoryImpl
+  ├── getFolder()                     └── uses FolderDao
+  ├── getSubfolders()
+  ├── getRootFolder()
+  ├── createFolder()
+  └── getFolderPath()
+#+end_example
+
+** Type Converters
+
+#+begin_example
+  Converters
+  ├── List<PointF> ↔ String    (points serialization)
+  ├── List<Float>  ↔ String    (pressure serialization)
+  ├── ShapeType    ↔ String
+  └── PenType      ↔ String
+#+end_example
+
+* SDK Integration (Onyx)
+
+** Class Hierarchy
+
+#+begin_example
+  «interface» DrawingActivityInterface
+  ├── onShapeCompleted()
+  ├── onShapeRemoved()
+  ├── forceScreenRefresh()
+  └── setViewModel()
+
+  BaseDrawingActivity (abstract)
+  └── OnyxDrawingActivity
+      │
+      ├── OnyxStylusHandler
+      │   ├── createOnyxCallback()          ← receives raw stylus events
+      │   ├── updatePenProfile()
+      │   ├── convertTouchPointListToNoteCoordinates()
+      │   ├── clearDrawing()
+      │   ├── isErasing()
+      │   └── uses: SurfaceView, EditorViewModel, RxManager,
+      │             BitmapManager, ShapesManager, DrawManager, EraseManager
+      │
+      ├── GestureHandler                    ← finger touch gestures
+      ├── TouchHelper (Onyx SDK)            ← raw stylus input
+      ├── RxManager (Onyx SDK)              ← request queue processing
+      ├── RefreshCoordinator                ← screen refresh lifecycle
+      │
+      └── OnyxDeviceReceiverWrapper
+          └── GlobalDeviceReceiver          ← device hardware events
+
+  BaseDeviceReceiver (abstract)
+  ├── enable()
+  ├── setSystemNotificationPanelChangeListener()
+  ├── setSystemScreenOnListener()
+  └── cleanup()
+#+end_example
+
+** End-to-End Drawing Flow
+
+#+begin_example
+  1. Stylus touches screen
+  2. TouchHelper (Onyx SDK) captures raw input
+  3. OnyxStylusHandler.createOnyxCallback() receives touch points
+  4. Points converted: SurfaceView coords → Note coords (ViewportManager)
+  5. DrawManager.newShape() creates BaseShape via ShapeFactory
+  6. onShapeCompleted() callback fires
+  7. EditorViewModel.addShape() creates domain Shape
+  8. NoteRepository.addShape() persists ShapeEntity to Room DB
+  9. BitmapManager.renderShapeToBitmap() draws to offscreen bitmap
+  10. RendererToScreenRequest enqueued to RxManager
+  11. RxManager processes → bitmap blitted to SurfaceView
+  12. ScreenRefreshManager triggers e-ink refresh
+#+end_example
+
+** End-to-End Erase Flow
+
+#+begin_example
+  1. Stylus in erase mode touches screen
+  2. OnyxStylusHandler detects erasing
+  3. EraseManager.handleErasing() called
+  4. EraseManager.findIntersectingShapes() checks hit detection
+  5. Matching shapes removed from ShapesManager
+  6. onShapeRemoved() callback fires
+  7. NoteRepository.removeShape() deletes from DB
+  8. EraseManager.calculateRefreshRect() determines dirty region
+  9. PartialEraseRefresh.performPartialRefresh()
+  10. BitmapManager recreates bitmap without erased shapes
+  11. Partial screen refresh on affected area only
+#+end_example
+
+* Utility & Support Classes
+
+#+begin_example
+  ScrotesApp (Application)
+  ├── Initializes NotesDatabase
+  ├── Lazy-initializes all DAOs
+  ├── Lazy-initializes all Repositories
+  └── Onyx SDK initialization
+
+  PaginationUtils
+  ├── PaginationConstants.SEPARATOR_HEIGHT  ← shared constant (10f)
+  ├── getPageBounds()                       ← (pageTop, pageBottom) for a page
+  └── getVisiblePageRange()                 ← IntRange of visible pages
+
+  PenIconUtils
+  ├── getIconForPenType()
+  └── getContentDescriptionForPenType()
+
+  TouchUtils
+  ├── enableFingerTouch()
+  └── disableFingerTouch()
+
+  ComposeUtils
+  └── Compose utility functions
+
+  InteractiveMode (Java enum)
+  └── Mode constants
+
+  EraseArgs (Java)
+  └── Arguments for erase operations
+
+  ActionInterface / ActionManager / DrawAction
+  └── Action history and undo support
+#+end_example
