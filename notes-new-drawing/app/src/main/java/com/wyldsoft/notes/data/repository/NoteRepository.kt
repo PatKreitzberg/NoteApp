@@ -24,6 +24,7 @@ interface NoteRepository {
     suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float)
     suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String)
     suspend fun updatePaperTemplate(noteId: String, paperTemplate: String)
+    suspend fun updateShape(noteId: String, shape: Shape)
 }
 
 class NoteRepositoryImpl(
@@ -143,6 +144,12 @@ class NoteRepositoryImpl(
             paperSize = paperSize,
             paperTemplate = PaperTemplate.fromString(paperTemplate)
         )
+    }
+
+    override suspend fun updateShape(noteId: String, shape: Shape) {
+        val shapeEntity = shape.toEntity(noteId)
+        shapeDao.update(shapeEntity)
+        refreshCurrentNoteIfMatch(noteId)
     }
 
     override suspend fun updatePaperTemplate(noteId: String, paperTemplate: String) {

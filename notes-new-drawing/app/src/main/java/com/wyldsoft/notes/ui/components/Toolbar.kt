@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.presentation.viewmodel.Tool
 
 
 @Composable
@@ -81,6 +83,10 @@ fun Toolbar(
     }
 
     fun handleProfileClick(profileIndex: Int) {
+        // If in selection mode, switch back to pen
+        if (viewModel.uiState.value.selectedTool == Tool.SELECTOR) {
+            viewModel.cancelSelection()
+        }
         if (selectedProfileIndex == profileIndex && isStrokeSelectionOpen) {
             // Same profile clicked - close panel
             closeStrokeOptionsPanel()
@@ -143,6 +149,34 @@ fun Toolbar(
                     profile = profile,
                     isSelected = selectedProfileIndex == index,
                     onClick = { handleProfileClick(index) }
+                )
+            }
+
+            // Selection tool button
+            val uiState by viewModel.uiState.collectAsState()
+            val isSelectionActive = uiState.selectedTool == Tool.SELECTOR
+
+            IconButton(
+                onClick = {
+                    if (isSelectionActive) {
+                        viewModel.cancelSelection()
+                    } else {
+                        if (isStrokeSelectionOpen) {
+                            closeStrokeOptionsPanel()
+                        }
+                        viewModel.selectTool(Tool.SELECTOR)
+                    }
+                },
+                modifier = Modifier
+                    .then(
+                        if (isSelectionActive) Modifier.border(2.dp, Color.Black)
+                        else Modifier
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SelectAll,
+                    contentDescription = "Selection Tool",
+                    tint = if (isSelectionActive) Color.Black else Color.Gray
                 )
             }
 

@@ -9,6 +9,7 @@ import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
@@ -54,6 +55,11 @@ class OnyxStylusHandler(
     // Erase management
     private val eraseManager = EraseManager(surfaceView, rxManager, bitmapManager, onShapeRemoved)
 
+    // Selection management
+    private val selectionManager get() = viewModel.selectionManager
+    // Snapshot of domain shapes before a drag, for undo
+    private var preMoveShapeSnapshots: List<com.wyldsoft.notes.domain.models.Shape>? = null
+
     // Drawing state
     private var isDrawingInProgress = false
     private var isErasingInProgress = false
@@ -78,6 +84,12 @@ class OnyxStylusHandler(
      */
     fun createOnyxCallback(): RawInputCallback = object : RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
+            val tool = viewModel.uiState.value.selectedTool
+            if (tool == Tool.SELECTOR) {
+                onDrawingStateChanged(true)
+                handleSelectionBegin(touchPoint)
+                return
+            }
             isDrawingInProgress = true
             onDrawingStateChanged(true)
             viewModel.startDrawing()
@@ -92,6 +104,12 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
+            val tool = viewModel.uiState.value.selectedTool
+            if (tool == Tool.SELECTOR) {
+                touchPointList?.let { handleSelectionInput(it) }
+                onDrawingStateChanged(false)
+                return
+            }
             touchPointList?.points?.let { points ->
                 val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
                 val newShape = drawManager.newShape(notePointList)
@@ -125,6 +143,69 @@ class OnyxStylusHandler(
                 eraseManager.handleErasing(noteErasePointList, shapesManager)
             }
         }
+    }
+
+    // --- Selection handling ---
+
+    private fun handleSelectionBegin(touchPoint: TouchPoint?) {
+        if (touchPoint == null) return
+        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
+
+        if (selectionManager.hasSelection && selectionManager.isInsideBoundingBox(notePoint.x, notePoint.y)) {
+            // Start dragging selected shapes
+            // Snapshot original domain shapes before move (for undo)
+            preMoveShapeSnapshots = viewModel.currentNote.value.shapes
+                .filter { it.id in selectionManager.selectedShapeIds }
+            selectionManager.beginDrag(notePoint)
+            Log.d(TAG, "Selection: drag started")
+        } else {
+            // If touch is outside bounding box while shapes are selected, clear and start new lasso
+            if (selectionManager.hasSelection) {
+                selectionManager.clearSelection()
+                // Redraw to remove old bounding box
+                bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+            }
+            selectionManager.beginLasso()
+            Log.d(TAG, "Selection: lasso started")
+        }
+    }
+
+    private fun handleSelectionInput(touchPointList: TouchPointList) {
+        val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
+
+        if (selectionManager.isDragging) {
+            // Finish drag and apply move
+            val delta = selectionManager.finishDrag(notePointList, shapesManager.shapes())
+            if (delta != null) {
+                // Record undo action with pre-move snapshots
+                preMoveShapeSnapshots?.let { originals ->
+                    viewModel.recordMoveAction(originals, delta.x, delta.y)
+                }
+                preMoveShapeSnapshots = null
+
+                // Persist moved shapes to DB
+                viewModel.persistMovedShapes(selectionManager.selectedShapeIds, delta.x, delta.y)
+
+                // Redraw bitmap with shapes at new positions + bounding box
+                redrawWithSelectionOverlay()
+            } else {
+                // No meaningful move; just redraw overlay
+                redrawWithSelectionOverlay()
+            }
+        } else if (selectionManager.isLassoInProgress) {
+            // Feed lasso points
+            selectionManager.addLassoPoints(notePointList)
+            // Finish lasso
+            selectionManager.finishLasso(shapesManager.shapes())
+            // Redraw with bounding box (lasso line is transient)
+            redrawWithSelectionOverlay()
+        }
+    }
+
+    private fun redrawWithSelectionOverlay() {
+        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        // Draw selection overlay on top of shapes
+        bitmapManager.drawSelectionOverlay(selectionManager, viewModel.viewportManager)
     }
 
 

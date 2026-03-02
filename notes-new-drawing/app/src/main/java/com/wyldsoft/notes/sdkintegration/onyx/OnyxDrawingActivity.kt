@@ -216,6 +216,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
         // Recreate bitmap with new viewport transformation
         bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        // Redraw selection overlay if active
+        val selMgr = editorViewModel.selectionManager
+        if (selMgr.hasSelection) {
+            bitmapManager.drawSelectionOverlay(selMgr, editorViewModel.viewportManager)
+        }
         // Request screen refresh to show the updated shapes
         forceScreenRefresh()
     }

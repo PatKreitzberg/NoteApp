@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.DrawAction
 import com.wyldsoft.notes.actions.EraseAction
+import com.wyldsoft.notes.actions.MoveAction
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.domain.models.Shape
@@ -17,6 +18,7 @@ import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.utils.PaginationConstants
 import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.viewport.ViewportManager
 import kotlinx.coroutines.FlowPreview
@@ -86,6 +88,9 @@ class EditorViewModel(
     private var shapesManager: ShapesManager? = null
     private var bitmapManager: BitmapManager? = null
     private var onScreenRefreshNeeded: (() -> Unit)? = null
+
+    // Selection manager
+    val selectionManager = SelectionManager()
 
     // Erase stroke grouping: accumulates erased shapes during one erase gesture
     private val pendingErasedShapes = mutableListOf<Shape>()
@@ -208,6 +213,50 @@ class EditorViewModel(
         }
     }
     
+    fun selectTool(tool: Tool) {
+        if (tool != Tool.SELECTOR) {
+            selectionManager.clearSelection()
+        }
+        _uiState.value = _uiState.value.copy(selectedTool = tool)
+    }
+
+    fun cancelSelection() {
+        selectionManager.clearSelection()
+        _uiState.value = _uiState.value.copy(selectedTool = Tool.PEN)
+    }
+
+    /**
+     * Record a move action for undo/redo after shapes have been dragged.
+     * [originalShapes] are the domain shapes *before* the move.
+     */
+    fun recordMoveAction(originalShapes: List<Shape>, dx: Float, dy: Float) {
+        val sm = shapesManager
+        val bm = bitmapManager
+        if (sm != null && bm != null) {
+            val action = MoveAction(
+                currentNote.value.id, originalShapes, dx, dy,
+                noteRepository, sm, bm
+            )
+            actionManager.recordAction(action)
+        }
+    }
+
+    /**
+     * Persist moved shapes to the database after a drag operation.
+     */
+    fun persistMovedShapes(shapeIds: Set<String>, dx: Float, dy: Float) {
+        viewModelScope.launch {
+            val note = currentNote.value
+            for (shape in note.shapes) {
+                if (shape.id in shapeIds) {
+                    val movedPoints = shape.points.map { PointF(it.x + dx, it.y + dy) }
+                    val movedShape = shape.copy(points = movedPoints)
+                    noteRepository.updateShape(note.id, movedShape)
+                }
+            }
+        }
+    }
+
     fun updatePenProfile(profile: PenProfile) {
         _currentPenProfile.value = profile
     }

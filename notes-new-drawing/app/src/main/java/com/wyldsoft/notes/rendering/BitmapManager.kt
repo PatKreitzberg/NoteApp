@@ -9,6 +9,7 @@ import com.onyx.android.sdk.rx.RxManager
 
 import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.utils.createStrokePaint
 import com.wyldsoft.notes.utils.notePointsToSurfaceTouchPoints
@@ -150,6 +151,21 @@ class BitmapManager(
         initRenderContext(renderContext, canvas)
 
         shape.render(renderContext)
+    }
+
+    /**
+     * Draws selection overlay (lasso line or bounding box) on top of the current bitmap,
+     * then pushes the result to screen.
+     */
+    fun drawSelectionOverlay(selectionManager: SelectionManager, viewportManager: ViewportManager) {
+        val canvas = getBitmapCanvas() ?: return
+        if (selectionManager.isLassoInProgress) {
+            SelectionRenderer.drawLasso(canvas, selectionManager.getLassoPoints(), viewportManager)
+        }
+        selectionManager.selectionBoundingBox?.let { box ->
+            SelectionRenderer.drawBoundingBox(canvas, box, viewportManager)
+        }
+        renderBitmapToScreen()
     }
 
     private fun initRenderContext(renderContext: RendererHelper.RenderContext, canvas: Canvas) {

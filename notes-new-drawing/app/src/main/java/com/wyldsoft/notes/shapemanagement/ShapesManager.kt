@@ -101,4 +101,8 @@ class ShapesManager(
     fun clear() {
         shapes.clear()
     }
+
+    fun findShapeById(id: String): BaseShape? {
+        return shapes.find { it.id == id }
+    }
 }
