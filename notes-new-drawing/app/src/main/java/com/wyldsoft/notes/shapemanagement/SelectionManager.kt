@@ -115,17 +115,18 @@ class SelectionManager {
     }
 
     /**
-     * A shape is "inside" the lasso if at least one of its points is inside the polygon.
+     * A shape is "inside" the lasso if ALL of its points are inside the polygon.
      */
     private fun isShapeInsideLasso(shape: BaseShape): Boolean {
         val points = shape.touchPointList ?: return false
+        if (points.size() == 0) return false
         for (i in 0 until points.size()) {
             val tp = points.get(i)
-            if (pointInPolygon(tp.x, tp.y, lassoPoints)) {
-                return true
+            if (!pointInPolygon(tp.x, tp.y, lassoPoints)) {
+                return false
             }
         }
-        return false
+        return true
     }
 
     /**
