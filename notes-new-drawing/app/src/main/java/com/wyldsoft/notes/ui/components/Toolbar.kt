@@ -17,6 +17,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
@@ -37,10 +41,12 @@ fun Toolbar(
     onCollapsedChanged: (Boolean) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     var selectedProfileIndex by remember { mutableStateOf(0) }
     var isStrokeSelectionOpen by remember { mutableStateOf(isStrokeOptionsOpen) }
     var strokePanelRect by remember { mutableStateOf<Rect?>(null) }
     var isCollapsed by remember { mutableStateOf(false) }
+    var toolbarHeightPx by remember { mutableStateOf(0) }
 
     // Store 5 profiles
     var profiles by remember {
@@ -162,6 +168,10 @@ fun Toolbar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        val bounds = coordinates.boundsInWindow()
+                        toolbarHeightPx = bounds.bottom.toInt()
+                    }
                     .background(Color.White)
                     .border(1.dp, Color.Gray)
                     .padding(8.dp),
@@ -271,6 +281,7 @@ fun Toolbar(
             if (isStrokeSelectionOpen) {
                 Popup(
                     alignment = Alignment.TopStart,
+                    offset = IntOffset(0, toolbarHeightPx),
                     properties = PopupProperties(focusable = false)
                 ) {
                     DisposableEffect(Unit) {

@@ -100,7 +100,6 @@ fun StrokeOptionsPanel(
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(PenType.entries.toTypedArray()) { penType ->
@@ -129,7 +128,7 @@ fun StrokeOptionsPanel(
             onValueChange = { strokeSize = it },
             valueRange = 1f..maxStrokeSize,
             modifier = Modifier
-                .fillMaxWidth()
+                .width(250.dp)
                 .padding(vertical = 8.dp)
         )
 
@@ -165,7 +164,6 @@ fun StrokeOptionsPanel(
 
         // Profile info card
         Card(
-            modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
         ) {
             Column(
