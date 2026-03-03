@@ -59,9 +59,8 @@ abstract class NotesDatabase : RoomDatabase() {
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .fallbackToDestructiveMigration()
                 .addCallback(object : RoomDatabase.Callback() {
-                    override fun onCreate(db: SupportSQLiteDatabase) {
-                        super.onCreate(db)
-                        // Insert root folder synchronously to avoid race conditions
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
                         db.execSQL("INSERT OR IGNORE INTO folders (id, name, parentFolderId) VALUES ('root', 'Root', NULL)")
                     }
                 })
