@@ -305,10 +305,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 com.wyldsoft.notes.gestures.GestureAction.TOGGLE_SELECTION_MODE -> {
                     val vm = editorViewModel
                     val currentTool = vm.uiState.value.selectedTool
-                    if (currentTool == com.wyldsoft.notes.presentation.viewmodel.Tool.SELECTOR) {
+                    if (currentTool == Tool.SELECTOR) {
                         vm.cancelSelection()
                     } else {
-                        vm.selectTool(com.wyldsoft.notes.presentation.viewmodel.Tool.SELECTOR)
+                        vm.selectTool(Tool.SELECTOR)
                     }
                     forceScreenRefresh()
                 }
@@ -341,5 +341,4 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
         return rxManager!!
     }
-
 }
