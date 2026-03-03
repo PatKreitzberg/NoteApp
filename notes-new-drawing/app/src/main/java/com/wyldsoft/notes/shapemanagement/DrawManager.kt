@@ -17,7 +17,7 @@ This class is responsible for:
  */
 class DrawManager(
     private var bitmapManager: BitmapManager,
-    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>) -> Unit,
+    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
 ) {
     private var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
 
@@ -32,12 +32,14 @@ class DrawManager(
         // Convert TouchPointList to List<PointF> for ViewModel (in NoteCoordinates)
         val pointFs = mutableListOf<PointF>()
         val pressures = mutableListOf<Float>()
+        val timestamps = mutableListOf<Long>()
         for (i in 0 until noteCoordinateTouchPointList.size()) {
             val tp = noteCoordinateTouchPointList.get(i)
             pointFs.add(PointF(tp.x, tp.y))
             pressures.add(tp.pressure)
+            timestamps.add(tp.timestamp)
         }
-        onShapeCompleted(shape.id, pointFs, pressures)
+        onShapeCompleted(shape.id, pointFs, pressures, timestamps)
 
         // Render the new shape to the bitmap
         bitmapManager.renderShapeToBitmap(shape)

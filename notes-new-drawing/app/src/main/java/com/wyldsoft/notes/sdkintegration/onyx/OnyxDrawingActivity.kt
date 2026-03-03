@@ -57,9 +57,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     // forceScreenRefresh() // todo should we force screen refresh here? I HIGHLY doubt it
                 }
             },
-            onShapeCompleted = { id, points, pressures ->
+            onShapeCompleted = { id, points, pressures, timestamps ->
                 // add shape to NoteRepository
-                onShapeCompleted(id, points, pressures)
+                onShapeCompleted(id, points, pressures, timestamps)
             },
             onShapeRemoved = {shapeId -> onShapeRemoved(shapeId)},
             onSetRawDrawingRenderEnabled = { enabled ->

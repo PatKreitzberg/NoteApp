@@ -41,7 +41,7 @@ class OnyxStylusHandler(
     private val bitmapManager: BitmapManager,
     private val shapesManager: ShapesManager,
     private val onDrawingStateChanged: (isDrawing: Boolean) -> Unit, // if false then enableFingerTouch and force screen refresh. If true then disableFingerTouch
-    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>) -> Unit, //
+    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit, //
     private val onShapeRemoved: (shapeId: String) -> Unit,
     private val onSetRawDrawingRenderEnabled: (Boolean) -> Unit, // toggle SDK stroke rendering on/off
     private val onForceScreenRefresh: () -> Unit // force e-ink display refresh

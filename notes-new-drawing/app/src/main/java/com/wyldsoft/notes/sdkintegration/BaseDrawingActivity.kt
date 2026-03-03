@@ -74,7 +74,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
         // Create EditorViewModel with repositories
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
-        editorViewModel = EditorViewModel(noteRepository, notebookRepository)
+        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrSegmentManager)
 
         // Create the UI
         setEditorViewAsContent()
@@ -290,8 +290,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         Log.d("DebugAug12", "DONE Setting ViewModel in BaseDrawingActivity")
     }
 
-    override fun onShapeCompleted(id: String, points: List<PointF>, pressures: List<Float>) {
-        editorViewModel.addShape(id, points, pressures)
+    override fun onShapeCompleted(id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) {
+        editorViewModel.addShape(id, points, pressures, timestamps)
     }
 
     override fun onShapeRemoved(shapeId: String) {

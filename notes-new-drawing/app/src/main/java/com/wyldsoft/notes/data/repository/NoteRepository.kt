@@ -182,6 +182,7 @@ class NoteRepositoryImpl(
             strokeColor = strokeColor,
             penType = penType,
             pressure = pressure,
+            pointTimestamps = pointTimestamps,
             timestamp = timestamp
         )
     }
@@ -197,6 +198,7 @@ class NoteRepositoryImpl(
             strokeColor = strokeColor,
             penType = penType,
             pressure = pressure,
+            pointTimestamps = pointTimestamps,
             timestamp = timestamp
         )
     }

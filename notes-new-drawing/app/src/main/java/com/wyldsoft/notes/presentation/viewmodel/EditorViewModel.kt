@@ -13,6 +13,7 @@ import com.wyldsoft.notes.actions.TransformAction
 import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
+import com.wyldsoft.notes.htr.HTRSegmentManager
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
@@ -34,7 +35,8 @@ import kotlinx.coroutines.launch
 @OptIn(FlowPreview::class)
 class EditorViewModel(
     private val noteRepository: NoteRepository,
-    private val notebookRepository: NotebookRepository
+    private val notebookRepository: NotebookRepository,
+    private val htrSegmentManager: HTRSegmentManager? = null
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(EditorUiState())
@@ -142,7 +144,7 @@ class EditorViewModel(
         _isDrawing.value = false
     }
     
-    fun addShape(id: String, points: List<PointF>, pressures: List<Float> = emptyList()) {
+    fun addShape(id: String, points: List<PointF>, pressures: List<Float> = emptyList(), timestamps: List<Long> = emptyList()) {
         viewModelScope.launch {
             Log.d("EditorViewModel", "Adding shape to note: ${currentNote.value.id}, points: $points, pressures: $pressures")
             val shape = Shape(
@@ -152,7 +154,8 @@ class EditorViewModel(
                 strokeWidth = _currentPenProfile.value.strokeWidth,
                 strokeColor = _currentPenProfile.value.getColorAsInt(),
                 penType = _currentPenProfile.value.penType,
-                pressure = pressures
+                pressure = pressures,
+                pointTimestamps = timestamps
             )
             noteRepository.addShape(currentNote.value.id, shape)
 
@@ -163,6 +166,9 @@ class EditorViewModel(
                 val action = DrawAction(currentNote.value.id, shape, noteRepository, sm, bm)
                 actionManager.recordAction(action)
             }
+
+            // Submit shape for HTR recognition
+            htrSegmentManager?.addShapesForRecognition(currentNote.value.id, listOf(shape))
         }
     }
 
@@ -197,6 +203,11 @@ class EditorViewModel(
                 )
                 actionManager.recordAction(action)
             }
+
+            // Notify HTR of deleted shapes
+            val deletedIds = pendingErasedShapes.map { it.id }.toSet()
+            htrSegmentManager?.onShapesDeleted(currentNote.value.id, deletedIds)
+
             pendingErasedShapes.clear()
         }
     }

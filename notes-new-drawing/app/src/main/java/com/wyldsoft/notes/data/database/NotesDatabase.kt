@@ -21,9 +21,10 @@ import java.util.UUID
         NotebookEntity::class,
         NoteEntity::class,
         NoteNotebookCrossRef::class,
-        ShapeEntity::class
+        ShapeEntity::class,
+        RecognizedSegmentEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -33,6 +34,7 @@ abstract class NotesDatabase : RoomDatabase() {
     abstract fun notebookDao(): NotebookDao
     abstract fun noteDao(): NoteDao
     abstract fun shapeDao(): ShapeDao
+    abstract fun recognizedSegmentDao(): RecognizedSegmentDao
     
     companion object {
         @Volatile
@@ -58,6 +60,7 @@ abstract class NotesDatabase : RoomDatabase() {
                     "notes_database"
                 )
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .fallbackToDestructiveMigration()
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)

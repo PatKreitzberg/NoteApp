@@ -41,6 +41,26 @@ class Converters {
     fun toFloatList(floatsJson: String): List<Float> {
         return Json.decodeFromString(floatsJson)
     }
+
+    @TypeConverter
+    fun fromLongList(longs: List<Long>): String {
+        return Json.encodeToString(longs)
+    }
+
+    @TypeConverter
+    fun toLongList(longsJson: String): List<Long> {
+        return Json.decodeFromString(longsJson)
+    }
+
+    @TypeConverter
+    fun fromStringList(strings: List<String>): String {
+        return Json.encodeToString(strings)
+    }
+
+    @TypeConverter
+    fun toStringList(stringsJson: String): List<String> {
+        return Json.decodeFromString(stringsJson)
+    }
 }
 
 @Serializable

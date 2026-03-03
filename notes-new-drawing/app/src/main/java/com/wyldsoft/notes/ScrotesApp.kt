@@ -7,6 +7,8 @@ import com.onyx.android.sdk.utils.ResManager
 import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.data.repository.*
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
+import com.wyldsoft.notes.htr.HTRManager
+import com.wyldsoft.notes.htr.HTRSegmentManager
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
 class ScrotesApp : Application() {
@@ -27,6 +29,14 @@ class ScrotesApp : Application() {
 
     val gestureSettingsRepository: GestureSettingsRepository by lazy {
         GestureSettingsRepository(this)
+    }
+
+    val recognizedSegmentRepository: RecognizedSegmentRepository by lazy {
+        RecognizedSegmentRepository(database.recognizedSegmentDao())
+    }
+
+    val htrSegmentManager: HTRSegmentManager by lazy {
+        HTRSegmentManager(HTRManager(), recognizedSegmentRepository)
     }
 
     override fun onCreate() {

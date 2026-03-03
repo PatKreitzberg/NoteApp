@@ -24,6 +24,7 @@ data class Shape(
     val strokeColor: Int,
     val penType: PenType = PenType.BALLPEN,
     val pressure: List<Float> = emptyList(),
+    val pointTimestamps: List<Long> = emptyList(),
     val timestamp: Long = System.currentTimeMillis()
 )
 
