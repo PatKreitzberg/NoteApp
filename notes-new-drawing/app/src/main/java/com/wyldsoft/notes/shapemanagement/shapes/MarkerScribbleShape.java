@@ -1,9 +1,14 @@
 package com.wyldsoft.notes.shapemanagement.shapes;
 
-import com.onyx.android.sdk.api.device.epd.EpdController;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PointF;
+
 import com.onyx.android.sdk.data.note.TouchPoint;
 import com.onyx.android.sdk.pen.NeoMarkerPen;
 import com.wyldsoft.notes.rendering.RendererHelper;
+import com.wyldsoft.notes.sdkintegration.DeviceHelper;
 import android.util.Log;
 import java.util.List;
 
@@ -11,12 +16,41 @@ public class MarkerScribbleShape extends BaseShape {
 
     @Override
     public void render(RendererHelper.RenderContext renderContext) {
+        if (DeviceHelper.INSTANCE.isOnyxDevice()) {
+            renderOnyx(renderContext);
+        } else {
+            renderGeneric(renderContext);
+        }
+    }
 
+    private void renderOnyx(RendererHelper.RenderContext renderContext) {
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
         List<TouchPoint> markerPoints = NeoMarkerPen.computeStrokePoints(points, strokeWidth,
-                EpdController.getMaxTouchPressure());
+                getMaxTouchPressure());
         NeoMarkerPen.drawStroke(renderContext.canvas, renderContext.paint, markerPoints, strokeWidth, isTransparent());
-        Log.d("Shape", "markerPoints" + markerPoints);
+    }
+
+    /** Wide semi-transparent stroke for non-Onyx devices */
+    private void renderGeneric(RendererHelper.RenderContext renderContext) {
+        List<TouchPoint> points = touchPointList.getPoints();
+        applyStrokeStyle(renderContext);
+        Canvas canvas = renderContext.canvas;
+        Paint paint = renderContext.paint;
+
+        // Marker effect: wider stroke with alpha
+        paint.setStrokeWidth(strokeWidth * 2.5f);
+        paint.setAlpha(80);
+        paint.setStrokeCap(Paint.Cap.SQUARE);
+
+        Path path = new Path();
+        PointF prev = new PointF(points.get(0).x, points.get(0).y);
+        path.moveTo(prev.x, prev.y);
+        for (TouchPoint point : points) {
+            path.quadTo(prev.x, prev.y, point.x, point.y);
+            prev.x = point.x;
+            prev.y = point.y;
+        }
+        canvas.drawPath(path, paint);
     }
 }

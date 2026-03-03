@@ -8,14 +8,19 @@ import android.graphics.RectF;
 import android.util.Log;
 
 import com.wyldsoft.notes.rendering.RendererHelper;
+import com.wyldsoft.notes.sdkintegration.DeviceHelper;
 import com.onyx.android.sdk.data.note.TouchPoint;
-import com.onyx.android.sdk.pen.PenUtils;
 import com.onyx.android.sdk.pen.data.TouchPointList;
 
 import java.util.List;
 import java.util.UUID;
 
 public class BaseShape {
+    /** Extra stroke width added when erasing (replaces PenUtils.ERASE_EXTRA_STROKE_WIDTH) */
+    private static final float ERASE_EXTRA_STROKE_WIDTH = 5f;
+    /** Default max touch pressure for non-Onyx devices */
+    public static final float DEFAULT_MAX_TOUCH_PRESSURE = 4096f;
+
     protected int shapeType;
     protected int texture;
     protected int strokeColor;
@@ -139,7 +144,18 @@ public class BaseShape {
 
     public float getRenderStrokeWidth() {
         float strokeWidth = getStrokeWidth();
-        return isTransparent() ? (strokeWidth + PenUtils.ERASE_EXTRA_STROKE_WIDTH) : strokeWidth;
+        return isTransparent() ? (strokeWidth + ERASE_EXTRA_STROKE_WIDTH) : strokeWidth;
+    }
+
+    /**
+     * Returns the max touch pressure, using Onyx SDK on Onyx devices
+     * or a default value on generic devices.
+     */
+    public static float getMaxTouchPressure() {
+        if (DeviceHelper.INSTANCE.isOnyxDevice()) {
+            return com.onyx.android.sdk.api.device.epd.EpdController.getMaxTouchPressure();
+        }
+        return DEFAULT_MAX_TOUCH_PRESSURE;
     }
 
     public boolean hitTestPoints(TouchPointList pointList, float radius) {
