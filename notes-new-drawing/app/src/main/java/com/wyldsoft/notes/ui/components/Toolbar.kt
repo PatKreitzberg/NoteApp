@@ -19,7 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import kotlinx.coroutines.launch
 
 import com.wyldsoft.notes.pen.PenProfile
@@ -266,14 +267,11 @@ fun Toolbar(
                 )
             }
 
-            // Stroke options panel - takes 0 height in layout, overflows on top of canvas
+            // Stroke options panel - rendered in a Popup so it appears above the SurfaceView canvas
             if (isStrokeSelectionOpen) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(0.dp)
-                        .wrapContentHeight(unbounded = true, align = Alignment.Top)
-                        .zIndex(1f)
+                Popup(
+                    alignment = Alignment.TopStart,
+                    properties = PopupProperties(focusable = false)
                 ) {
                     DisposableEffect(Unit) {
                         onDispose {
