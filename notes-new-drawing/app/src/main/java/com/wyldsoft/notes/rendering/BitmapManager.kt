@@ -3,6 +3,7 @@ package com.wyldsoft.notes.rendering
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Rect
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.rx.RxManager
@@ -25,7 +26,7 @@ import androidx.core.graphics.withSave
 class BitmapManager(
     private val surfaceView: SurfaceView,
     private val viewModel: EditorViewModel,
-    private val rxManager: RxManager,
+    private val rxManager: RxManager?,
     private val getBitmap: () -> Bitmap?,
     private val getBitmapCanvas: () -> Canvas?
 ) {
@@ -131,11 +132,32 @@ class BitmapManager(
     internal fun renderBitmapToScreen() {
         val bitmap = getBitmap() ?: return
 
-        rxManager.enqueue(
-            RendererToScreenRequest(
-                surfaceView,
-                bitmap
-            ), null)
+        if (rxManager != null) {
+            rxManager.enqueue(
+                RendererToScreenRequest(
+                    surfaceView,
+                    bitmap
+                ), null)
+        } else {
+            // Direct rendering for non-Onyx devices
+            renderBitmapDirectly(bitmap)
+        }
+    }
+
+    /**
+     * Direct rendering path for non-Onyx devices (no RxManager queue).
+     */
+    private fun renderBitmapDirectly(bitmap: Bitmap) {
+        val viewRect = RenderingUtils.checkSurfaceView(surfaceView) ?: return
+        val canvas = surfaceView.holder.lockCanvas() ?: return
+        try {
+            RenderingUtils.renderBackground(canvas, viewRect)
+            RenderingUtils.drawRendererContent(bitmap, canvas)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            surfaceView.holder.unlockCanvasAndPost(canvas)
+        }
     }
 
     /**

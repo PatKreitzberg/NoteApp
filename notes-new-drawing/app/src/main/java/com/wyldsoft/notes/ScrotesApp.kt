@@ -9,6 +9,7 @@ import com.wyldsoft.notes.data.repository.*
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.htr.HTRManager
 import com.wyldsoft.notes.htr.HTRSegmentManager
+import com.wyldsoft.notes.sdkintegration.DeviceHelper
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
 class ScrotesApp : Application() {
@@ -41,8 +42,10 @@ class ScrotesApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        ResManager.init(this)
-        RxBaseAction.init(this)
+        if (DeviceHelper.isOnyxDevice) {
+            ResManager.init(this)
+            RxBaseAction.init(this)
+        }
         checkHiddenApiBypass()
     }
 

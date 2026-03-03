@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.util.Log
 import androidx.activity.ComponentActivity
+import com.wyldsoft.notes.sdkintegration.DeviceHelper
+import com.wyldsoft.notes.sdkintegration.generic.GenericDrawingActivity
 import com.wyldsoft.notes.sdkintegration.onyx.OnyxDrawingActivity
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -79,7 +81,12 @@ class MainActivity : ComponentActivity() {
                                 signInLauncher = signInLauncher,
                                 signInError = signInError,
                                 onNotebookSelected = { notebookId, noteId ->
-                                    val intent = Intent(context, OnyxDrawingActivity::class.java).apply {
+                                    val activityClass = if (DeviceHelper.isOnyxDevice) {
+                                        OnyxDrawingActivity::class.java
+                                    } else {
+                                        GenericDrawingActivity::class.java
+                                    }
+                                    val intent = Intent(context, activityClass).apply {
                                         putExtra("notebookId", notebookId)
                                         putExtra("noteId", noteId)
                                     }

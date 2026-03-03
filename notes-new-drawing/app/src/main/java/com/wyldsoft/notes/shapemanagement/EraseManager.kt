@@ -12,10 +12,17 @@ import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 
 class EraseManager(
     private val surfaceView: SurfaceView,
-    private val rxManager: RxManager,
+    private val rxManager: RxManager?,
     private val bitmapManager: BitmapManager,
     private val onShapeRemoved: (String) -> Unit
 ) {
+    /** Secondary constructor for non-Onyx devices (no RxManager needed) */
+    constructor(
+        surfaceView: SurfaceView,
+        bitmapManager: BitmapManager,
+        onShapeRemoved: (String) -> Unit
+    ) : this(surfaceView, null, bitmapManager, onShapeRemoved)
+
     private val partialEraseRefresh = PartialEraseRefresh()
     private val rendererHelper = RendererHelper()
 
@@ -43,15 +50,17 @@ class EraseManager(
                 onShapeRemoved(shape.id)
             }
 
-            // Perform partial refresh of the erased area
-            refreshRect?.let { rect: RectF ->
-                partialEraseRefresh.performPartialRefresh(
-                    surfaceView,
-                    rect,
-                    shapesManager.shapes(), // Pass remaining shapes
-                    rendererHelper,
-                    rxManager
-                )
+            // Perform partial refresh of the erased area (only on Onyx with RxManager)
+            if (rxManager != null) {
+                refreshRect?.let { rect: RectF ->
+                    partialEraseRefresh.performPartialRefresh(
+                        surfaceView,
+                        rect,
+                        shapesManager.shapes(),
+                        rendererHelper,
+                        rxManager
+                    )
+                }
             }
 
             // Also update the main bitmap by recreating it from remaining shapes

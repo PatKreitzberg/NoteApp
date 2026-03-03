@@ -28,6 +28,12 @@
             android:exported="true"
             android:screenOrientation="portrait">
         </activity>
+
+        <activity
+            android:name=".sdkintegration.generic.GenericDrawingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait">
+        </activity>
     </application>
 
 </manifest>
