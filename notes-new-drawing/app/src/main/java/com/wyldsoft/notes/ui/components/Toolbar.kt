@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 
 import com.wyldsoft.notes.pen.PenProfile
@@ -265,14 +266,17 @@ fun Toolbar(
                 )
             }
 
-            // Stroke options panel with disposal detection
+            // Stroke options panel - takes 0 height in layout, overflows on top of canvas
             if (isStrokeSelectionOpen) {
                 Box(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(0.dp)
+                        .wrapContentHeight(unbounded = true, align = Alignment.Top)
+                        .zIndex(1f)
                 ) {
                     DisposableEffect(Unit) {
                         onDispose {
-                            // This runs when the panel is actually removed from composition
                             Log.d("Toolbar", "StrokeOptionsPanel removed from composition")
                             removeStrokeOptionPanelRect()
                             forceUIRefresh()
