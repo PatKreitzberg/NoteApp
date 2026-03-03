@@ -219,6 +219,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     bitmap = null
                     bitmapCanvas = null
                     createDrawingBitmap()
+                    recreateBitmapFromShapes()
                 }
                 bitmap?.let { renderToScreen(surfaceView, it) }
             }
