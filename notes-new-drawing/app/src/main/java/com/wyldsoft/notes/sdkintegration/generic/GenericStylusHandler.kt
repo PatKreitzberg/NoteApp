@@ -123,9 +123,17 @@ class GenericStylusHandler(
     private fun handleDrawMove(event: MotionEvent) {
         val tool = viewModel.uiState.value.selectedTool
         if (tool == Tool.SELECTOR && selectionManager.hasSelection) {
-            refreshCount++
-            if (refreshCount < REFRESH_COUNT_LIMIT) return
-            refreshCount = 0
+            val isTransforming = selectionManager.isDragging ||
+                selectionManager.transformMode == TransformMode.SCALE ||
+                selectionManager.transformMode == TransformMode.ROTATE
+
+            // Only throttle non-transform operations (e.g. lasso).
+            // Drag/scale/rotate need every event for responsive feedback.
+            if (!isTransforming) {
+                refreshCount++
+                if (refreshCount < REFRESH_COUNT_LIMIT) return
+                refreshCount = 0
+            }
 
             val tp = motionEventToTouchPoint(event, event.pointerCount - 1)
             val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(tp.x, tp.y)
