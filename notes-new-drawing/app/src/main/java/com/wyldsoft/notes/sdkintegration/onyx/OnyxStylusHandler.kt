@@ -67,6 +67,9 @@ class OnyxStylusHandler(
     private var transformCenterX: Float = 0f
     private var transformCenterY: Float = 0f
 
+    private var refreshCount: Int = 0
+    private var REFRESH_COUNT_LIMIT: Int = 100
+
     // Drawing state
     private var isDrawingInProgress = false
     private var isErasingInProgress = false
@@ -108,6 +111,13 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
+            Log.d("OnyxStylusHandler", "Refresh count: $refreshCount")
+            if (refreshCount < REFRESH_COUNT_LIMIT) {
+                refreshCount++
+                return
+            }
+            refreshCount = 0
+
             if (touchPoint == null) return
             val tool = viewModel.uiState.value.selectedTool
             if (tool != Tool.SELECTOR) return
