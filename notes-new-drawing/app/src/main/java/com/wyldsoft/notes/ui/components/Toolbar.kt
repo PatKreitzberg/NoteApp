@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
@@ -35,6 +37,7 @@ fun Toolbar(
     var selectedProfileIndex by remember { mutableStateOf(0) }
     var isStrokeSelectionOpen by remember { mutableStateOf(isStrokeOptionsOpen) }
     var strokePanelRect by remember { mutableStateOf<Rect?>(null) }
+    var isCollapsed by remember { mutableStateOf(false) }
 
     // Store 5 profiles
     var profiles by remember {
@@ -131,131 +134,164 @@ fun Toolbar(
     }
 
     Column {
-        // Main toolbar - single row with 5 profile buttons
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .border(1.dp, Color.Gray)
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Profiles:", color = Color.Black, fontSize = 12.sp)
-
-            // 5 Profile buttons
-            profiles.forEachIndexed { index, profile ->
-                ProfileButton(
-                    profile = profile,
-                    isSelected = selectedProfileIndex == index,
-                    onClick = { handleProfileClick(index) }
-                )
-            }
-
-            // Selection tool button
-            val uiState by viewModel.uiState.collectAsState()
-            val isSelectionActive = uiState.selectedTool == Tool.SELECTOR
-
-            IconButton(
-                onClick = {
-                    if (isSelectionActive) {
-                        viewModel.cancelSelection()
-                    } else {
-                        if (isStrokeSelectionOpen) {
-                            closeStrokeOptionsPanel()
-                        }
-                        viewModel.selectTool(Tool.SELECTOR)
-                    }
-                },
+        if (isCollapsed) {
+            // Collapsed toolbar - just an expand button on the far right
+            Row(
                 modifier = Modifier
-                    .then(
-                        if (isSelectionActive) Modifier.border(2.dp, Color.Black)
-                        else Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(onClick = { isCollapsed = false }) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronLeft,
+                        contentDescription = "Expand Toolbar",
+                        tint = Color.Black
                     )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SelectAll,
-                    contentDescription = "Selection Tool",
-                    tint = if (isSelectionActive) Color.Black else Color.Gray
-                )
+                }
             }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Undo/Redo buttons
-            val canUndo by viewModel.canUndo.collectAsState()
-            val canRedo by viewModel.canRedo.collectAsState()
-
-            IconButton(
-                onClick = { viewModel.undo() },
-                enabled = canUndo
+        } else {
+            // Main toolbar - single row with 5 profile buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .border(1.dp, Color.Gray)
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Undo,
-                    contentDescription = "Undo",
-                    tint = if (canUndo) Color.Black else Color.LightGray
-                )
-            }
+                Text("Profiles:", color = Color.Black, fontSize = 12.sp)
 
-            IconButton(
-                onClick = { viewModel.redo() },
-                enabled = canRedo
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Redo,
-                    contentDescription = "Redo",
-                    tint = if (canRedo) Color.Black else Color.LightGray
-                )
-            }
-
-            // Settings icon
-            IconButton(onClick = onSettingsClick) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Note Settings",
-                    tint = Color.Black
-                )
-            }
-
-            // Debug info
-            Text(
-                text = "Profile: ${selectedProfileIndex + 1} | ${currentPenProfile.penType.displayName}",
-                color = Color.Gray,
-                fontSize = 10.sp
-            )
-        }
-
-        // Stroke options panel with disposal detection
-        if (isStrokeSelectionOpen) {
-            Box(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                DisposableEffect(Unit) {
-                    onDispose {
-                        // This runs when the panel is actually removed from composition
-                        Log.d("Toolbar", "StrokeOptionsPanel removed from composition")
-                        removeStrokeOptionPanelRect()
-                        forceUIRefresh()
-                    }
+                // 5 Profile buttons
+                profiles.forEachIndexed { index, profile ->
+                    ProfileButton(
+                        profile = profile,
+                        isSelected = selectedProfileIndex == index,
+                        onClick = { handleProfileClick(index) }
+                    )
                 }
 
-                StrokeOptionsPanel(
-                    viewModel = viewModel,
-                    currentProfile = currentPenProfile,
-                    onProfileChanged = { newProfile ->
-                        updateProfile(newProfile)
-                    },
-                    onPanelPositioned = { rect ->
-                        if (rect != strokePanelRect) {
-                            strokePanelRect = rect
+                // Selection tool button
+                val uiState by viewModel.uiState.collectAsState()
+                val isSelectionActive = uiState.selectedTool == Tool.SELECTOR
+
+                IconButton(
+                    onClick = {
+                        if (isSelectionActive) {
+                            viewModel.cancelSelection()
+                        } else {
                             if (isStrokeSelectionOpen) {
-                                scope.launch {
-                                    addStrokeOptionPanelRect()
+                                closeStrokeOptionsPanel()
+                            }
+                            viewModel.selectTool(Tool.SELECTOR)
+                        }
+                    },
+                    modifier = Modifier
+                        .then(
+                            if (isSelectionActive) Modifier.border(2.dp, Color.Black)
+                            else Modifier
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SelectAll,
+                        contentDescription = "Selection Tool",
+                        tint = if (isSelectionActive) Color.Black else Color.Gray
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Undo/Redo buttons
+                val canUndo by viewModel.canUndo.collectAsState()
+                val canRedo by viewModel.canRedo.collectAsState()
+
+                IconButton(
+                    onClick = { viewModel.undo() },
+                    enabled = canUndo
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Undo,
+                        contentDescription = "Undo",
+                        tint = if (canUndo) Color.Black else Color.LightGray
+                    )
+                }
+
+                IconButton(
+                    onClick = { viewModel.redo() },
+                    enabled = canRedo
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Redo,
+                        contentDescription = "Redo",
+                        tint = if (canRedo) Color.Black else Color.LightGray
+                    )
+                }
+
+                // Settings icon
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Note Settings",
+                        tint = Color.Black
+                    )
+                }
+
+                // Collapse toolbar button
+                IconButton(onClick = {
+                    if (isStrokeSelectionOpen) {
+                        closeStrokeOptionsPanel()
+                    }
+                    isCollapsed = true
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Collapse Toolbar",
+                        tint = Color.Black
+                    )
+                }
+
+                // Debug info
+                Text(
+                    text = "Profile: ${selectedProfileIndex + 1} | ${currentPenProfile.penType.displayName}",
+                    color = Color.Gray,
+                    fontSize = 10.sp
+                )
+            }
+
+            // Stroke options panel with disposal detection
+            if (isStrokeSelectionOpen) {
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            // This runs when the panel is actually removed from composition
+                            Log.d("Toolbar", "StrokeOptionsPanel removed from composition")
+                            removeStrokeOptionPanelRect()
+                            forceUIRefresh()
+                        }
+                    }
+
+                    StrokeOptionsPanel(
+                        viewModel = viewModel,
+                        currentProfile = currentPenProfile,
+                        onProfileChanged = { newProfile ->
+                            updateProfile(newProfile)
+                        },
+                        onPanelPositioned = { rect ->
+                            if (rect != strokePanelRect) {
+                                strokePanelRect = rect
+                                if (isStrokeSelectionOpen) {
+                                    scope.launch {
+                                        addStrokeOptionPanelRect()
+                                    }
                                 }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
