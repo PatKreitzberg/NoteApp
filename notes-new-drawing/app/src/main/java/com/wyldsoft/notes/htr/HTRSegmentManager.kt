@@ -11,11 +11,10 @@ class HTRSegmentManager(
 ) {
     companion object {
         private const val TAG = "HTRSegmentManager"
-        private const val DEBOUNCE_MS = 5000L
+        private const val DEBOUNCE_MS = 2000L
     }
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val lineDetector = LineDetector()
 
     // Pending shapes per note, keyed by noteId
     private val pendingShapes = mutableMapOf<String, MutableList<Shape>>()

@@ -63,7 +63,6 @@ class HTRManager {
 
     fun isReady(): Boolean = modelReady
 
-
     fun close() {
         recognizer?.close()
         recognizer = null
