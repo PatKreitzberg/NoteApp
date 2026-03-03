@@ -31,7 +31,8 @@ fun Toolbar(
     viewModel: EditorViewModel,
     currentPenProfile: PenProfile,
     isStrokeOptionsOpen: Boolean,
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onCollapsedChanged: (Boolean) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     var selectedProfileIndex by remember { mutableStateOf(0) }
@@ -143,7 +144,10 @@ fun Toolbar(
                     .padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.End
             ) {
-                IconButton(onClick = { isCollapsed = false }) {
+                IconButton(onClick = {
+                    isCollapsed = false
+                    onCollapsedChanged(false)
+                }) {
                     Icon(
                         imageVector = Icons.Default.ChevronLeft,
                         contentDescription = "Expand Toolbar",
@@ -244,6 +248,7 @@ fun Toolbar(
                         closeStrokeOptionsPanel()
                     }
                     isCollapsed = true
+                    onCollapsedChanged(true)
                 }) {
                     Icon(
                         imageVector = Icons.Default.ChevronRight,

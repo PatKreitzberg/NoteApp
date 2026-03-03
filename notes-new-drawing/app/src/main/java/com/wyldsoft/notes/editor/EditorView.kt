@@ -26,6 +26,7 @@ fun EditorView(
     val paperTemplate by viewModel.paperTemplate.collectAsState()
     val currentPageNumber by viewModel.currentPageNumber.collectAsState()
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
+    var isToolbarCollapsed by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -33,16 +34,19 @@ fun EditorView(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(if (isToolbarCollapsed) 0.dp else 16.dp)
         ) {
             Toolbar(
                 viewModel = viewModel,
                 currentPenProfile = currentPenProfile,
                 isStrokeOptionsOpen = uiState.isStrokeOptionsOpen,
-                onSettingsClick = { showNoteSettingsDialog = true }
+                onSettingsClick = { showNoteSettingsDialog = true },
+                onCollapsedChanged = { collapsed -> isToolbarCollapsed = collapsed }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (!isToolbarCollapsed) {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             DrawingCanvas(
                 viewModel = viewModel,
