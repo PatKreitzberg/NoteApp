@@ -6,19 +6,34 @@ import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.sin
+
+enum class TransformMode {
+    NONE, MOVE, SCALE, ROTATE
+}
+
+data class HandlePositions(
+    val corners: List<PointF>,       // 4 corners: TL, TR, BR, BL
+    val rotationHandle: PointF       // circle above top-center
+)
 
 /**
- * Manages lasso selection and drag-to-move of shapes.
+ * Manages lasso selection and drag-to-move/scale/rotate of shapes.
  *
  * Phases:
  * 1. Lasso phase: user draws a freeform lasso; touch points accumulate.
  * 2. Selection phase: point-in-polygon test determines contained shapes; bounding box shown.
- * 3. Move phase: stylus touch inside bounding box drags all selected shapes.
+ * 3. Transform phase: stylus touch on handles scales/rotates, inside box moves.
  */
 class SelectionManager {
 
     companion object {
         private const val TAG = "SelectionManager"
+        private const val HANDLE_HIT_RADIUS = 30f  // px hit target for handles
+        private const val ROTATION_HANDLE_OFFSET = 40f  // px above top-center
     }
 
     // Lasso state
@@ -36,6 +51,13 @@ class SelectionManager {
     var isDragging = false
         private set
     private var dragStartPoint: PointF? = null
+
+    // Transform state
+    var transformMode = TransformMode.NONE
+        private set
+    private var scaleAnchorCornerIndex: Int = -1
+    private var scaleStartDistance: Float = 0f
+    private var rotationStartAngle: Float = 0f
 
     /** True when shapes have been selected (after lasso completes). */
     val hasSelection: Boolean get() = selectedShapeIds.isNotEmpty()
@@ -198,6 +220,154 @@ class SelectionManager {
         shape.updateShapeRect()
     }
 
+    // --- Handle Detection ---
+
+    fun getHandlePositions(): HandlePositions? {
+        val box = selectionBoundingBox ?: return null
+        val corners = listOf(
+            PointF(box.left, box.top),       // 0: TL
+            PointF(box.right, box.top),      // 1: TR
+            PointF(box.right, box.bottom),   // 2: BR
+            PointF(box.left, box.bottom)     // 3: BL
+        )
+        val topCenterX = (box.left + box.right) / 2f
+        val rotationHandle = PointF(topCenterX, box.top - ROTATION_HANDLE_OFFSET)
+        return HandlePositions(corners, rotationHandle)
+    }
+
+    /** Returns corner index (0-3) if point is near a corner handle, null otherwise. */
+    fun isOnScaleHandle(noteX: Float, noteY: Float): Int? {
+        val handles = getHandlePositions() ?: return null
+        for ((i, corner) in handles.corners.withIndex()) {
+            if (hypot(noteX - corner.x, noteY - corner.y) <= HANDLE_HIT_RADIUS) {
+                return i
+            }
+        }
+        return null
+    }
+
+    /** Returns true if point is near the rotation handle circle. */
+    fun isOnRotationHandle(noteX: Float, noteY: Float): Boolean {
+        val handles = getHandlePositions() ?: return false
+        return hypot(noteX - handles.rotationHandle.x, noteY - handles.rotationHandle.y) <= HANDLE_HIT_RADIUS
+    }
+
+    // --- Scale Phase ---
+
+    fun beginScale(cornerIndex: Int, startPoint: PointF) {
+        val box = selectionBoundingBox ?: return
+        transformMode = TransformMode.SCALE
+        scaleAnchorCornerIndex = cornerIndex
+        val centerX = box.centerX()
+        val centerY = box.centerY()
+        scaleStartDistance = hypot(startPoint.x - centerX, startPoint.y - centerY)
+        Log.d(TAG, "Scale started from corner $cornerIndex")
+    }
+
+    /**
+     * Apply proportional scale to all selected shapes around bounding box center.
+     * Returns the scale factor applied, or null if no meaningful scale.
+     */
+    fun finishScale(endPointList: TouchPointList, allShapes: List<BaseShape>): Float? {
+        transformMode = TransformMode.NONE
+        val box = selectionBoundingBox ?: return null
+        if (endPointList.size() == 0) return null
+
+        val lastPt = endPointList.get(endPointList.size() - 1)
+        val centerX = box.centerX()
+        val centerY = box.centerY()
+        val endDistance = hypot(lastPt.x - centerX, lastPt.y - centerY)
+
+        if (scaleStartDistance < 1f) return null
+        val scaleFactor = endDistance / scaleStartDistance
+        if (Math.abs(scaleFactor - 1f) < 0.01f) return null
+
+        // Apply scale to all selected shapes
+        for (shape in allShapes) {
+            if (shape.id in selectedShapeIds) {
+                scaleShapeTouchPoints(shape, scaleFactor, centerX, centerY)
+            }
+        }
+
+        // Update bounding box
+        selectionBoundingBox = calculateBoundingBox(allShapes.filter { it.id in selectedShapeIds })
+
+        Log.d(TAG, "Scale finished: factor=$scaleFactor")
+        return scaleFactor
+    }
+
+    private fun scaleShapeTouchPoints(shape: BaseShape, scaleFactor: Float, centerX: Float, centerY: Float) {
+        val oldList = shape.touchPointList ?: return
+        val newList = TouchPointList()
+        for (i in 0 until oldList.size()) {
+            val tp = oldList.get(i)
+            val newX = centerX + (tp.x - centerX) * scaleFactor
+            val newY = centerY + (tp.y - centerY) * scaleFactor
+            newList.add(TouchPoint(newX, newY, tp.pressure, tp.size, tp.timestamp))
+        }
+        shape.touchPointList = newList
+        shape.updateShapeRect()
+    }
+
+    // --- Rotate Phase ---
+
+    fun beginRotate(startPoint: PointF) {
+        val box = selectionBoundingBox ?: return
+        transformMode = TransformMode.ROTATE
+        val centerX = box.centerX()
+        val centerY = box.centerY()
+        rotationStartAngle = atan2(startPoint.y - centerY, startPoint.x - centerX)
+        Log.d(TAG, "Rotate started")
+    }
+
+    /**
+     * Apply rotation to all selected shapes around bounding box center.
+     * Returns the angle in radians applied, or null if no meaningful rotation.
+     */
+    fun finishRotate(endPointList: TouchPointList, allShapes: List<BaseShape>): Float? {
+        transformMode = TransformMode.NONE
+        val box = selectionBoundingBox ?: return null
+        if (endPointList.size() == 0) return null
+
+        val lastPt = endPointList.get(endPointList.size() - 1)
+        val centerX = box.centerX()
+        val centerY = box.centerY()
+        val endAngle = atan2(lastPt.y - centerY, lastPt.x - centerX)
+        val angleRad = endAngle - rotationStartAngle
+
+        if (Math.abs(angleRad) < 0.01f) return null
+
+        // Apply rotation to all selected shapes
+        for (shape in allShapes) {
+            if (shape.id in selectedShapeIds) {
+                rotateShapeTouchPoints(shape, angleRad, centerX, centerY)
+            }
+        }
+
+        // Update bounding box
+        selectionBoundingBox = calculateBoundingBox(allShapes.filter { it.id in selectedShapeIds })
+
+        Log.d(TAG, "Rotate finished: angle=${Math.toDegrees(angleRad.toDouble())} deg")
+        return angleRad
+    }
+
+    private fun rotateShapeTouchPoints(shape: BaseShape, angleRad: Float, centerX: Float, centerY: Float) {
+        val oldList = shape.touchPointList ?: return
+        val newList = TouchPointList()
+        val cosA = cos(angleRad)
+        val sinA = sin(angleRad)
+        for (i in 0 until oldList.size()) {
+            val tp = oldList.get(i)
+            val dx = tp.x - centerX
+            val dy = tp.y - centerY
+            val newX = centerX + dx * cosA - dy * sinA
+            val newY = centerY + dx * sinA + dy * cosA
+            newList.add(TouchPoint(newX, newY, tp.pressure, tp.size, tp.timestamp))
+        }
+        shape.touchPointList = newList
+        shape.updateShapeRect()
+    }
+
     // --- Cancel / Clear ---
 
     fun clearSelection() {
@@ -207,6 +377,10 @@ class SelectionManager {
         selectionBoundingBox = null
         isDragging = false
         dragStartPoint = null
+        transformMode = TransformMode.NONE
+        scaleAnchorCornerIndex = -1
+        scaleStartDistance = 0f
+        rotationStartAngle = 0f
         Log.d(TAG, "Selection cleared")
     }
 

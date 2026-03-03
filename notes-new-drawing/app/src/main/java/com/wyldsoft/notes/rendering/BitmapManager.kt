@@ -164,6 +164,10 @@ class BitmapManager(
         }
         selectionManager.selectionBoundingBox?.let { box ->
             SelectionRenderer.drawBoundingBox(canvas, box, viewportManager)
+            // Draw scale/rotate handles when selection exists
+            selectionManager.getHandlePositions()?.let { handles ->
+                SelectionRenderer.drawHandles(canvas, handles, viewportManager)
+            }
         }
         renderBitmapToScreen()
     }

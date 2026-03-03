@@ -13,8 +13,10 @@ import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.shapemanagement.DrawManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.wyldsoft.notes.shapemanagement.TransformMode
 
 /**
  * Handles all stylus-related operations for Onyx devices:
@@ -59,8 +61,11 @@ class OnyxStylusHandler(
 
     // Selection management
     private val selectionManager get() = viewModel.selectionManager
-    // Snapshot of domain shapes before a drag, for undo
-    private var preMoveShapeSnapshots: List<com.wyldsoft.notes.domain.models.Shape>? = null
+    // Snapshot of domain shapes before a transform, for undo
+    private var preTransformShapeSnapshots: List<com.wyldsoft.notes.domain.models.Shape>? = null
+    // Bounding box center at time of transform start (for persist/undo)
+    private var transformCenterX: Float = 0f
+    private var transformCenterY: Float = 0f
 
     // Drawing state
     private var isDrawingInProgress = false
@@ -156,66 +161,117 @@ class OnyxStylusHandler(
 
     // --- Selection handling ---
 
+    private fun snapshotSelectedShapes(): List<com.wyldsoft.notes.domain.models.Shape> {
+        return viewModel.currentNote.value.shapes
+            .filter { it.id in selectionManager.selectedShapeIds }
+    }
+
+    private fun recordTransformCenter() {
+        val box = selectionManager.selectionBoundingBox ?: return
+        transformCenterX = box.centerX()
+        transformCenterY = box.centerY()
+    }
+
     private fun handleSelectionBegin(touchPoint: TouchPoint?) {
         if (touchPoint == null) return
         val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
 
-        if (selectionManager.hasSelection && selectionManager.isInsideBoundingBox(notePoint.x, notePoint.y)) {
-            // Start dragging selected shapes - disable SDK rendering so no ink appears
-            onSetRawDrawingRenderEnabled(false)
-            // Snapshot original domain shapes before move (for undo)
-            preMoveShapeSnapshots = viewModel.currentNote.value.shapes
-                .filter { it.id in selectionManager.selectedShapeIds }
-            selectionManager.beginDrag(notePoint)
-            Log.d(TAG, "Selection: drag started")
-        } else {
-            if (selectionManager.hasSelection) {
-                // Touch outside bounding box - exit selection mode entirely
-                selectionCancelledThisStroke = true
-                viewModel.cancelSelection()
-                onForceScreenRefresh()
-                Log.d(TAG, "Selection: cancelled, exiting selection mode")
+        if (selectionManager.hasSelection) {
+            // Priority: rotation handle > scale handle > inside box (move) > outside box (cancel)
+            if (selectionManager.isOnRotationHandle(notePoint.x, notePoint.y)) {
+                onSetRawDrawingRenderEnabled(false)
+                preTransformShapeSnapshots = snapshotSelectedShapes()
+                recordTransformCenter()
+                selectionManager.beginRotate(notePoint)
+                Log.d(TAG, "Selection: rotate started")
             } else {
-                // No selection yet - start new lasso
-                // Enable SDK rendering for lasso (thin grey line configured by touch helper)
-                onSetRawDrawingRenderEnabled(true)
-                selectionManager.beginLasso()
-                Log.d(TAG, "Selection: lasso started")
+                val cornerIndex = selectionManager.isOnScaleHandle(notePoint.x, notePoint.y)
+                if (cornerIndex != null) {
+                    onSetRawDrawingRenderEnabled(false)
+                    preTransformShapeSnapshots = snapshotSelectedShapes()
+                    recordTransformCenter()
+                    selectionManager.beginScale(cornerIndex, notePoint)
+                    Log.d(TAG, "Selection: scale started from corner $cornerIndex")
+                } else if (selectionManager.isInsideBoundingBox(notePoint.x, notePoint.y)) {
+                    // Start dragging selected shapes
+                    onSetRawDrawingRenderEnabled(false)
+                    preTransformShapeSnapshots = snapshotSelectedShapes()
+                    selectionManager.beginDrag(notePoint)
+                    Log.d(TAG, "Selection: drag started")
+                } else {
+                    // Touch outside bounding box - exit selection mode
+                    selectionCancelledThisStroke = true
+                    viewModel.cancelSelection()
+                    onForceScreenRefresh()
+                    Log.d(TAG, "Selection: cancelled, exiting selection mode")
+                }
             }
+        } else {
+            // No selection yet - start new lasso
+            onSetRawDrawingRenderEnabled(true)
+            selectionManager.beginLasso()
+            Log.d(TAG, "Selection: lasso started")
         }
     }
 
     private fun handleSelectionInput(touchPointList: TouchPointList) {
         val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
 
-        if (selectionManager.isDragging) {
-            // Finish drag and apply move
-            val delta = selectionManager.finishDrag(notePointList, shapesManager.shapes())
-            if (delta != null) {
-                // Record undo action with pre-move snapshots
-                preMoveShapeSnapshots?.let { originals ->
-                    viewModel.recordMoveAction(originals, delta.x, delta.y)
+        when (selectionManager.transformMode) {
+            TransformMode.SCALE -> {
+                val scaleFactor = selectionManager.finishScale(notePointList, shapesManager.shapes())
+                if (scaleFactor != null) {
+                    preTransformShapeSnapshots?.let { originals ->
+                        viewModel.recordTransformAction(
+                            originals, TransformType.SCALE, scaleFactor,
+                            transformCenterX, transformCenterY
+                        )
+                    }
+                    viewModel.persistScaledShapes(
+                        selectionManager.selectedShapeIds, scaleFactor,
+                        transformCenterX, transformCenterY
+                    )
                 }
-                preMoveShapeSnapshots = null
-
-                // Persist moved shapes to DB
-                viewModel.persistMovedShapes(selectionManager.selectedShapeIds, delta.x, delta.y)
+                preTransformShapeSnapshots = null
+                onForceScreenRefresh()
             }
-            // Refresh e-ink to show shapes at new positions + bounding box
-            onForceScreenRefresh()
-        } else if (selectionManager.isLassoInProgress) {
-            // Feed lasso points
-            selectionManager.addLassoPoints(notePointList)
-            // Finish lasso
-            selectionManager.finishLasso(shapesManager.shapes())
-
-            // If shapes were selected, disable SDK rendering for next stroke (drag phase)
-            if (selectionManager.hasSelection) {
-                onSetRawDrawingRenderEnabled(false)
+            TransformMode.ROTATE -> {
+                val angleRad = selectionManager.finishRotate(notePointList, shapesManager.shapes())
+                if (angleRad != null) {
+                    preTransformShapeSnapshots?.let { originals ->
+                        viewModel.recordTransformAction(
+                            originals, TransformType.ROTATE, angleRad,
+                            transformCenterX, transformCenterY
+                        )
+                    }
+                    viewModel.persistRotatedShapes(
+                        selectionManager.selectedShapeIds, angleRad,
+                        transformCenterX, transformCenterY
+                    )
+                }
+                preTransformShapeSnapshots = null
+                onForceScreenRefresh()
             }
-
-            // Refresh e-ink to show bounding box
-            onForceScreenRefresh()
+            TransformMode.MOVE, TransformMode.NONE -> {
+                if (selectionManager.isDragging) {
+                    val delta = selectionManager.finishDrag(notePointList, shapesManager.shapes())
+                    if (delta != null) {
+                        preTransformShapeSnapshots?.let { originals ->
+                            viewModel.recordMoveAction(originals, delta.x, delta.y)
+                        }
+                        viewModel.persistMovedShapes(selectionManager.selectedShapeIds, delta.x, delta.y)
+                    }
+                    preTransformShapeSnapshots = null
+                    onForceScreenRefresh()
+                } else if (selectionManager.isLassoInProgress) {
+                    selectionManager.addLassoPoints(notePointList)
+                    selectionManager.finishLasso(shapesManager.shapes())
+                    if (selectionManager.hasSelection) {
+                        onSetRawDrawingRenderEnabled(false)
+                    }
+                    onForceScreenRefresh()
+                }
+            }
         }
     }
 

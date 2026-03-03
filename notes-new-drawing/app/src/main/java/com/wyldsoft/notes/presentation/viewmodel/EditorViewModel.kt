@@ -9,6 +9,8 @@ import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.DrawAction
 import com.wyldsoft.notes.actions.EraseAction
 import com.wyldsoft.notes.actions.MoveAction
+import com.wyldsoft.notes.actions.TransformAction
+import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.domain.models.Shape
@@ -252,6 +254,71 @@ class EditorViewModel(
                     val movedPoints = shape.points.map { PointF(it.x + dx, it.y + dy) }
                     val movedShape = shape.copy(points = movedPoints)
                     noteRepository.updateShape(note.id, movedShape)
+                }
+            }
+        }
+    }
+
+    /**
+     * Record a transform action (scale or rotate) for undo/redo.
+     */
+    fun recordTransformAction(
+        originalShapes: List<Shape>,
+        transformType: TransformType,
+        param: Float,
+        centerX: Float,
+        centerY: Float
+    ) {
+        val sm = shapesManager
+        val bm = bitmapManager
+        if (sm != null && bm != null) {
+            val action = TransformAction(
+                currentNote.value.id, originalShapes, transformType, param,
+                centerX, centerY, noteRepository, sm, bm
+            )
+            actionManager.recordAction(action)
+        }
+    }
+
+    /**
+     * Persist scaled shapes to the database.
+     */
+    fun persistScaledShapes(shapeIds: Set<String>, scaleFactor: Float, centerX: Float, centerY: Float) {
+        viewModelScope.launch {
+            val note = currentNote.value
+            for (shape in note.shapes) {
+                if (shape.id in shapeIds) {
+                    val scaledPoints = shape.points.map { pt ->
+                        PointF(
+                            centerX + (pt.x - centerX) * scaleFactor,
+                            centerY + (pt.y - centerY) * scaleFactor
+                        )
+                    }
+                    noteRepository.updateShape(note.id, shape.copy(points = scaledPoints))
+                }
+            }
+        }
+    }
+
+    /**
+     * Persist rotated shapes to the database.
+     */
+    fun persistRotatedShapes(shapeIds: Set<String>, angleRad: Float, centerX: Float, centerY: Float) {
+        viewModelScope.launch {
+            val note = currentNote.value
+            val cosA = kotlin.math.cos(angleRad)
+            val sinA = kotlin.math.sin(angleRad)
+            for (shape in note.shapes) {
+                if (shape.id in shapeIds) {
+                    val rotatedPoints = shape.points.map { pt ->
+                        val dx = pt.x - centerX
+                        val dy = pt.y - centerY
+                        PointF(
+                            centerX + dx * cosA - dy * sinA,
+                            centerY + dx * sinA + dy * cosA
+                        )
+                    }
+                    noteRepository.updateShape(note.id, shape.copy(points = rotatedPoints))
                 }
             }
         }
