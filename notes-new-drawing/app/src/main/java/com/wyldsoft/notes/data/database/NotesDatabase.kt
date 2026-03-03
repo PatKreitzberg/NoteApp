@@ -10,9 +10,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.wyldsoft.notes.data.database.converters.Converters
 import com.wyldsoft.notes.data.database.dao.*
 import com.wyldsoft.notes.data.database.entities.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.UUID
 
 @Database(
@@ -64,17 +61,8 @@ abstract class NotesDatabase : RoomDatabase() {
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
-
-                        // Run once DB is fully built
-                        CoroutineScope(Dispatchers.IO).launch {
-                            getDatabase(context).folderDao().insert(
-                                FolderEntity(
-                                    id = "root",
-                                    name = "Root",
-                                    parentFolderId = null
-                                )
-                            )
-                        }
+                        // Insert root folder synchronously to avoid race conditions
+                        db.execSQL("INSERT OR IGNORE INTO folders (id, name, parentFolderId) VALUES ('root', 'Root', NULL)")
                     }
                 })
                 .build()
