@@ -108,7 +108,28 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            // Handle move events if needed
+            if (touchPoint == null) return
+            val tool = viewModel.uiState.value.selectedTool
+            if (tool != Tool.SELECTOR) return
+            if (!selectionManager.hasSelection) return
+
+            val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
+            val currentPoint = PointF(notePoint.x, notePoint.y)
+
+            when {
+                selectionManager.isDragging -> {
+                    selectionManager.updateDrag(currentPoint, shapesManager.shapes())
+                    onForceScreenRefresh()
+                }
+                selectionManager.transformMode == TransformMode.SCALE -> {
+                    selectionManager.updateScale(currentPoint, shapesManager.shapes())
+                    onForceScreenRefresh()
+                }
+                selectionManager.transformMode == TransformMode.ROTATE -> {
+                    selectionManager.updateRotate(currentPoint, shapesManager.shapes())
+                    onForceScreenRefresh()
+                }
+            }
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
