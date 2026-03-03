@@ -28,7 +28,11 @@ class FolderRepositoryImpl(
     }
     
     override suspend fun getRootFolder(): FolderEntity {
-        return folderDao.getRootFolder() ?: throw IllegalStateException("Root folder not found")
+        return folderDao.getRootFolder() ?: run {
+            val root = FolderEntity(id = "root", name = "Root", parentFolderId = null)
+            folderDao.insert(root)
+            root
+        }
     }
     
     override suspend fun createFolder(name: String, parentId: String): FolderEntity {
