@@ -31,7 +31,8 @@ enum class GestureAction(val displayName: String) {
     NONE("None"),
     SCROLL("Scroll viewport"),
     ZOOM("Zoom viewport"),
-    RESET_ZOOM_AND_CENTER("Reset zoom & center");
+    RESET_ZOOM_AND_CENTER("Reset zoom & center"),
+    TOGGLE_SELECTION_MODE("Toggle selection mode");
 
     companion object {
         fun fromString(value: String): GestureAction? {

@@ -302,6 +302,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     vm.viewportManager.resetZoomAndCenter(isPagination, pageWidth)
                     forceScreenRefresh()
                 }
+                com.wyldsoft.notes.gestures.GestureAction.TOGGLE_SELECTION_MODE -> {
+                    val vm = editorViewModel
+                    val currentTool = vm.uiState.value.selectedTool
+                    if (currentTool == com.wyldsoft.notes.presentation.viewmodel.EditorViewModel.Tool.SELECTOR) {
+                        vm.cancelSelection()
+                    } else {
+                        vm.selectTool(com.wyldsoft.notes.presentation.viewmodel.EditorViewModel.Tool.SELECTOR)
+                    }
+                    forceScreenRefresh()
+                }
                 else -> {
                     Log.d(TAG, "Gesture action $action handled inline")
                 }
