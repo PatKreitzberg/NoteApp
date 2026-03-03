@@ -12,6 +12,7 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.DrawManager
+import com.wyldsoft.notes.utils.createStrokePaint
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.TransformMode
@@ -50,6 +51,8 @@ class GenericStylusHandler(
 
     // Accumulate points during a stroke
     private val currentPoints = mutableListOf<TouchPoint>()
+    // Track how many points have been rendered incrementally
+    private var lastRenderedPointIndex = 0
     private var refreshCount: Int = 0
     private val REFRESH_COUNT_LIMIT: Int = 100
 
@@ -113,6 +116,7 @@ class GenericStylusHandler(
         onDrawingStateChanged(true)
         viewModel.startDrawing()
         currentPoints.clear()
+        lastRenderedPointIndex = 0
         addPointsFromEvent(event)
     }
 
@@ -145,6 +149,8 @@ class GenericStylusHandler(
         }
         // Accumulate points using historical data for accuracy
         addPointsFromEvent(event)
+        // Draw new segments incrementally to give real-time feedback
+        drawIncrementalSegments()
     }
 
     private fun handleDrawEnd() {
@@ -300,6 +306,20 @@ class GenericStylusHandler(
                 }
             }
         }
+    }
+
+    // --- Incremental drawing ---
+
+    /**
+     * Draws newly added line segments to the bitmap and pushes to screen.
+     * This provides real-time visual feedback as the user draws.
+     */
+    private fun drawIncrementalSegments() {
+        val startIdx = if (lastRenderedPointIndex > 0) lastRenderedPointIndex - 1 else 0
+        if (currentPoints.size < 2 || startIdx >= currentPoints.size - 1) return
+
+        bitmapManager.drawSegmentsToScreen(currentPoints, startIdx, currentPenProfile)
+        lastRenderedPointIndex = currentPoints.size
     }
 
     // --- Helpers ---

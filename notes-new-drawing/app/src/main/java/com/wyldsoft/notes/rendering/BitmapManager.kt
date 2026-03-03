@@ -8,7 +8,9 @@ import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.rx.RxManager
 
+import com.onyx.android.sdk.data.note.TouchPoint
 import com.wyldsoft.notes.domain.models.PaperTemplate
+import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
@@ -191,6 +193,35 @@ class BitmapManager(
                 SelectionRenderer.drawHandles(canvas, handles, viewportManager)
             }
         }
+        renderBitmapToScreen()
+    }
+
+    /**
+     * Draws line segments from [startIdx] to end of [points] onto the bitmap,
+     * then pushes the bitmap to screen. Used for real-time drawing feedback
+     * on non-Onyx devices.
+     */
+    fun drawSegmentsToScreen(
+        points: List<TouchPoint>,
+        startIdx: Int,
+        penProfile: PenProfile
+    ) {
+        val canvas = getBitmapCanvas() ?: return
+        val paint = createStrokePaint().apply {
+            color = penProfile.getColorAsInt()
+            strokeWidth = penProfile.strokeWidth
+        }
+
+        val maxPressure = 1.0f
+        for (i in startIdx until points.size - 1) {
+            val p1 = points[i]
+            val p2 = points[i + 1]
+            val pressure = maxOf(p1.pressure, 0.1f)
+            val width = penProfile.strokeWidth * (pressure / maxPressure) * 2.5f
+            paint.strokeWidth = maxOf(width, 1f)
+            canvas.drawLine(p1.x, p1.y, p2.x, p2.y, paint)
+        }
+
         renderBitmapToScreen()
     }
 
