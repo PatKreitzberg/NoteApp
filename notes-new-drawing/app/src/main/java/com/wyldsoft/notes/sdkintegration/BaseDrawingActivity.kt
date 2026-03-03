@@ -21,14 +21,12 @@ import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.drawing.DrawingActivityInterface
 import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
@@ -74,7 +72,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
         // Create EditorViewModel with repositories
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
-        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrSegmentManager)
+        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrRunManager)
 
         // Create the UI
         setEditorViewAsContent()

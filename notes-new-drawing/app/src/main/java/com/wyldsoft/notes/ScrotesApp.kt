@@ -8,7 +8,7 @@ import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.data.repository.*
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.htr.HTRManager
-import com.wyldsoft.notes.htr.HTRSegmentManager
+import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.sdkintegration.DeviceHelper
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
@@ -36,8 +36,8 @@ class ScrotesApp : Application() {
         RecognizedSegmentRepository(database.recognizedSegmentDao())
     }
 
-    val htrSegmentManager: HTRSegmentManager by lazy {
-        HTRSegmentManager(HTRManager(), recognizedSegmentRepository)
+    val htrRunManager: HTRRunManager by lazy {
+        HTRRunManager(HTRManager(), recognizedSegmentRepository)
     }
 
     override fun onCreate() {

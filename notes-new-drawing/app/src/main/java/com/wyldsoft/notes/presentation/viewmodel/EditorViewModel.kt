@@ -13,7 +13,7 @@ import com.wyldsoft.notes.actions.TransformAction
 import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
-import com.wyldsoft.notes.htr.HTRSegmentManager
+import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 class EditorViewModel(
     private val noteRepository: NoteRepository,
     private val notebookRepository: NotebookRepository,
-    private val htrSegmentManager: HTRSegmentManager? = null
+    private val htrRunManager: HTRRunManager? = null
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(EditorUiState())
@@ -168,7 +168,7 @@ class EditorViewModel(
             }
 
             // Submit shape for HTR recognition
-            htrSegmentManager?.addShapesForRecognition(currentNote.value.id, listOf(shape))
+            htrRunManager?.addShapesForRecognition(currentNote.value.id, listOf(shape))
 
         }
     }
@@ -207,7 +207,7 @@ class EditorViewModel(
 
             // Notify HTR of deleted shapes
             val deletedIds = pendingErasedShapes.map { it.id }.toSet()
-            htrSegmentManager?.onShapesDeleted(currentNote.value.id, deletedIds)
+            htrRunManager?.onShapesDeleted(currentNote.value.id, deletedIds)
 
             pendingErasedShapes.clear()
         }
