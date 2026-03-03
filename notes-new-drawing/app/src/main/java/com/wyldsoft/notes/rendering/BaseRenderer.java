@@ -9,8 +9,6 @@ import android.view.SurfaceView;
 import androidx.annotation.Nullable;
 
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape;
-import com.onyx.android.sdk.utils.BitmapUtils;
-import com.onyx.android.sdk.utils.CanvasUtils;
 
 import java.util.List;
 
@@ -30,15 +28,15 @@ public abstract class BaseRenderer implements Renderer {
 
     protected void drawRendererContent(Bitmap bitmap, Canvas canvas) {
         Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-        BitmapUtils.safelyDrawBitmap(canvas, bitmap, rect, rect, null);
+        canvas.drawBitmap(bitmap, rect, rect, null);
     }
 
     protected Canvas lockHardwareCanvas(SurfaceHolder holder, @Nullable Rect dirty) {
-        return CanvasUtils.lockHardwareCanvas(holder, dirty);
+        return holder.lockCanvas(dirty);
     }
 
     protected void unlockCanvasAndPost(SurfaceView surfaceView, Canvas canvas) {
-        CanvasUtils.unlockCanvasAndPost(surfaceView, canvas);
+        surfaceView.getHolder().unlockCanvasAndPost(canvas);
     }
 
     protected void beforeUnlockCanvas(SurfaceView surfaceView) {

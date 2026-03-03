@@ -10,7 +10,6 @@ import android.view.SurfaceView;
 import com.wyldsoft.notes.EraseArgs;
 import com.wyldsoft.notes.InteractiveMode;
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape;
-import com.onyx.android.sdk.utils.BitmapUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +28,9 @@ public class RendererHelper {
         public Point viewPoint;
 
         public void recycleBitmap() {
-            BitmapUtils.recycle(bitmap);
+            if (bitmap != null && !bitmap.isRecycled()) {
+                bitmap.recycle();
+            }
             bitmap = null;
         }
     }

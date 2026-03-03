@@ -7,6 +7,7 @@ import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.onyx.android.sdk.rx.RxRequest
 import com.wyldsoft.notes.drawing.DrawingManager
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.sdkintegration.DeviceHelper
 
 /**
  * Custom renderer that includes pagination support with page separators
@@ -25,16 +26,18 @@ class PaginationRendererToScreenRequest(
     
     private fun renderToScreen() {
         val viewRect = RenderingUtils.checkSurfaceView(surfaceView)
-        EpdController.setViewDefaultUpdateMode(surfaceView, UpdateMode.HAND_WRITING_REPAINT_MODE)
+        if (DeviceHelper.isOnyxDevice) {
+            EpdController.setViewDefaultUpdateMode(surfaceView, UpdateMode.HAND_WRITING_REPAINT_MODE)
+        }
         val canvas = surfaceView.holder.lockCanvas() ?: return
-        
+
         try {
             // Render background
             RenderingUtils.renderBackground(canvas, viewRect)
-            
+
             // Draw the main content bitmap
             RenderingUtils.drawRendererContent(bitmap, canvas)
-            
+
             // Draw page separators if pagination is enabled
             viewModel?.let { vm ->
                 if (vm.isPaginationEnabled.value) {
@@ -50,7 +53,9 @@ class PaginationRendererToScreenRequest(
             e.printStackTrace()
         } finally {
             surfaceView.holder.unlockCanvasAndPost(canvas)
-            EpdController.resetViewUpdateMode(surfaceView)
+            if (DeviceHelper.isOnyxDevice) {
+                EpdController.resetViewUpdateMode(surfaceView)
+            }
         }
     }
 }

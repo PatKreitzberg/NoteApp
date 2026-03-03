@@ -8,6 +8,7 @@ import android.view.SurfaceView;
 import com.onyx.android.sdk.api.device.epd.EpdController;
 import com.onyx.android.sdk.api.device.epd.UpdateMode;
 import com.onyx.android.sdk.rx.RxRequest;
+import com.wyldsoft.notes.sdkintegration.DeviceHelper;
 
 public class RendererToScreenRequest extends RxRequest {
     private SurfaceView surfaceView;
@@ -28,7 +29,9 @@ public class RendererToScreenRequest extends RxRequest {
             return;
         }
         Rect viewRect = RenderingUtils.checkSurfaceView(surfaceView);
-        EpdController.setViewDefaultUpdateMode(surfaceView, UpdateMode.HAND_WRITING_REPAINT_MODE);
+        if (DeviceHelper.INSTANCE.isOnyxDevice()) {
+            EpdController.setViewDefaultUpdateMode(surfaceView, UpdateMode.HAND_WRITING_REPAINT_MODE);
+        }
         Canvas canvas = surfaceView.getHolder().lockCanvas();
         if (canvas == null) {
             return;
@@ -40,7 +43,9 @@ public class RendererToScreenRequest extends RxRequest {
             e.printStackTrace();
         } finally {
             surfaceView.getHolder().unlockCanvasAndPost(canvas);
-            EpdController.resetViewUpdateMode(surfaceView);
+            if (DeviceHelper.INSTANCE.isOnyxDevice()) {
+                EpdController.resetViewUpdateMode(surfaceView);
+            }
         }
     }
 

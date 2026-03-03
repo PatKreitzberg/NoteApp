@@ -11,6 +11,7 @@ import android.view.SurfaceView;
 import android.view.View;
 
 import com.onyx.android.sdk.api.device.epd.EpdController;
+import com.wyldsoft.notes.sdkintegration.DeviceHelper;
 
 public class RenderingUtils {
 
@@ -43,7 +44,9 @@ public class RenderingUtils {
      * Must be called before unlocking a canvas or enqueuing a refresh request.
      */
     public static void enableScreenPost(View view) {
-        EpdController.enablePost(view, 1);
+        if (DeviceHelper.INSTANCE.isOnyxDevice()) {
+            EpdController.enablePost(view, 1);
+        }
     }
 
     public static Matrix getPointMatrix(final RendererHelper.RenderContext renderContext) {
