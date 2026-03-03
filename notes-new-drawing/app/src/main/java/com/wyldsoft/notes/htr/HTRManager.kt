@@ -5,11 +5,7 @@ import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
 import com.google.mlkit.vision.digitalink.*
 import com.wyldsoft.notes.domain.models.Shape
-
-data class RecognitionResult(
-    val text: String,
-    val confidence: Float
-)
+import kotlinx.coroutines.tasks.await
 
 class HTRManager {
     companion object {
@@ -67,71 +63,39 @@ class HTRManager {
 
     fun isReady(): Boolean = modelReady
 
-    fun recognizeShapes(
-        shapes: List<Shape>,
-        onResult: (RecognitionResult?) -> Unit
-    ) {
-        val currentRecognizer = recognizer
-        if (currentRecognizer == null || !modelReady) {
-            Log.w(TAG, "Recognizer not ready")
-            onResult(null)
-            return
-        }
-
-        if (shapes.isEmpty()) {
-            onResult(null)
-            return
-        }
-
-        val ink = shapesToInk(shapes)
-        if (ink == null) {
-            onResult(null)
-            return
-        }
-
-        currentRecognizer.recognize(ink)
-            .addOnSuccessListener { result ->
-                if (result.candidates.isNotEmpty()) {
-                    val best = result.candidates[0]
-                    val confidence = if (best.score != null) best.score!!.toFloat() else 0f
-                    onResult(RecognitionResult(best.text, confidence))
-                } else {
-                    onResult(null)
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "Recognition failed", e)
-                onResult(null)
-            }
-    }
-
-    private fun shapesToInk(shapes: List<Shape>): Ink? {
-        val inkBuilder = Ink.builder()
-        var hasStrokes = false
-
-        for (shape in shapes) {
-            if (shape.points.size < 2) continue
-
-            val strokeBuilder = Ink.Stroke.builder()
-            for (i in shape.points.indices) {
-                val point = shape.points[i]
-                val timestamp = if (i < shape.pointTimestamps.size) {
-                    shape.pointTimestamps[i]
-                } else {
-                    shape.timestamp + i * 10L // fallback: 10ms spacing
-                }
-                strokeBuilder.addPoint(Ink.Point.create(point.x, point.y, timestamp))
-            }
-            inkBuilder.addStroke(strokeBuilder.build())
-            hasStrokes = true
-        }
-
-        return if (hasStrokes) inkBuilder.build() else null
-    }
 
     fun close() {
         recognizer?.close()
         recognizer = null
         modelReady = false
     }
+
+    internal suspend fun basicRecognize(map: MutableMap<String, MutableList<Shape>>) {
+        Log.d(TAG, "Starting basic recognition with ${map.size} notes")
+        // Build out ink objects for MLKit
+        val inkBuilder = Ink.builder()
+        for ((noteId, shapes) in map) {
+            Log.d(TAG, "Processing note $noteId with ${shapes.size} shapes")
+            for (shape in shapes) {
+                Log.d(TAG, "Processing shape ${shape.id} with ${shape.points.size} points")
+                val strokeBuilder = Ink.Stroke.builder()
+
+                // process each point in the shape, using timestamps if available
+                for (i in shape.points.indices) {
+                    val point = shape.points[i]
+                    strokeBuilder.addPoint(Ink.Point.create(point.x, point.y, shape.pointTimestamps[i]))
+                }
+                inkBuilder.addStroke(strokeBuilder.build())
+            }
+        }
+        Log.d(TAG, "Finished building ink with ${inkBuilder.build().strokes.size} strokes")
+        // Build out ink
+        val ink = inkBuilder.build()
+        Log.d(TAG, "Built ink with ${ink.strokes.size} strokes")
+        if (ink.strokes.isEmpty()) return
+
+        val resultString = recognizer?.recognize(ink)?.await()?.candidates?.getOrNull(0)?.text ?: "No text recognized"
+        Log.d(TAG, "Basic recognition result: $resultString")
+    }
+
 }

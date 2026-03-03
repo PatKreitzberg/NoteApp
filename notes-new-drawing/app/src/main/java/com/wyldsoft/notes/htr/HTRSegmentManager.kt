@@ -1,11 +1,9 @@
 package com.wyldsoft.notes.htr
 
 import android.util.Log
-import com.wyldsoft.notes.data.database.entities.RecognizedSegmentEntity
 import com.wyldsoft.notes.data.repository.RecognizedSegmentRepository
 import com.wyldsoft.notes.domain.models.Shape
 import kotlinx.coroutines.*
-import java.util.UUID
 
 class HTRSegmentManager(
     private val htrManager: HTRManager,
@@ -13,7 +11,7 @@ class HTRSegmentManager(
 ) {
     companion object {
         private const val TAG = "HTRSegmentManager"
-        private const val DEBOUNCE_MS = 1000L
+        private const val DEBOUNCE_MS = 5000L
     }
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -35,8 +33,17 @@ class HTRSegmentManager(
         debounceJob?.cancel()
         debounceJob = scope.launch {
             delay(DEBOUNCE_MS)
-            processRecognition(noteId)
+            basicRecognition()
         }
+    }
+
+    suspend fun basicRecognition() {
+        if (!htrManager.isReady()) {
+            Log.w(TAG, "HTR model not ready, skipping recognition")
+            return
+        }
+        Log.d(TAG, "Starting basic recognition for all pending shapes")
+        htrManager.basicRecognize(pendingShapes)
     }
 
     fun onShapesDeleted(noteId: String, deletedShapeIds: Set<String>) {
@@ -57,65 +64,11 @@ class HTRSegmentManager(
         }
     }
 
-    private suspend fun processRecognition(noteId: String) {
-        if (!htrManager.isReady()) {
-            Log.w(TAG, "HTR model not ready, skipping recognition")
-            return
-        }
-
-        val shapesToProcess: List<Shape>
-        synchronized(pendingShapes) {
-            shapesToProcess = pendingShapes[noteId]?.toList() ?: emptyList()
-            pendingShapes[noteId]?.clear()
-        }
-
-        if (shapesToProcess.isEmpty()) return
-
-        Log.d(TAG, "Processing ${shapesToProcess.size} shapes for note $noteId")
-
-        val lines = lineDetector.detectLines(shapesToProcess)
-        Log.d(TAG, "Detected ${lines.size} lines")
-
-        val segments = mutableListOf<RecognizedSegmentEntity>()
-
-        for (line in lines) {
-            val result = recognizeLine(line) ?: continue
-
-            Log.d(TAG, "Line ${line.lineNumber}: \"${result.text}\" (confidence: ${result.confidence})")
-
-            segments.add(
-                RecognizedSegmentEntity(
-                    id = UUID.randomUUID().toString(),
-                    noteId = noteId,
-                    shapeIds = line.shapes.map { it.id },
-                    recognizedText = result.text,
-                    confidence = result.confidence,
-                    lineNumber = line.lineNumber,
-                    boundingBoxLeft = line.boundingRect.left,
-                    boundingBoxTop = line.boundingRect.top,
-                    boundingBoxRight = line.boundingRect.right,
-                    boundingBoxBottom = line.boundingRect.bottom
-                )
-            )
-        }
-
-        if (segments.isNotEmpty()) {
-            recognizedSegmentRepository.saveSegments(segments)
-            Log.d(TAG, "Saved ${segments.size} recognized segments")
-        }
-    }
-
-    private suspend fun recognizeLine(line: Line): RecognitionResult? {
-        return suspendCancellableCoroutine { continuation ->
-            htrManager.recognizeShapes(line.shapes) { result ->
-                continuation.resumeWith(Result.success(result))
-            }
-        }
-    }
-
     fun close() {
         debounceJob?.cancel()
         scope.cancel()
         htrManager.close()
     }
 }
+
+

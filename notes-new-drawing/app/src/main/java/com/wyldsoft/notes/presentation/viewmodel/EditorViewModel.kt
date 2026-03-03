@@ -169,6 +169,7 @@ class EditorViewModel(
 
             // Submit shape for HTR recognition
             htrSegmentManager?.addShapesForRecognition(currentNote.value.id, listOf(shape))
+
         }
     }
 
