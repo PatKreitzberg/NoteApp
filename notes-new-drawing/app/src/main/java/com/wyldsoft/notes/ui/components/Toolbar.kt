@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.SelectAll
@@ -38,7 +40,11 @@ fun Toolbar(
     currentPenProfile: PenProfile,
     isStrokeOptionsOpen: Boolean,
     onSettingsClick: () -> Unit = {},
-    onCollapsedChanged: (Boolean) -> Unit = {}
+    onCollapsedChanged: (Boolean) -> Unit = {},
+    onNavigateBack: (() -> Unit)? = null,
+    onNavigateForward: (() -> Unit)? = null,
+    canGoBack: Boolean = false,
+    canGoForward: Boolean = false
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -252,6 +258,31 @@ fun Toolbar(
                         contentDescription = "Note Settings",
                         tint = Color.Black
                     )
+                }
+
+                // Note navigation buttons (only shown when in a notebook)
+                if (onNavigateBack != null && onNavigateForward != null) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        enabled = canGoBack
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Previous Note",
+                            tint = if (canGoBack) Color.Black else Color.LightGray
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onNavigateForward,
+                        enabled = canGoForward
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Next Note",
+                            tint = if (canGoForward) Color.Black else Color.LightGray
+                        )
+                    }
                 }
 
                 // Collapse toolbar button

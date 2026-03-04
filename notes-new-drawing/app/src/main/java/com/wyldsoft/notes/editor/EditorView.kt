@@ -28,6 +28,10 @@ fun EditorView(
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
     var isToolbarCollapsed by remember { mutableStateOf(false) }
 
+    val canGoBack by viewModel.canGoBack.collectAsState()
+    val canGoForward by viewModel.canGoForward.collectAsState()
+    val hasNotebook = viewModel.notebookId != null
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -41,7 +45,11 @@ fun EditorView(
                 currentPenProfile = currentPenProfile,
                 isStrokeOptionsOpen = uiState.isStrokeOptionsOpen,
                 onSettingsClick = { showNoteSettingsDialog = true },
-                onCollapsedChanged = { collapsed -> isToolbarCollapsed = collapsed }
+                onCollapsedChanged = { collapsed -> isToolbarCollapsed = collapsed },
+                onNavigateBack = if (hasNotebook) {{ viewModel.navigateBackward() }} else null,
+                onNavigateForward = if (hasNotebook) {{ viewModel.navigateForward() }} else null,
+                canGoBack = canGoBack,
+                canGoForward = canGoForward
             )
 
             if (!isToolbarCollapsed) {

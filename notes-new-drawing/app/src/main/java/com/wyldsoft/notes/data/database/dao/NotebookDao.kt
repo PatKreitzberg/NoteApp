@@ -43,4 +43,13 @@ interface NotebookDao {
         LIMIT 1
     """)
     suspend fun getFirstNoteInNotebook(notebookId: String): NoteEntity?
+
+    @Transaction
+    @Query("""
+        SELECT n.* FROM notes n
+        JOIN note_notebook_cross_ref cr ON n.id = cr.noteId
+        WHERE cr.notebookId = :notebookId
+        ORDER BY n.createdAt
+    """)
+    suspend fun getNotesInNotebookOnce(notebookId: String): List<NoteEntity>
 }

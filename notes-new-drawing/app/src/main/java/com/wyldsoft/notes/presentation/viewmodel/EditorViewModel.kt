@@ -36,7 +36,8 @@ import kotlinx.coroutines.launch
 class EditorViewModel(
     private val noteRepository: NoteRepository,
     private val notebookRepository: NotebookRepository,
-    private val htrRunManager: HTRRunManager? = null
+    private val htrRunManager: HTRRunManager? = null,
+    val notebookId: String? = null
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(EditorUiState())
@@ -95,6 +96,15 @@ class EditorViewModel(
 
     // Selection manager
     val selectionManager = SelectionManager()
+
+    // Note navigation within notebook
+    private val _canGoBack = MutableStateFlow(false)
+    val canGoBack: StateFlow<Boolean> = _canGoBack.asStateFlow()
+    private val _canGoForward = MutableStateFlow(true)
+    val canGoForward: StateFlow<Boolean> = _canGoForward.asStateFlow()
+
+    // Callback invoked when switching notes, so BaseDrawingActivity can re-init
+    var onNoteSwitched: (() -> Unit)? = null
 
     // Erase stroke grouping: accumulates erased shapes during one erase gesture
     private val pendingErasedShapes = mutableListOf<Shape>()
@@ -334,6 +344,75 @@ class EditorViewModel(
                 }
             }
         }
+    }
+
+    // --- Note navigation ---
+
+    fun initNavigationState() {
+        if (notebookId == null) {
+            _canGoBack.value = false
+            _canGoForward.value = false
+            return
+        }
+        viewModelScope.launch {
+            updateNavigationState()
+        }
+    }
+
+    private suspend fun updateNavigationState() {
+        val nbId = notebookId ?: return
+        val notes = notebookRepository.getNotesInNotebookOnce(nbId)
+        val currentIndex = notes.indexOfFirst { it.id == currentNote.value.id }
+        _canGoBack.value = currentIndex > 0
+        // Always allow forward (creates new note if at end and current note has shapes)
+        _canGoForward.value = true
+    }
+
+    fun navigateBackward() {
+        val nbId = notebookId ?: return
+        viewModelScope.launch {
+            val notes = notebookRepository.getNotesInNotebookOnce(nbId)
+            val currentIndex = notes.indexOfFirst { it.id == currentNote.value.id }
+            if (currentIndex > 0) {
+                switchToNote(notes[currentIndex - 1].id)
+            }
+        }
+    }
+
+    fun navigateForward() {
+        val nbId = notebookId ?: return
+        viewModelScope.launch {
+            val notes = notebookRepository.getNotesInNotebookOnce(nbId)
+            val currentIndex = notes.indexOfFirst { it.id == currentNote.value.id }
+            if (currentIndex < notes.size - 1) {
+                // Go to next existing note
+                switchToNote(notes[currentIndex + 1].id)
+            } else {
+                // At end — only create new note if current note has shapes
+                if (currentNote.value.shapes.isNotEmpty()) {
+                    val newNote = notebookRepository.createNoteInNotebook(nbId)
+                    switchToNote(newNote.id)
+                }
+            }
+        }
+    }
+
+    private suspend fun switchToNote(noteId: String) {
+        noteRepository.setCurrentNote(noteId)
+        // Reset viewport to the new note's saved viewport
+        val note = currentNote.value
+        viewportManager.setState(note.viewportScale, note.viewportOffsetX, note.viewportOffsetY)
+        // Update pagination state from the new note
+        _isPaginationEnabled.value = note.isPaginationEnabled
+        _paperSize.value = PaperSize.entries.find { it.name == note.paperSize } ?: PaperSize.LETTER
+        _paperTemplate.value = PaperTemplate.fromString(note.paperTemplate.name)
+        calculatePageDimensions()
+        // Clear undo/redo history (it belongs to the previous note)
+        actionManager.clear()
+        // Update navigation button states
+        updateNavigationState()
+        // Notify BaseDrawingActivity to re-init drawing surfaces
+        onNoteSwitched?.invoke()
     }
 
     fun updatePenProfile(profile: PenProfile) {

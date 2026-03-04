@@ -16,6 +16,8 @@ interface NotebookRepository {
     suspend fun deleteNotebook(notebookId: String)
     fun getNotesInNotebook(notebookId: String): Flow<List<NoteEntity>>
     suspend fun getFirstNoteInNotebook(notebookId: String): NoteEntity?
+    suspend fun getNotesInNotebookOnce(notebookId: String): List<NoteEntity>
+    suspend fun createNoteInNotebook(notebookId: String): NoteEntity
 }
 
 class NotebookRepositoryImpl(
@@ -79,5 +81,29 @@ class NotebookRepositoryImpl(
     override suspend fun getFirstNoteInNotebook(notebookId: String): NoteEntity? {
         return notebookDao.getFirstNoteInNotebook(notebookId)
     }
-    
+
+    override suspend fun getNotesInNotebookOnce(notebookId: String): List<NoteEntity> {
+        return notebookDao.getNotesInNotebookOnce(notebookId)
+    }
+
+    override suspend fun createNoteInNotebook(notebookId: String): NoteEntity {
+        val existingNotes = notebookDao.getNotesInNotebookOnce(notebookId)
+        val pageNumber = existingNotes.size + 1
+
+        val newNote = NoteEntity(
+            id = UUID.randomUUID().toString(),
+            title = "Page $pageNumber",
+            parentNotebookId = notebookId
+        )
+        noteDao.insert(newNote)
+
+        noteDao.insertNoteNotebookCrossRef(
+            NoteNotebookCrossRef(
+                noteId = newNote.id,
+                notebookId = notebookId
+            )
+        )
+
+        return newNote
+    }
 }

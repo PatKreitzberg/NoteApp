@@ -64,6 +64,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         val noteRepository = app.noteRepository
         val notebookRepository = app.notebookRepository
         val noteId = intent.getStringExtra("noteId") ?: return
+        val notebookId = intent.getStringExtra("notebookId")
 
         // Must complete before creating UI so ShapesManager reads the correct note
         runBlocking(Dispatchers.IO) {
@@ -71,8 +72,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         }
 
         // Create EditorViewModel with repositories
-        Log.d(TAG, "Setting EditorView as content with noteId: $noteId")
-        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrRunManager)
+        Log.d(TAG, "Setting EditorView as content with noteId: $noteId, notebookId: $notebookId")
+        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrRunManager, notebookId)
 
         // Create the UI
         setEditorViewAsContent()
@@ -193,6 +194,37 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         // 2. Pagination is enabled or disabled
         // 3. ViewportState changes
         setObservers()
+
+        // Initialize note navigation state
+        editorViewModel.initNavigationState()
+
+        // Wire up note switch callback for re-initializing drawing surfaces
+        editorViewModel.onNoteSwitched = {
+            onNoteSwitched()
+        }
+    }
+
+    /**
+     * Called when the user navigates to a different note within a notebook.
+     * Clears the bitmap and re-renders shapes from the new note.
+     */
+    private fun onNoteSwitched() {
+        lifecycleScope.launch(Dispatchers.Main) {
+            Log.d(TAG, "Note switched — reinitializing drawing surfaces")
+            // Clear the bitmap
+            bitmap?.let { bm ->
+                bitmapCanvas?.drawColor(Color.WHITE)
+            }
+            // Reinitialize shapes manager to pick up new note's shapes
+            initializeShapeMaanager()
+            // Re-wire drawing references for undo/redo
+            editorViewModel.setDrawingReferences(shapesManager, bitmapManager) {
+                forceScreenRefresh()
+            }
+            // Redraw from the new note's shapes
+            recreateBitmapFromShapes()
+            bitmap?.let { renderToScreen(surfaceView, it) }
+        }
     }
 
     protected open fun initializeSurfaceCallback() {
