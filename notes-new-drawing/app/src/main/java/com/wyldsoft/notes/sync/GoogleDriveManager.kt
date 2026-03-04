@@ -45,7 +45,10 @@ object GoogleDriveManager {
                     com.wyldsoft.notes.data.database.NotesDatabase::class.java,
                     "notes_database"
                 ).build()
-                db.openHelper.writableDatabase.execSQL("PRAGMA wal_checkpoint(FULL)")
+                val cursor = db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)")
+                cursor.moveToFirst()
+                cursor.close()
+                db.close()
 
                 val dbFile = context.getDatabasePath("notes_database")
                 if (!dbFile.exists()) {
