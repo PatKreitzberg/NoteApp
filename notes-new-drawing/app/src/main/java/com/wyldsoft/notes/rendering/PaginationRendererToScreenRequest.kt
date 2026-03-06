@@ -10,21 +10,16 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.sdkintegration.DeviceHelper
 
 /**
- * Custom renderer that includes pagination support with page separators
+ * Renders the bitmap to the SurfaceView, including page separators when pagination is enabled.
+ * Used by both Onyx (via RxManager queue) and generic (via direct execute()) rendering paths.
  */
 class PaginationRendererToScreenRequest(
     private val surfaceView: SurfaceView,
     private val bitmap: Bitmap,
     private val viewModel: EditorViewModel?
 ) : RxRequest() {
-    
-    private val drawingManager = DrawingManager(viewModel?.viewportManager)
-    
+
     override fun execute() {
-        renderToScreen()
-    }
-    
-    private fun renderToScreen() {
         val viewRect = RenderingUtils.checkSurfaceView(surfaceView)
         if (DeviceHelper.isOnyxDevice) {
             EpdController.setViewDefaultUpdateMode(surfaceView, UpdateMode.HAND_WRITING_REPAINT_MODE)
@@ -32,20 +27,18 @@ class PaginationRendererToScreenRequest(
         val canvas = surfaceView.holder.lockCanvas() ?: return
 
         try {
-            // Render background
             RenderingUtils.renderBackground(canvas, viewRect)
-
-            // Draw the main content bitmap
             RenderingUtils.drawRendererContent(bitmap, canvas)
 
             // Draw page separators if pagination is enabled
             viewModel?.let { vm ->
                 if (vm.isPaginationEnabled.value) {
-                    drawingManager.drawPageSeparators(
+                    DrawingManager.drawPageSeparators(
                         canvas = canvas,
                         screenWidth = vm.screenWidth.value,
                         pageHeight = vm.pageHeight.value,
-                        isPaginationEnabled = true
+                        isPaginationEnabled = true,
+                        viewportManager = vm.viewportManager
                     )
                 }
             }

@@ -241,8 +241,11 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
         val surfaceCallback = object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
+                // cleanSurfaceView is needed here (unlike forceScreenRefresh) because
+                // this is the first draw after the surface is created — no bitmap exists
+                // yet to render over the potentially-stale surface contents.
                 cleanSurfaceView(surfaceView)
-                createDrawingBitmap() // Ensure bitmap is created
+                createDrawingBitmap()
                 bitmap?.let { renderToScreen(surfaceView, it) }
             }
 

@@ -8,11 +8,10 @@ import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceView
-import com.wyldsoft.notes.drawing.DrawingManager
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
-import com.wyldsoft.notes.rendering.RenderingUtils
+import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import com.wyldsoft.notes.shapemanagement.ShapesManager
@@ -28,7 +27,6 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
     private lateinit var stylusHandler: GenericStylusHandler
     // gestureHandler is declared in BaseDrawingActivity
     private var deviceReceiver: GenericDeviceReceiverWrapper? = null
-    private var drawingManager: DrawingManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -122,28 +120,10 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
 
     override fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
         if (bitmap == null) return
-        val viewRect = RenderingUtils.checkSurfaceView(surfaceView) ?: return
-        val canvas = surfaceView.holder.lockCanvas() ?: return
         try {
-            RenderingUtils.renderBackground(canvas, viewRect)
-            RenderingUtils.drawRendererContent(bitmap, canvas)
-
-            // Draw page separators if pagination is enabled
-            if (editorViewModel.isPaginationEnabled.value) {
-                if (drawingManager == null) {
-                    drawingManager = DrawingManager(editorViewModel.viewportManager)
-                }
-                drawingManager?.drawPageSeparators(
-                    canvas = canvas,
-                    screenWidth = editorViewModel.screenWidth.value,
-                    pageHeight = editorViewModel.pageHeight.value,
-                    isPaginationEnabled = true
-                )
-            }
+            PaginationRendererToScreenRequest(surfaceView, bitmap, editorViewModel).execute()
         } catch (e: Exception) {
             e.printStackTrace()
-        } finally {
-            surfaceView.holder.unlockCanvasAndPost(canvas)
         }
     }
 
