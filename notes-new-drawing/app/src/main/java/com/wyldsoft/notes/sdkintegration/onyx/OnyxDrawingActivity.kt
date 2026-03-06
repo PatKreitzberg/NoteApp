@@ -265,8 +265,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun forceScreenRefresh() {
         RenderingUtils.enableScreenPost(surfaceView) // absolutely necessary to ensure the screen refreshes properly
         surfaceView.let { sv ->
-            cleanSurfaceView(sv)
-            // Recreate bitmap from all stored shapes
+            // Note: cleanSurfaceView() is intentionally omitted here. The renderToScreen()
+            // call already draws a white background via renderBackground() before drawing the
+            // bitmap, so a separate white clear would cause a visible flash between frames.
             recreateBitmapFromShapes()
             bitmap?.let { renderToScreen(sv, it) }
         }

@@ -249,9 +249,7 @@ class GestureHandler(
             } else {
                 Log.w(TAG, "ViewportManager is null - cannot update offset!")
             }
-
-            // Trigger view refresh
-            (view.context as? com.wyldsoft.notes.drawing.DrawingActivityInterface)?.forceScreenRefresh()
+            // Refresh is triggered by the viewportState observer in BaseDrawingActivity
 
             val direction = getDirection(totalPanX, totalPanY)
             Log.d(TAG, "Pan/Scroll - Direction: $direction, Distance: ${sqrt(totalPanX * totalPanX + totalPanY * totalPanY)}, Delta: ($totalPanX, $totalPanY)")

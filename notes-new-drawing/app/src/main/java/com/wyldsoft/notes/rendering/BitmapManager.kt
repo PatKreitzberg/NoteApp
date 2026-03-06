@@ -97,9 +97,9 @@ class BitmapManager(
                 }
             }
         }
-
-        // Render the updated bitmap to screen
-        renderBitmapToScreen()
+        // Note: renderBitmapToScreen() is intentionally not called here.
+        // All callers (forceScreenRefresh, surfaceChanged, onNoteSwitched) call renderToScreen()
+        // themselves, so calling it here would enqueue a redundant render request.
     }
 
 
