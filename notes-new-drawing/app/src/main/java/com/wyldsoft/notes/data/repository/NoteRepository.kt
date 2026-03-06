@@ -23,7 +23,7 @@ interface NoteRepository {
     suspend fun createNewNote(): Note
     suspend fun setCurrentNote(noteId: String)
     fun getNoteFlow(noteId: String): Flow<Note>
-    suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float)
+    suspend fun updateViewportState(noteId: String, scale: Float, scrollX: Float, scrollY: Float)
     suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String)
     suspend fun updatePaperTemplate(noteId: String, paperTemplate: String)
     suspend fun updateShape(noteId: String, shape: Shape)
@@ -96,13 +96,13 @@ class NoteRepositoryImpl(
         _currentNote.value = getNote(noteId)
     }
     
-    override suspend fun updateViewportState(noteId: String, scale: Float, offsetX: Float, offsetY: Float) {
-        Log.d("NoteRepository", "Updating viewport state for note: $noteId, scale: $scale, offsetX: $offsetX, offsetY: $offsetY")
+    override suspend fun updateViewportState(noteId: String, scale: Float, scrollX: Float, scrollY: Float) {
+        Log.d("NoteRepository", "Updating viewport state for note: $noteId, scale: $scale, scrollX: $scrollX, scrollY: $scrollY")
         updateNoteFields(noteId) { entity ->
             entity.copy(
                 viewportScale = scale,
-                viewportOffsetX = offsetX,
-                viewportOffsetY = offsetY
+                viewportScrollX = scrollX,
+                viewportScrollY = scrollY
             )
         }
     }
@@ -142,8 +142,8 @@ class NoteRepositoryImpl(
             createdAt = createdAt,
             modifiedAt = modifiedAt,
             viewportScale = viewportScale,
-            viewportOffsetX = viewportOffsetX,
-            viewportOffsetY = viewportOffsetY,
+            viewportScrollX = viewportScrollX,
+            viewportScrollY = viewportScrollY,
             isPaginationEnabled = isPaginationEnabled,
             paperSize = paperSize,
             paperTemplate = PaperTemplate.fromString(paperTemplate)
@@ -169,8 +169,8 @@ class NoteRepositoryImpl(
             createdAt = createdAt,
             modifiedAt = modifiedAt,
             viewportScale = viewportScale,
-            viewportOffsetX = viewportOffsetX,
-            viewportOffsetY = viewportOffsetY,
+            viewportScrollX = viewportScrollX,
+            viewportScrollY = viewportScrollY,
             isPaginationEnabled = isPaginationEnabled,
             paperSize = paperSize,
             paperTemplate = paperTemplate.name

@@ -10,8 +10,8 @@ data class Note(
     val modifiedAt: Long = System.currentTimeMillis(),
     val paperTemplate: PaperTemplate = PaperTemplate.BLANK,
     val viewportScale: Float = 1.0f,
-    val viewportOffsetX: Float = 0f,
-    val viewportOffsetY: Float = 0f,
+    val viewportScrollX: Float = 0f,
+    val viewportScrollY: Float = 0f,
     val isPaginationEnabled: Boolean = true,
     val paperSize: String = "LETTER"
 )

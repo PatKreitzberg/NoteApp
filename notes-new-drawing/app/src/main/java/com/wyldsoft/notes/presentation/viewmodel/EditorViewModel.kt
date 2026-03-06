@@ -138,12 +138,12 @@ class EditorViewModel(
                 .drop(1) // Skip initial because currentNote is not the actual note yet, just a default one
                 .debounce(100) // Wait 100ms after last change before saving
                 .collect { state ->
-                    Log.d("EditorViewModel", "Saving viewport state for note: ${currentNote.value.id}, scale: ${state.scale}, offsetX: ${state.offsetX}, offsetY: ${state.offsetY}")
+                    Log.d("EditorViewModel", "Saving viewport state for note: ${currentNote.value.id}, scale: ${state.scale}, scrollX: ${state.scrollX}, scrollY: ${state.scrollY}")
                     noteRepository.updateViewportState(
                         currentNote.value.id,
                         state.scale,
-                        state.offsetX,
-                        state.offsetY
+                        state.scrollX,
+                        state.scrollY
                     )
                 }
         }
@@ -405,7 +405,7 @@ class EditorViewModel(
         noteRepository.setCurrentNote(noteId)
         // Reset viewport to the new note's saved viewport
         val note = currentNote.value
-        viewportManager.setState(note.viewportScale, note.viewportOffsetX, note.viewportOffsetY)
+        viewportManager.setState(note.viewportScale, note.viewportScrollX, note.viewportScrollY)
         // Update pagination state from the new note
         _isPaginationEnabled.value = note.isPaginationEnabled
         viewportManager.isPaginationEnabled = note.isPaginationEnabled
@@ -492,9 +492,9 @@ class EditorViewModel(
         val rects = mutableListOf<Rect>()
         val pageHeightInt = _pageHeight.value.toInt()
         
-        // Calculate visible separators based on viewport
-        val viewportTop = viewportState.value.offsetY.toInt()
-        val viewportBottom = viewportTop + viewportManager.viewHeight
+        // Calculate visible separators based on viewport (scrollY is in NoteCoordinates)
+        val viewportTop = viewportState.value.scrollY.toInt()
+        val viewportBottom = viewportTop + (viewportManager.viewHeight / viewportState.value.scale).toInt()
         
         var pageY = pageHeightInt
         var pageNum = 2

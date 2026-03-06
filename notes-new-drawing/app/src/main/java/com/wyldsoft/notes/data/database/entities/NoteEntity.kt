@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.data.database.entities
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.ForeignKey
@@ -27,8 +28,8 @@ data class NoteEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val modifiedAt: Long = System.currentTimeMillis(),
     val viewportScale: Float = 1.0f,
-    val viewportOffsetX: Float = 0f,
-    val viewportOffsetY: Float = 0f,
+    @ColumnInfo(name = "viewportOffsetX") val viewportScrollX: Float = 0f,
+    @ColumnInfo(name = "viewportOffsetY") val viewportScrollY: Float = 0f,
     val isPaginationEnabled: Boolean = true,
     val paperSize: String = "LETTER",
     val paperTemplate: String = "BLANK"

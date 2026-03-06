@@ -22,9 +22,9 @@ fun ViewportInfo(
     isPaginationEnabled: Boolean = false,
     currentPageNumber: Int = 1
 ) {
-    // Calculate scroll position in NoteCoordinates
-    val scrollX = (-viewportState.offsetX / viewportState.scale).roundToInt()
-    val scrollY = (-viewportState.offsetY / viewportState.scale).roundToInt()
+    // Scroll position in NoteCoordinates (positive values: how far scrolled from origin)
+    val scrollX = viewportState.scrollX.roundToInt()
+    val scrollY = viewportState.scrollY.roundToInt()
     val zoomPercent = (viewportState.scale * 100).roundToInt()
     
     Box(

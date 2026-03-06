@@ -27,7 +27,7 @@ import java.util.UUID
         DeletedItemEntity::class,
         SyncStateEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -57,6 +57,18 @@ abstract class NotesDatabase : RoomDatabase() {
             }
         }
 
+        // Convert viewport offsets (old: negative screen-pixel values) to scroll positions
+        // (new: positive NoteCoordinate values). scrollX = -offsetX/scale, scrollY = -offsetY/scale.
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    UPDATE notes SET
+                        viewportOffsetX = CASE WHEN viewportScale > 0 THEN -viewportOffsetX / viewportScale ELSE 0 END,
+                        viewportOffsetY = CASE WHEN viewportScale > 0 THEN -viewportOffsetY / viewportScale ELSE 0 END
+                """.trimIndent())
+            }
+        }
+
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -83,7 +95,7 @@ abstract class NotesDatabase : RoomDatabase() {
                     NotesDatabase::class.java,
                     "notes_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5, MIGRATION_5_6)
                 .fallbackToDestructiveMigration()
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {

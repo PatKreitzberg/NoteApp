@@ -7,24 +7,28 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.max
-import kotlin.math.min
 import android.util.Log
 
 /**
  * Manages the viewport transformation between NoteCoordinates and SurfaceViewCoordinates.
  *
  * Coordinate Systems:
- * - NoteCoordinates: The absolute position in the note (stored with shapes)
- * - SurfaceViewCoordinates: The position on the screen surface where drawing occurs
+ * - NoteCoordinates: The absolute position in the note (stored with shapes).
+ *   Origin (0,0) is the top-left of the canvas; x increases rightward, y increases downward.
+ * - SurfaceViewCoordinates: The position on the screen surface where drawing occurs.
  *
- * The transformation is: SurfaceViewCoords = (NoteCoords * scale) + offset
+ * ViewportState stores scrollX/scrollY as positive NoteCoordinate values representing
+ * how far the viewport has been scrolled from the origin:
+ *   scrollX = 0 means the left edge of the note is at the left of the screen
+ *   scrollY = 0 means the top of the note is at the top of the screen
+ *
+ * The transformation is: SurfaceCoords = (NoteCoords - scroll) * scale
  */
 class ViewportManager {
 
     companion object {
         private const val MIN_SCALE = 0.5f
         private const val MAX_SCALE = 2.0f
-        private const val TOP_LIMIT = 0f // Top limit in NoteCoordinates
     }
 
     // Current viewport state
@@ -42,21 +46,30 @@ class ViewportManager {
     // Pagination state (updated from EditorViewModel)
     var isPaginationEnabled: Boolean = false
     var pageWidth: Float = 0f
-    
+
     /**
-     * Constrains offsetX based on pagination mode and scale.
+     * Constrains scrollX based on pagination mode and scale.
      * - Pagination enabled + scale < 1.0: center the page horizontally.
-     * - Otherwise: prevent scrolling left of the note's left edge (offsetX >= 0).
+     * - Otherwise: prevent scrolling left of the note's left edge (scrollX >= 0).
      */
-    private fun constrainOffsetX(offsetX: Float, scale: Float): Float {
-        Log.d("ViewportManager", "constrainOffsetX: offsetX=$offsetX, scale=$scale, pagination=$isPaginationEnabled, viewWidth=$viewWidth, pageWidth=$pageWidth")
+    private fun constrainScrollX(scrollX: Float, scale: Float): Float {
+        Log.d("ViewportManager", "constrainScrollX: scrollX=$scrollX, scale=$scale, pagination=$isPaginationEnabled, viewWidth=$viewWidth, pageWidth=$pageWidth")
         return if (isPaginationEnabled && scale < 1.0f && viewWidth > 0 && pageWidth > 0f) {
-            // Center the page horizontally: offset so that the page center aligns with screen center
-            (viewWidth - pageWidth * scale) / 2f
+            // Center the page: scrollX such that the page center aligns with screen center.
+            // SurfaceX = (NoteX - scrollX) * scale; for page center (pageWidth/2) to be at
+            // screen center (viewWidth/2): viewWidth/2 = (pageWidth/2 - scrollX) * scale
+            // scrollX = pageWidth/2 - viewWidth/(2*scale)
+            pageWidth / 2f - viewWidth / (2f * scale)
         } else {
-            // Prevent scrolling left of the note's left edge
-            max(offsetX, 0f)
+            max(0f, scrollX)
         }
+    }
+
+    /**
+     * Constrains scrollY so the top of the note cannot scroll above the screen top.
+     */
+    private fun constrainScrollY(scrollY: Float): Float {
+        return max(0f, scrollY)
     }
 
     /**
@@ -75,40 +88,43 @@ class ViewportManager {
             // Convert focus point to NoteCoordinates
             val notePoint = surfaceToNoteCoordinates(focusX, focusY)
 
-            // Adjust offset to keep the focus point stationary
-            val newOffsetX = constrainOffsetX(focusX - (notePoint.x * newScale), newScale)
-            val newOffsetY = min(focusY - (notePoint.y * newScale), TOP_LIMIT * newScale)
-            Log.d("ViewportManager", "updateScale: newScale=$newScale, notePoint=(${notePoint.x}, ${notePoint.y}), newOffsetX=$newOffsetX, newOffsetY=$newOffsetY")
+            // Keep the focus note-point at the same screen position after rescaling:
+            // focusX = (notePoint.x - newScrollX) * newScale => newScrollX = notePoint.x - focusX/newScale
+            val newScrollX = constrainScrollX(notePoint.x - focusX / newScale, newScale)
+            val newScrollY = constrainScrollY(notePoint.y - focusY / newScale)
+
+            Log.d("ViewportManager", "updateScale: newScale=$newScale, notePoint=(${notePoint.x}, ${notePoint.y}), newScrollX=$newScrollX, newScrollY=$newScrollY")
             _viewportState.value = currentState.copy(
                 scale = newScale,
-                offsetX = newOffsetX,
-                offsetY = newOffsetY
+                scrollX = newScrollX,
+                scrollY = newScrollY
             )
 
             updateMatrices()
         }
     }
-    
+
     /**
      * Updates the viewport offset (pan/scroll).
      *
-     * @param deltaX The horizontal distance to pan in SurfaceViewCoordinates
-     * @param deltaY The vertical distance to pan in SurfaceViewCoordinates
+     * @param deltaX The horizontal pixel distance the finger moved (positive = finger moved right)
+     * @param deltaY The vertical pixel distance the finger moved (positive = finger moved down)
      */
     fun updateOffset(deltaX: Float, deltaY: Float) {
         Log.d("ViewportManager", "updateOffset: deltaX=$deltaX, deltaY=$deltaY")
         val currentState = _viewportState.value
-        val newOffsetX = constrainOffsetX(currentState.offsetX + deltaX, currentState.scale)
-        val newOffsetY = min(currentState.offsetY + deltaY, TOP_LIMIT * currentState.scale)
+        // Dragging finger right (deltaX > 0) moves content right → scrollX decreases.
+        val newScrollX = constrainScrollX(currentState.scrollX - deltaX / currentState.scale, currentState.scale)
+        val newScrollY = constrainScrollY(currentState.scrollY - deltaY / currentState.scale)
 
         _viewportState.value = currentState.copy(
-            offsetX = newOffsetX,
-            offsetY = newOffsetY
+            scrollX = newScrollX,
+            scrollY = newScrollY
         )
 
         updateMatrices()
     }
-    
+
     /**
      * Converts a point from SurfaceViewCoordinates to NoteCoordinates.
      * Used when creating new shapes from touch input.
@@ -118,7 +134,7 @@ class ViewportManager {
         inverseMatrix.mapPoints(points)
         return PointF(points[0], points[1])
     }
-    
+
     /**
      * Converts a point from NoteCoordinates to SurfaceViewCoordinates.
      * Used for hit testing and UI feedback.
@@ -128,13 +144,13 @@ class ViewportManager {
         transformMatrix.mapPoints(points)
         return PointF(points[0], points[1])
     }
-    
+
     /**
      * Gets the current transformation matrix for rendering.
      * This matrix transforms from NoteCoordinates to SurfaceViewCoordinates.
      */
     fun getTransformMatrix(): Matrix = Matrix(transformMatrix)
-    
+
     /**
      * Resets the viewport to default state (no zoom, no scroll).
      */
@@ -153,68 +169,64 @@ class ViewportManager {
     fun resetZoomAndCenter(isPaginationEnabled: Boolean, pageWidth: Float = 0f) {
         val currentState = _viewportState.value
 
-        // Keep current vertical scroll position in NoteCoordinates, then recalculate for scale=1.0
-        val currentScrollY = -currentState.offsetY / currentState.scale
-
-        val newOffsetX = if (isPaginationEnabled && pageWidth > 0 && viewWidth > 0) {
-            // Center the page horizontally: offset so that the page center aligns with screen center
-            (viewWidth - pageWidth) / 2f
+        val newScrollX = if (isPaginationEnabled && pageWidth > 0 && viewWidth > 0) {
+            // Center the page at scale=1: scrollX = pageWidth/2 - viewWidth/2
+            pageWidth / 2f - viewWidth / 2f
         } else {
             0f
         }
 
-        val newOffsetY = min(-currentScrollY, TOP_LIMIT)
+        // Preserve vertical scroll position, clamped to >= 0
+        val newScrollY = constrainScrollY(currentState.scrollY)
 
         _viewportState.value = ViewportState(
             scale = 1.0f,
-            offsetX = newOffsetX,
-            offsetY = newOffsetY
+            scrollX = newScrollX,
+            scrollY = newScrollY
         )
         updateMatrices()
-        Log.d("ViewportManager", "resetZoomAndCenter: pagination=$isPaginationEnabled, pageWidth=$pageWidth, newOffsetX=$newOffsetX, newOffsetY=$newOffsetY")
+        Log.d("ViewportManager", "resetZoomAndCenter: pagination=$isPaginationEnabled, pageWidth=$pageWidth, newScrollX=$newScrollX, newScrollY=$newScrollY")
     }
-    
+
     /**
      * Sets the viewport state (used for persistence/restoration).
+     * scrollX and scrollY are positive NoteCoordinate values (distance scrolled from origin).
      */
-    fun setState(scale: Float, offsetX: Float, offsetY: Float) {
-        Log.d("ViewportManager", "setState called with: scale=$scale, offsetX=$offsetX, offsetY=$offsetY")
+    fun setState(scale: Float, scrollX: Float, scrollY: Float) {
+        Log.d("ViewportManager", "setState called with: scale=$scale, scrollX=$scrollX, scrollY=$scrollY")
         val clampedScale = scale.coerceIn(MIN_SCALE, MAX_SCALE)
         _viewportState.value = ViewportState(
             scale = clampedScale,
-            offsetX = constrainOffsetX(offsetX, clampedScale),
-            offsetY = min(offsetY, TOP_LIMIT * clampedScale)
+            scrollX = constrainScrollX(scrollX, clampedScale),
+            scrollY = constrainScrollY(scrollY)
         )
         updateMatrices()
     }
-    
+
     /**
      * Updates the transformation matrices based on current state.
+     * SurfaceCoords = (NoteCoords - scroll) * scale
      */
     private fun updateMatrices() {
         val state = _viewportState.value
-        
-        // Create forward transformation matrix
+
         transformMatrix.reset()
         transformMatrix.postScale(state.scale, state.scale)
-        transformMatrix.postTranslate(state.offsetX, state.offsetY)
-        
+        transformMatrix.postTranslate(-state.scrollX * state.scale, -state.scrollY * state.scale)
+
         // Create inverse transformation matrix
         transformMatrix.invert(inverseMatrix)
     }
-    
+
     /**
      * Gets the current scroll position in NoteCoordinates.
      * This represents the top-left corner of the viewport in note space.
      */
     fun getScrollPosition(): PointF {
         val state = _viewportState.value
-        return PointF(
-            -state.offsetX / state.scale,
-            -state.offsetY / state.scale
-        )
+        return PointF(state.scrollX, state.scrollY)
     }
-    
+
     /**
      * Returns the visible bounds in note coordinates for the given canvas size.
      */
@@ -233,9 +245,14 @@ class ViewportManager {
 
 /**
  * Represents the current state of the viewport.
+ *
+ * scrollX and scrollY are the scroll position in NoteCoordinates (always >= 0 normally).
+ * scrollX = 0 means the left edge of the note is at the left of the screen.
+ * scrollY = 0 means the top of the note is at the top of the screen.
+ * Increasing scrollX/scrollY means you have scrolled further right/down into the note.
  */
 data class ViewportState(
     val scale: Float = 1.0f,
-    val offsetX: Float = 0f,
-    val offsetY: Float = 0f
+    val scrollX: Float = 0f,
+    val scrollY: Float = 0f
 )

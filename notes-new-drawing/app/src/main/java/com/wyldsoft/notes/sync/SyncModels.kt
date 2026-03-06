@@ -25,8 +25,8 @@ data class NoteJson(
     val createdAt: Long,
     val modifiedAt: Long,
     val viewportScale: Float,
-    val viewportOffsetX: Float,
-    val viewportOffsetY: Float,
+    val viewportScrollX: Float,
+    val viewportScrollY: Float,
     val isPaginationEnabled: Boolean,
     val paperSize: String,
     val paperTemplate: String
@@ -91,8 +91,8 @@ fun NoteEntity.toNoteJson() = NoteJson(
     createdAt = createdAt,
     modifiedAt = modifiedAt,
     viewportScale = viewportScale,
-    viewportOffsetX = viewportOffsetX,
-    viewportOffsetY = viewportOffsetY,
+    viewportScrollX = viewportScrollX,
+    viewportScrollY = viewportScrollY,
     isPaginationEnabled = isPaginationEnabled,
     paperSize = paperSize,
     paperTemplate = paperTemplate
@@ -107,8 +107,8 @@ fun NoteJson.toEntity() = NoteEntity(
     createdAt = createdAt,
     modifiedAt = modifiedAt,
     viewportScale = viewportScale,
-    viewportOffsetX = viewportOffsetX,
-    viewportOffsetY = viewportOffsetY,
+    viewportScrollX = viewportScrollX,
+    viewportScrollY = viewportScrollY,
     isPaginationEnabled = isPaginationEnabled,
     paperSize = paperSize,
     paperTemplate = paperTemplate

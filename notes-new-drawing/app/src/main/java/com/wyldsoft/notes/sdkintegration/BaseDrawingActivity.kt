@@ -296,7 +296,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                 Log.d("DebugAug12", "OBSERVER Viewport changed: ${editorViewModel.viewportState.value}")
                 if (editorViewModel.isPaginationEnabled.value) {
                     // Update scroll position for page number calculation
-                    editorViewModel.updateCurrentPage(-editorViewModel.viewportState.value.offsetY)
+                    editorViewModel.updateCurrentPage(editorViewModel.viewportState.value.scrollY)
                     // Update exclusion zones when viewport changes
                     updatePaginationExclusionZones()
                 }
