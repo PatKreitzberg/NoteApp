@@ -118,9 +118,7 @@ class GestureHandler(
                     } else {
                         Log.w(TAG, "ViewportManager is null - cannot update scale!")
                     }
-
-                    // Trigger view refresh
-                    (view.context as? com.wyldsoft.notes.drawing.DrawingActivityInterface)?.forceScreenRefresh()
+                    // Refresh is triggered by the viewportState observer in BaseDrawingActivity
 
                     if (currentScale > 1f) {
                         Log.d(TAG, "Pinch EXPAND - Scale: $currentScale, Center: ($pinchCenterX, $pinchCenterY)")

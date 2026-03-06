@@ -129,36 +129,23 @@ class BitmapManager(
     }
 
     /**
-     * Renders bitmap to screen
+     * Renders bitmap to screen. Uses PaginationRendererToScreenRequest for both
+     * Onyx (via RxManager queue) and non-Onyx (via direct execution) paths,
+     * ensuring page separators are drawn consistently.
      */
     internal fun renderBitmapToScreen() {
         val bitmap = getBitmap() ?: return
+        val request = PaginationRendererToScreenRequest(surfaceView, bitmap, viewModel)
 
         if (rxManager != null) {
-            rxManager.enqueue(
-                RendererToScreenRequest(
-                    surfaceView,
-                    bitmap
-                ), null)
+            rxManager.enqueue(request, null)
         } else {
-            // Direct rendering for non-Onyx devices
-            renderBitmapDirectly(bitmap)
-        }
-    }
-
-    /**
-     * Direct rendering path for non-Onyx devices (no RxManager queue).
-     */
-    private fun renderBitmapDirectly(bitmap: Bitmap) {
-        val viewRect = RenderingUtils.checkSurfaceView(surfaceView) ?: return
-        val canvas = surfaceView.holder.lockCanvas() ?: return
-        try {
-            RenderingUtils.renderBackground(canvas, viewRect)
-            RenderingUtils.drawRendererContent(bitmap, canvas)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            surfaceView.holder.unlockCanvasAndPost(canvas)
+            // Direct execution for non-Onyx devices
+            try {
+                request.execute()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

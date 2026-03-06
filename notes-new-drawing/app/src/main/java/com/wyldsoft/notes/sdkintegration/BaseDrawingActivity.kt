@@ -25,6 +25,9 @@ import com.wyldsoft.notes.drawing.DrawingActivityInterface
 import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import com.wyldsoft.notes.gestures.GestureAction
+import com.wyldsoft.notes.gestures.GestureHandler
+import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.sync.SyncWorker
@@ -46,10 +49,10 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected lateinit var bitmapManager: BitmapManager // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var shapesManager: ShapesManager
+    protected lateinit var gestureHandler: GestureHandler
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun initializeShapeMaanager()
-    abstract fun initializeGestureHandler()
     abstract fun initializeStylusHandler()
     abstract fun createDeviceReceiver(): BaseDeviceReceiver
     abstract fun enableFingerTouch()
@@ -322,6 +325,40 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         Log.d("DebugAug12", "DONE Setting ViewModel in BaseDrawingActivity")
     }
 
+    open fun initializeGestureHandler() {
+        Log.d(TAG, "initializeGestureHandler called")
+        gestureHandler = GestureHandler(this, surfaceView)
+        gestureHandler.setViewportManager(editorViewModel.viewportManager)
+
+        val app = application as com.wyldsoft.notes.ScrotesApp
+        gestureHandler.gestureMappings = app.gestureSettingsRepository.mappings.value
+
+        gestureHandler.onGestureAction = { action ->
+            when (action) {
+                GestureAction.RESET_ZOOM_AND_CENTER -> {
+                    val vm = editorViewModel
+                    val isPagination = vm.isPaginationEnabled.value
+                    val pageWidth = vm.screenWidth.value.toFloat()
+                    vm.viewportManager.resetZoomAndCenter(isPagination, pageWidth)
+                    forceScreenRefresh()
+                }
+                GestureAction.TOGGLE_SELECTION_MODE -> {
+                    val vm = editorViewModel
+                    val currentTool = vm.uiState.value.selectedTool
+                    if (currentTool == Tool.SELECTOR) {
+                        vm.cancelSelection()
+                    } else {
+                        vm.selectTool(Tool.SELECTOR)
+                    }
+                    forceScreenRefresh()
+                }
+                else -> {
+                    Log.d(TAG, "Gesture action $action handled inline")
+                }
+            }
+        }
+    }
+
     override fun onShapeCompleted(id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) {
         editorViewModel.addShape(id, points, pressures, timestamps)
     }
@@ -351,8 +388,15 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         // Don't call viewModel?.updatePenProfile here to avoid infinite loop
     }
 
-    // Method to recreate bitmap from shapes
-    abstract fun recreateBitmapFromShapes()
+    open fun recreateBitmapFromShapes() {
+        Log.d(TAG, "recreateBitmapFromShapes")
+        getOrCreateBitmap()
+        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        val selMgr = editorViewModel.selectionManager
+        if (selMgr.hasSelection) {
+            bitmapManager.drawSelectionOverlay(selMgr, editorViewModel.viewportManager)
+        }
+    }
 
     protected fun createDrawingBitmap(): Bitmap? {
         return surfaceView.let { sv ->

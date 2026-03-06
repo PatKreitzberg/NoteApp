@@ -14,7 +14,6 @@ import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.touchhandling.TouchUtils
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
-import com.wyldsoft.notes.gestures.GestureHandler
 import android.view.MotionEvent
 import com.wyldsoft.notes.rendering.RenderingUtils
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
@@ -33,8 +32,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     // Stylus handler for all stylus-related operations
     private lateinit var stylusHandler: OnyxStylusHandler
 
-    // Gesture handler
-    private lateinit var gestureHandler: GestureHandler//? = null
+    // gestureHandler is declared in BaseDrawingActivity
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -275,54 +273,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         // RenderingUtils.enableScreenPost(surfaceView) with 0 instead of 1
     }
     
-    override fun recreateBitmapFromShapes() {
-        Log.d(TAG, "recreateBitmapFromShapes called from OnyxDrawingActivity")
-        getOrCreateBitmap() // Ensure bitmap exists
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
-        // Re-draw selection overlay so bounding box persists across redraws
-        val selMgr = editorViewModel.selectionManager
-        if (selMgr.hasSelection) {
-            bitmapManager.drawSelectionOverlay(selMgr, editorViewModel.viewportManager)
-        }
-    }
-
-    override fun initializeGestureHandler() {
-        Log.d(TAG, "initializeGestureHandler called")
-        // Initialize gesture handler with the current surface view
-        gestureHandler = GestureHandler(this, surfaceView)
-        // Set the viewport manager to the gesture handler
-        gestureHandler.setViewportManager(editorViewModel.viewportManager)
-
-        // Load gesture mappings from settings
-        val app = application as com.wyldsoft.notes.ScrotesApp
-        gestureHandler.gestureMappings = app.gestureSettingsRepository.mappings.value
-
-        // Generic gesture action callback
-        gestureHandler.onGestureAction = { action ->
-            when (action) {
-                com.wyldsoft.notes.gestures.GestureAction.RESET_ZOOM_AND_CENTER -> {
-                    val vm = editorViewModel
-                    val isPagination = vm.isPaginationEnabled.value
-                    val pageWidth = vm.screenWidth.value.toFloat()
-                    vm.viewportManager.resetZoomAndCenter(isPagination, pageWidth)
-                    forceScreenRefresh()
-                }
-                com.wyldsoft.notes.gestures.GestureAction.TOGGLE_SELECTION_MODE -> {
-                    val vm = editorViewModel
-                    val currentTool = vm.uiState.value.selectedTool
-                    if (currentTool == Tool.SELECTOR) {
-                        vm.cancelSelection()
-                    } else {
-                        vm.selectTool(Tool.SELECTOR)
-                    }
-                    forceScreenRefresh()
-                }
-                else -> {
-                    Log.d(TAG, "Gesture action $action handled inline")
-                }
-            }
-        }
-    }
     override fun initializeBitmapManager(sv: SurfaceView, vm: EditorViewModel) {
         Log.d(TAG, "BitmapManager initialized with current bitmap")
         this.bitmapManager = BitmapManager(

@@ -9,7 +9,6 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceView
 import com.wyldsoft.notes.drawing.DrawingManager
-import com.wyldsoft.notes.gestures.GestureHandler
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
@@ -27,7 +26,7 @@ import kotlinx.coroutines.launch
 open class GenericDrawingActivity : BaseDrawingActivity() {
 
     private lateinit var stylusHandler: GenericStylusHandler
-    private lateinit var gestureHandler: GestureHandler
+    // gestureHandler is declared in BaseDrawingActivity
     private var deviceReceiver: GenericDeviceReceiverWrapper? = null
     private var drawingManager: DrawingManager? = null
 
@@ -85,40 +84,6 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
         lifecycleScope.launch {
             editorViewModel.uiState.collect { state ->
                 // No touch helper reconfiguration needed on generic devices
-            }
-        }
-    }
-
-    override fun initializeGestureHandler() {
-        Log.d(TAG, "initializeGestureHandler called")
-        gestureHandler = GestureHandler(this, surfaceView)
-        gestureHandler.setViewportManager(editorViewModel.viewportManager)
-
-        val app = application as com.wyldsoft.notes.ScrotesApp
-        gestureHandler.gestureMappings = app.gestureSettingsRepository.mappings.value
-
-        gestureHandler.onGestureAction = { action ->
-            when (action) {
-                com.wyldsoft.notes.gestures.GestureAction.RESET_ZOOM_AND_CENTER -> {
-                    val vm = editorViewModel
-                    val isPagination = vm.isPaginationEnabled.value
-                    val pageWidth = vm.screenWidth.value.toFloat()
-                    vm.viewportManager.resetZoomAndCenter(isPagination, pageWidth)
-                    forceScreenRefresh()
-                }
-                com.wyldsoft.notes.gestures.GestureAction.TOGGLE_SELECTION_MODE -> {
-                    val vm = editorViewModel
-                    val currentTool = vm.uiState.value.selectedTool
-                    if (currentTool == Tool.SELECTOR) {
-                        vm.cancelSelection()
-                    } else {
-                        vm.selectTool(Tool.SELECTOR)
-                    }
-                    forceScreenRefresh()
-                }
-                else -> {
-                    Log.d(TAG, "Gesture action $action handled inline")
-                }
             }
         }
     }
@@ -227,19 +192,11 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
 
     override fun forceScreenRefresh() {
         surfaceView.let { sv ->
-            cleanSurfaceView(sv)
+            // Note: cleanSurfaceView() is intentionally omitted here. The renderToScreen()
+            // call already draws a white background via renderBackground() before drawing the
+            // bitmap, so a separate white clear would cause a visible flash between frames.
             recreateBitmapFromShapes()
             bitmap?.let { renderToScreen(sv, it) }
-        }
-    }
-
-    override fun recreateBitmapFromShapes() {
-        Log.d(TAG, "recreateBitmapFromShapes called from GenericDrawingActivity")
-        getOrCreateBitmap()
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
-        val selMgr = editorViewModel.selectionManager
-        if (selMgr.hasSelection) {
-            bitmapManager.drawSelectionOverlay(selMgr, editorViewModel.viewportManager)
         }
     }
 
