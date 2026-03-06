@@ -49,9 +49,12 @@ class ViewportManager {
      * - Otherwise: prevent scrolling left of the note's left edge (offsetX >= 0).
      */
     private fun constrainOffsetX(offsetX: Float, scale: Float): Float {
+        Log.d("ViewportManager", "constrainOffsetX: offsetX=$offsetX, scale=$scale, pagination=$isPaginationEnabled, viewWidth=$viewWidth, pageWidth=$pageWidth")
         return if (isPaginationEnabled && scale < 1.0f && viewWidth > 0 && pageWidth > 0f) {
+            // Center the page horizontally: offset so that the page center aligns with screen center
             (viewWidth - pageWidth * scale) / 2f
         } else {
+            // Prevent scrolling left of the note's left edge
             max(offsetX, 0f)
         }
     }
@@ -75,7 +78,7 @@ class ViewportManager {
             // Adjust offset to keep the focus point stationary
             val newOffsetX = constrainOffsetX(focusX - (notePoint.x * newScale), newScale)
             val newOffsetY = min(focusY - (notePoint.y * newScale), TOP_LIMIT * newScale)
-
+            Log.d("ViewportManager", "updateScale: newScale=$newScale, notePoint=(${notePoint.x}, ${notePoint.y}), newOffsetX=$newOffsetX, newOffsetY=$newOffsetY")
             _viewportState.value = currentState.copy(
                 scale = newScale,
                 offsetX = newOffsetX,
