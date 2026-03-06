@@ -12,36 +12,53 @@ import android.util.Log
 
 /**
  * Manages the viewport transformation between NoteCoordinates and SurfaceViewCoordinates.
- * 
+ *
  * Coordinate Systems:
  * - NoteCoordinates: The absolute position in the note (stored with shapes)
  * - SurfaceViewCoordinates: The position on the screen surface where drawing occurs
- * 
+ *
  * The transformation is: SurfaceViewCoords = (NoteCoords * scale) + offset
  */
 class ViewportManager {
-    
+
     companion object {
         private const val MIN_SCALE = 0.5f
         private const val MAX_SCALE = 2.0f
         private const val TOP_LIMIT = 0f // Top limit in NoteCoordinates
     }
-    
+
     // Current viewport state
     private val _viewportState = MutableStateFlow(ViewportState())
     val viewportState: StateFlow<ViewportState> = _viewportState.asStateFlow()
-    
+
     // Transformation matrix (updated whenever viewport changes)
     private val transformMatrix = Matrix()
     private val inverseMatrix = Matrix()
-    
+
     // View dimensions (set by the activity)
     var viewWidth = 0
     var viewHeight = 0
+
+    // Pagination state (updated from EditorViewModel)
+    var isPaginationEnabled: Boolean = false
+    var pageWidth: Float = 0f
     
     /**
+     * Constrains offsetX based on pagination mode and scale.
+     * - Pagination enabled + scale < 1.0: center the page horizontally.
+     * - Otherwise: prevent scrolling left of the note's left edge (offsetX >= 0).
+     */
+    private fun constrainOffsetX(offsetX: Float, scale: Float): Float {
+        return if (isPaginationEnabled && scale < 1.0f && viewWidth > 0 && pageWidth > 0f) {
+            (viewWidth - pageWidth * scale) / 2f
+        } else {
+            max(offsetX, 0f)
+        }
+    }
+
+    /**
      * Updates the viewport scale (zoom).
-     * 
+     *
      * @param scaleFactor The scale factor to apply (multiplicative)
      * @param focusX The X coordinate in SurfaceViewCoordinates to zoom around
      * @param focusY The Y coordinate in SurfaceViewCoordinates to zoom around
@@ -50,54 +67,42 @@ class ViewportManager {
         Log.d("ViewportManager", "updateScale: scaleFactor=$scaleFactor, focusX=$focusX, focusY=$focusY")
         val currentState = _viewportState.value
         val newScale = (currentState.scale * scaleFactor).coerceIn(MIN_SCALE, MAX_SCALE)
-        
+
         if (newScale != currentState.scale) {
             // Convert focus point to NoteCoordinates
             val notePoint = surfaceToNoteCoordinates(focusX, focusY)
-            
-            // Update scale
-            val actualScaleFactor = newScale / currentState.scale
-            
+
             // Adjust offset to keep the focus point stationary
-            val newOffsetX = focusX - (notePoint.x * newScale)
-            val newOffsetY = focusY - (notePoint.y * newScale)
-            
-            // Apply top limit constraint
-            val constrainedOffsetY = min(newOffsetY, TOP_LIMIT * newScale)
-            
+            val newOffsetX = constrainOffsetX(focusX - (notePoint.x * newScale), newScale)
+            val newOffsetY = min(focusY - (notePoint.y * newScale), TOP_LIMIT * newScale)
+
             _viewportState.value = currentState.copy(
                 scale = newScale,
                 offsetX = newOffsetX,
-                offsetY = constrainedOffsetY
+                offsetY = newOffsetY
             )
-            
+
             updateMatrices()
         }
     }
     
     /**
      * Updates the viewport offset (pan/scroll).
-     * 
+     *
      * @param deltaX The horizontal distance to pan in SurfaceViewCoordinates
      * @param deltaY The vertical distance to pan in SurfaceViewCoordinates
      */
     fun updateOffset(deltaX: Float, deltaY: Float) {
         Log.d("ViewportManager", "updateOffset: deltaX=$deltaX, deltaY=$deltaY")
         val currentState = _viewportState.value
-        var newOffsetX = currentState.offsetX + deltaX
-        var newOffsetY = currentState.offsetY + deltaY
-        
-        // Apply top limit constraint (can't scroll above y=0 in NoteCoordinates)
-        // When offsetY >= 0, we're at or above the top
-        newOffsetY = min(newOffsetY, TOP_LIMIT * currentState.scale)
-        
-        // No bottom limit - infinite scroll down
-        
+        val newOffsetX = constrainOffsetX(currentState.offsetX + deltaX, currentState.scale)
+        val newOffsetY = min(currentState.offsetY + deltaY, TOP_LIMIT * currentState.scale)
+
         _viewportState.value = currentState.copy(
             offsetX = newOffsetX,
             offsetY = newOffsetY
         )
-        
+
         updateMatrices()
     }
     
@@ -171,10 +176,11 @@ class ViewportManager {
      */
     fun setState(scale: Float, offsetX: Float, offsetY: Float) {
         Log.d("ViewportManager", "setState called with: scale=$scale, offsetX=$offsetX, offsetY=$offsetY")
+        val clampedScale = scale.coerceIn(MIN_SCALE, MAX_SCALE)
         _viewportState.value = ViewportState(
-            scale = scale.coerceIn(MIN_SCALE, MAX_SCALE),
-            offsetX = offsetX,
-            offsetY = min(offsetY, TOP_LIMIT * scale)
+            scale = clampedScale,
+            offsetX = constrainOffsetX(offsetX, clampedScale),
+            offsetY = min(offsetY, TOP_LIMIT * clampedScale)
         )
         updateMatrices()
     }

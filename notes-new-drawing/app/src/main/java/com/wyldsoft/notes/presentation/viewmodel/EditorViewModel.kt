@@ -60,10 +60,11 @@ class EditorViewModel(
     // Viewport manager for coordinate transformations
     val viewportManager = ViewportManager()
     val viewportState = viewportManager.viewportState
-    
+
     // Pagination state - initialized from the current note's settings
     private val _isPaginationEnabled = MutableStateFlow(currentNote.value.isPaginationEnabled)
     val isPaginationEnabled: StateFlow<Boolean> = _isPaginationEnabled.asStateFlow()
+
 
     private val _paperSize = MutableStateFlow(
         PaperSize.entries.find { it.name == currentNote.value.paperSize } ?: PaperSize.LETTER
@@ -121,6 +122,9 @@ class EditorViewModel(
     }
 
     init {
+        // Sync initial pagination state to viewportManager
+        viewportManager.isPaginationEnabled = currentNote.value.isPaginationEnabled
+
         viewModelScope.launch {
             if (currentNote.value == null) {
                 Log.d("EditorViewModel", "No current note found, creating a new one")
@@ -404,6 +408,7 @@ class EditorViewModel(
         viewportManager.setState(note.viewportScale, note.viewportOffsetX, note.viewportOffsetY)
         // Update pagination state from the new note
         _isPaginationEnabled.value = note.isPaginationEnabled
+        viewportManager.isPaginationEnabled = note.isPaginationEnabled
         _paperSize.value = PaperSize.entries.find { it.name == note.paperSize } ?: PaperSize.LETTER
         _paperTemplate.value = PaperTemplate.fromString(note.paperTemplate.name)
         calculatePageDimensions()
@@ -436,16 +441,18 @@ class EditorViewModel(
     fun setScreenWidth(width: Int) {
         _screenWidth.value = width
         calculatePageDimensions()
+        viewportManager.pageWidth = width.toFloat()
     }
-    
+
     private fun calculatePageDimensions() {
         if (_screenWidth.value > 0) {
             _pageHeight.value = _screenWidth.value * _paperSize.value.aspectRatio
         }
     }
-    
+
     fun updatePaginationEnabled(enabled: Boolean) {
         _isPaginationEnabled.value = enabled
+        viewportManager.isPaginationEnabled = enabled
         viewModelScope.launch {
             Log.d("EditorViewModel", "Updating pagination settings for note: ${currentNote.value.id}, enabled: $enabled, paperSize: ${_paperSize.value.name}")
             noteRepository.updatePaginationSettings(currentNote.value.id, enabled, _paperSize.value.name)
