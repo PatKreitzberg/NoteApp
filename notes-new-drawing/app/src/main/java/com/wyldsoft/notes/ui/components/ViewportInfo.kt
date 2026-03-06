@@ -3,7 +3,6 @@ package com.wyldsoft.notes.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,11 +21,12 @@ fun ViewportInfo(
     isPaginationEnabled: Boolean = false,
     currentPageNumber: Int = 1
 ) {
-    // Scroll position in NoteCoordinates (positive values: how far scrolled from origin)
-    val scrollX = viewportState.scrollX.roundToInt()
-    val scrollY = viewportState.scrollY.roundToInt()
     val zoomPercent = (viewportState.scale * 100).roundToInt()
-    
+    val isZoomed = zoomPercent != 100
+
+    // Only show the overlay when zoomed or pagination is active
+    if (!isZoomed && !isPaginationEnabled) return
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -43,15 +43,16 @@ fun ViewportInfo(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Show page number when pagination is enabled
             if (isPaginationEnabled) {
                 Text(
-                    text = "Page: $currentPageNumber",
+                    text = "Page $currentPageNumber",
                     color = Color.White,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
+            }
 
+            if (isPaginationEnabled && isZoomed) {
                 Text(
                     text = "|",
                     color = Color.White.copy(alpha = 0.5f),
@@ -59,26 +60,14 @@ fun ViewportInfo(
                 )
             }
 
-            Text(
-                text = "Zoom: $zoomPercent%",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Text(
-                text = "|",
-                color = Color.White.copy(alpha = 0.5f),
-                fontSize = 14.sp
-            )
-            
-            // Scroll position
-            Text(
-                text = "Scroll: ($scrollX, $scrollY)",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+            if (isZoomed) {
+                Text(
+                    text = "$zoomPercent%",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }

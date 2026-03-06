@@ -5,14 +5,15 @@ import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
@@ -150,12 +151,12 @@ fun Toolbar(
 
     Column {
         if (isCollapsed) {
-            // Collapsed toolbar - just an expand button on the far right
+            // Collapsed toolbar - a small tab at the right edge to expand
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.White)
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.End
             ) {
                 IconButton(onClick = {
@@ -163,8 +164,8 @@ fun Toolbar(
                     onCollapsedChanged(false)
                 }) {
                     Icon(
-                        imageVector = Icons.Default.ChevronLeft,
-                        contentDescription = "Expand Toolbar",
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Show Toolbar",
                         tint = Color.Black
                     )
                 }
@@ -191,6 +192,7 @@ fun Toolbar(
                     ProfileButton(
                         profile = profile,
                         isSelected = selectedProfileIndex == index,
+                        isActive = currentPenProfile.profileId == profile.profileId,
                         onClick = { handleProfileClick(index) }
                     )
                 }
@@ -300,12 +302,6 @@ fun Toolbar(
                     )
                 }
 
-                // Debug info
-                Text(
-                    text = "Profile: ${selectedProfileIndex + 1} | ${currentPenProfile.penType.displayName}",
-                    color = Color.Gray,
-                    fontSize = 10.sp
-                )
             }
 
             // Stroke options panel - rendered in a Popup so it appears above the SurfaceView canvas
@@ -350,14 +346,36 @@ fun Toolbar(
 fun ProfileButton(
     profile: PenProfile,
     isSelected: Boolean,
+    isActive: Boolean,
     onClick: () -> Unit
 ) {
-    PenButton(
-        penType = profile.penType,
-        isSelected = isSelected,
-        onClick = onClick,
-        selectedColor = profile.strokeColor,
-        size = 48.dp,
-        iconSize = 24.dp
-    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        PenButton(
+            penType = profile.penType,
+            isSelected = isSelected,
+            onClick = onClick,
+            selectedColor = profile.strokeColor,
+            size = 48.dp,
+            iconSize = 24.dp
+        )
+        // Color dot: shows the profile's ink color at a glance.
+        // Filled when this profile is the one currently drawing (isActive),
+        // outlined otherwise so all 5 colors are always visible.
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .border(
+                    width = 1.dp,
+                    color = profile.strokeColor,
+                    shape = CircleShape
+                )
+                .then(
+                    if (isActive) Modifier.background(profile.strokeColor, CircleShape)
+                    else Modifier
+                )
+        )
+    }
 }

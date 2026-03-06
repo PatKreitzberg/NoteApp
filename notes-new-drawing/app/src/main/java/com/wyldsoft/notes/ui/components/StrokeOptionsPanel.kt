@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -128,7 +130,7 @@ fun StrokeOptionsPanel(
             onValueChange = { strokeSize = it },
             valueRange = 1f..maxStrokeSize,
             modifier = Modifier
-                .width(250.dp)
+                .fillMaxWidth()
                 .padding(vertical = 8.dp)
         )
 
@@ -160,43 +162,6 @@ fun StrokeOptionsPanel(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Profile info card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
-                Text(
-                    text = "Current Settings",
-                    fontSize = 14.sp,
-                    color = Color.Black
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Profile: ${currentProfile.profileId + 1}",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = "Pen: ${selectedPenType.displayName}",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = "Stroke: ${strokeSize.toInt()}px",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = "Color: ${getColorName(selectedColor)}",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-        }
     }
 }
 
@@ -219,17 +184,21 @@ fun ColorButton(
     isSelected: Boolean = false,
     onSelect: () -> Unit
 ) {
+    val colorName = getColorName(color)
     Box(
         modifier = Modifier
             .size(40.dp)
             .padding(4.dp)
-            .background(color, CircleShape)
-            .clip(CircleShape)
-            .noRippleClickable(onClick = onSelect)
             .border(
                 width = if (isSelected) 3.dp else 1.dp,
                 color = if (isSelected) Color.Black else Color.LightGray,
                 shape = CircleShape
             )
+            .clip(CircleShape)
+            .background(color)
+            .semantics {
+                contentDescription = if (isSelected) "$colorName, selected" else colorName
+            }
+            .noRippleClickable(onClick = onSelect)
     )
 }

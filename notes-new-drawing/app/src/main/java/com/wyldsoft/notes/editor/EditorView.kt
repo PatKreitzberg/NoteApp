@@ -36,24 +36,21 @@ fun EditorView(
         modifier = Modifier.fillMaxSize()
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(if (isToolbarCollapsed) 0.dp else 16.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
-            Toolbar(
-                viewModel = viewModel,
-                currentPenProfile = currentPenProfile,
-                isStrokeOptionsOpen = uiState.isStrokeOptionsOpen,
-                onSettingsClick = { showNoteSettingsDialog = true },
-                onCollapsedChanged = { collapsed -> isToolbarCollapsed = collapsed },
-                onNavigateBack = if (hasNotebook) {{ viewModel.navigateBackward() }} else null,
-                onNavigateForward = if (hasNotebook) {{ viewModel.navigateForward() }} else null,
-                canGoBack = canGoBack,
-                canGoForward = canGoForward
-            )
-
-            if (!isToolbarCollapsed) {
-                Spacer(modifier = Modifier.height(16.dp))
+            // Toolbar has its own horizontal padding; canvas gets full width
+            Box(modifier = Modifier.padding(horizontal = if (isToolbarCollapsed) 0.dp else 8.dp)) {
+                Toolbar(
+                    viewModel = viewModel,
+                    currentPenProfile = currentPenProfile,
+                    isStrokeOptionsOpen = uiState.isStrokeOptionsOpen,
+                    onSettingsClick = { showNoteSettingsDialog = true },
+                    onCollapsedChanged = { collapsed -> isToolbarCollapsed = collapsed },
+                    onNavigateBack = if (hasNotebook) {{ viewModel.navigateBackward() }} else null,
+                    onNavigateForward = if (hasNotebook) {{ viewModel.navigateForward() }} else null,
+                    canGoBack = canGoBack,
+                    canGoForward = canGoForward
+                )
             }
 
             DrawingCanvas(
