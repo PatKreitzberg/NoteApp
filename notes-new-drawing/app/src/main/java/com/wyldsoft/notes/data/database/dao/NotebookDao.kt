@@ -4,6 +4,7 @@ import androidx.room.*
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import kotlinx.coroutines.flow.Flow
+import androidx.room.OnConflictStrategy
 
 @Dao
 interface NotebookDao {
@@ -52,4 +53,13 @@ interface NotebookDao {
         ORDER BY n.createdAt
     """)
     suspend fun getNotesInNotebookOnce(notebookId: String): List<NoteEntity>
+
+    @Query("SELECT * FROM notebooks WHERE modifiedAt > :timestamp")
+    suspend fun getNotebooksModifiedAfter(timestamp: Long): List<NotebookEntity>
+
+    @Query("SELECT * FROM notebooks")
+    suspend fun getAllNotebookEntities(): List<NotebookEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNotebook(notebook: NotebookEntity)
 }

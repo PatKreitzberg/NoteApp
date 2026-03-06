@@ -1,8 +1,10 @@
 package com.wyldsoft.notes.data.repository
 
 import android.util.Log
+import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
 import com.wyldsoft.notes.data.database.dao.ShapeDao
+import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.ShapeEntity
 import com.wyldsoft.notes.domain.models.Note
@@ -29,7 +31,8 @@ interface NoteRepository {
 
 class NoteRepositoryImpl(
     private val noteDao: NoteDao,
-    private val shapeDao: ShapeDao
+    private val shapeDao: ShapeDao,
+    private val deletedItemDao: DeletedItemDao? = null
 ) : NoteRepository {
     private var _currentNote = MutableStateFlow(Note()) // set a default empty note
     override fun getCurrentNote(): StateFlow<Note> = _currentNote.asStateFlow()
@@ -60,6 +63,7 @@ class NoteRepositoryImpl(
     }
     
     override suspend fun deleteNote(id: String) {
+        deletedItemDao?.insert(DeletedItemEntity(entityId = id, entityType = "note"))
         noteDao.deleteById(id)
     }
     

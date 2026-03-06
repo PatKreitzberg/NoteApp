@@ -3,6 +3,7 @@ package com.wyldsoft.notes.data.database.dao
 import androidx.room.*
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import kotlinx.coroutines.flow.Flow
+import androidx.room.OnConflictStrategy
 
 @Dao
 interface FolderDao {
@@ -39,4 +40,13 @@ interface FolderDao {
         SELECT * FROM folder_path ORDER BY parentFolderId
     """)
     suspend fun getFolderPath(folderId: String): List<FolderEntity>
+
+    @Query("SELECT * FROM folders WHERE modifiedAt > :timestamp")
+    suspend fun getFoldersModifiedAfter(timestamp: Long): List<FolderEntity>
+
+    @Query("SELECT * FROM folders")
+    suspend fun getAllFolderEntities(): List<FolderEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertFolder(folder: FolderEntity)
 }

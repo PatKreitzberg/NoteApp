@@ -4,6 +4,7 @@ import androidx.room.*
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRef
 import kotlinx.coroutines.flow.Flow
+import androidx.room.OnConflictStrategy
 
 @Dao
 interface NoteDao {
@@ -40,4 +41,22 @@ interface NoteDao {
     
     @Query("SELECT notebookId FROM note_notebook_cross_ref WHERE noteId = :noteId")
     suspend fun getNotebooksForNote(noteId: String): List<String>
+
+    @Query("SELECT * FROM notes WHERE modifiedAt > :timestamp")
+    suspend fun getNotesModifiedAfter(timestamp: Long): List<NoteEntity>
+
+    @Query("SELECT * FROM notes")
+    suspend fun getAllNoteEntities(): List<NoteEntity>
+
+    @Query("SELECT * FROM note_notebook_cross_ref WHERE noteId = :noteId")
+    suspend fun getCrossRefsForNote(noteId: String): List<NoteNotebookCrossRef>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNote(note: NoteEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCrossRef(crossRef: NoteNotebookCrossRef)
+
+    @Query("DELETE FROM note_notebook_cross_ref WHERE noteId = :noteId")
+    suspend fun deleteCrossRefsForNote(noteId: String)
 }

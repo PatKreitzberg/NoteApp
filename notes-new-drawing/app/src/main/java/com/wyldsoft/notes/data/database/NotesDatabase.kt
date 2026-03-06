@@ -10,6 +10,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.wyldsoft.notes.data.database.converters.Converters
 import com.wyldsoft.notes.data.database.dao.*
 import com.wyldsoft.notes.data.database.entities.*
+import com.wyldsoft.notes.data.database.dao.DeletedItemDao
+import com.wyldsoft.notes.data.database.dao.SyncStateDao
+import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
+import com.wyldsoft.notes.data.database.entities.SyncStateEntity
 import java.util.UUID
 
 @Database(
@@ -19,20 +23,24 @@ import java.util.UUID
         NoteEntity::class,
         NoteNotebookCrossRef::class,
         ShapeEntity::class,
-        RecognizedSegmentEntity::class
+        RecognizedSegmentEntity::class,
+        DeletedItemEntity::class,
+        SyncStateEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class NotesDatabase : RoomDatabase() {
-    
+
     abstract fun folderDao(): FolderDao
     abstract fun notebookDao(): NotebookDao
     abstract fun noteDao(): NoteDao
     abstract fun shapeDao(): ShapeDao
     abstract fun recognizedSegmentDao(): RecognizedSegmentDao
-    
+    abstract fun deletedItemDao(): DeletedItemDao
+    abstract fun syncStateDao(): SyncStateDao
+
     companion object {
         @Volatile
         private var INSTANCE: NotesDatabase? = null
@@ -49,6 +57,25 @@ abstract class NotesDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS deleted_items (
+                        entityId TEXT NOT NULL PRIMARY KEY,
+                        entityType TEXT NOT NULL,
+                        deletedAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS sync_state (
+                        deviceId TEXT NOT NULL PRIMARY KEY,
+                        lastSyncTimestamp INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
         fun getDatabase(context: Context): NotesDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -56,7 +83,7 @@ abstract class NotesDatabase : RoomDatabase() {
                     NotesDatabase::class.java,
                     "notes_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5)
                 .fallbackToDestructiveMigration()
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {

@@ -24,6 +24,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import com.wyldsoft.notes.home.HomeView
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
+import com.wyldsoft.notes.sync.SyncWorker
 
 /**
  * Main activity that uses Onyx SDK implementation.
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
 
         val app = application as ScrotesApp
         val viewModel = HomeViewModel(app.noteRepository, app.notebookRepository, app.folderRepository)
+        SyncWorker.scheduleOneTime(this)
 
         setContent {
             MinimaleditorTheme {
@@ -80,6 +82,7 @@ class MainActivity : ComponentActivity() {
                                 gestureSettingsRepository = app.gestureSettingsRepository,
                                 signInLauncher = signInLauncher,
                                 signInError = signInError,
+                                syncViewModel = app.syncViewModel,
                                 onNotebookSelected = { notebookId, noteId ->
                                     val activityClass = if (DeviceHelper.isOnyxDevice) {
                                         OnyxDrawingActivity::class.java

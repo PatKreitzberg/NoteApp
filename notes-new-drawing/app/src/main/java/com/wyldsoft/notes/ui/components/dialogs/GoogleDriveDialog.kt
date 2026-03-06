@@ -12,20 +12,23 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.wyldsoft.notes.presentation.viewmodel.SyncUiState
+import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
 import com.wyldsoft.notes.sync.GoogleDriveManager
-import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun GoogleDriveDialog(
     signInLauncher: ActivityResultLauncher<Intent>,
     signInError: State<String?>,
+    syncViewModel: SyncViewModel,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     var account by remember { mutableStateOf(GoogleDriveManager.getSignedInAccount(context)) }
-    var statusText by remember { mutableStateOf("") }
-    var isBackingUp by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
+    val syncUiState by syncViewModel.syncUiState.collectAsState()
     val errorText by signInError
 
     // Refresh account when activity resumes (e.g., after sign-in intent returns)
@@ -41,7 +44,7 @@ fun GoogleDriveDialog(
     }
 
     SettingsDialogShell(
-        title = "Google Drive",
+        title = "Google Drive Sync",
         onDismiss = onDismiss,
         scrollable = true
     ) {
@@ -51,37 +54,48 @@ fun GoogleDriveDialog(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            OutlinedButton(
-                onClick = {
-                    GoogleDriveManager.signOut(context) {
-                        account = null
-                        statusText = "Signed out"
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Sign Out")
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Last sync status
+            when (val state = syncUiState) {
+                is SyncUiState.Success -> {
+                    val formatted = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
+                        .format(Date(state.lastSyncedAt))
+                    Text(
+                        text = "Last synced: $formatted",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                is SyncUiState.Error -> {
+                    Text(
+                        text = "Sync error: ${state.message}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Red
+                    )
+                }
+                else -> {}
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val isSyncing = syncUiState is SyncUiState.Syncing
             Button(
-                onClick = {
-                    isBackingUp = true
-                    statusText = "Backing up..."
-                    coroutineScope.launch {
-                        val result = GoogleDriveManager.uploadDatabaseFile(context, account!!)
-                        isBackingUp = false
-                        statusText = result.fold(
-                            onSuccess = { "Backup uploaded: $it" },
-                            onFailure = { "Backup failed: ${it.message}" }
-                        )
-                    }
-                },
+                onClick = { syncViewModel.triggerSync() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isBackingUp
+                enabled = !isSyncing
             ) {
-                Text(if (isBackingUp) "Backing up..." else "Backup to Drive")
+                Text(if (isSyncing) "Syncing..." else "Sync Now")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = {
+                    GoogleDriveManager.signOut(context) { account = null }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Sign Out")
             }
         } else {
             Text(
@@ -96,7 +110,7 @@ fun GoogleDriveDialog(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Sign In")
+                Text("Sign In with Google")
             }
 
             if (errorText != null) {
@@ -107,14 +121,6 @@ fun GoogleDriveDialog(
                     color = Color.Red
                 )
             }
-        }
-
-        if (statusText.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }

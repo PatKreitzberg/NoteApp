@@ -200,6 +200,9 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:21.3.0'
     implementation 'com.google.api-client:google-api-client-android:2.7.0'
     implementation 'com.google.apis:google-api-services-drive:v3-rev20241027-2.0.0'
+
+    // WorkManager for background sync
+    implementation 'androidx.work:work-runtime-ktx:2.9.1'
 }
 
 tasks.register('printVersionName') {

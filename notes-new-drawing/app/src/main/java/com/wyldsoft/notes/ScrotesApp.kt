@@ -9,7 +9,10 @@ import com.wyldsoft.notes.data.repository.*
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.htr.HTRManager
 import com.wyldsoft.notes.htr.HTRRunManager
+import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
 import com.wyldsoft.notes.sdkintegration.DeviceHelper
+import com.wyldsoft.notes.sync.SyncRepository
+import com.wyldsoft.notes.sync.SyncWorker
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
 class ScrotesApp : Application() {
@@ -17,15 +20,26 @@ class ScrotesApp : Application() {
     val database: NotesDatabase by lazy { NotesDatabase.getDatabase(this) }
 
     val noteRepository: NoteRepository by lazy {
-        NoteRepositoryImpl(noteDao = database.noteDao(), shapeDao = database.shapeDao())
+        NoteRepositoryImpl(
+            noteDao = database.noteDao(),
+            shapeDao = database.shapeDao(),
+            deletedItemDao = database.deletedItemDao()
+        )
     }
 
     val folderRepository: FolderRepository by lazy {
-        FolderRepositoryImpl(folderDao = database.folderDao())
+        FolderRepositoryImpl(
+            folderDao = database.folderDao(),
+            deletedItemDao = database.deletedItemDao()
+        )
     }
 
     val notebookRepository: NotebookRepository by lazy {
-        NotebookRepositoryImpl(notebookDao = database.notebookDao(), noteDao = database.noteDao())
+        NotebookRepositoryImpl(
+            notebookDao = database.notebookDao(),
+            noteDao = database.noteDao(),
+            deletedItemDao = database.deletedItemDao()
+        )
     }
 
     val gestureSettingsRepository: GestureSettingsRepository by lazy {
@@ -40,6 +54,22 @@ class ScrotesApp : Application() {
         HTRRunManager(HTRManager(), recognizedSegmentRepository)
     }
 
+    val syncRepository: SyncRepository by lazy {
+        SyncRepository(
+            noteDao = database.noteDao(),
+            notebookDao = database.notebookDao(),
+            folderDao = database.folderDao(),
+            shapeDao = database.shapeDao(),
+            deletedItemDao = database.deletedItemDao(),
+            syncStateDao = database.syncStateDao(),
+            context = this
+        )
+    }
+
+    val syncViewModel: SyncViewModel by lazy {
+        SyncViewModel(syncRepository)
+    }
+
     override fun onCreate() {
         super.onCreate()
         if (DeviceHelper.isOnyxDevice) {
@@ -47,6 +77,7 @@ class ScrotesApp : Application() {
             RxBaseAction.init(this)
         }
         checkHiddenApiBypass()
+        SyncWorker.schedule(this)
     }
 
     private fun checkHiddenApiBypass() {

@@ -26,6 +26,7 @@ import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
+import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
 import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.GoogleDriveDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
@@ -43,6 +44,7 @@ fun HomeView(
     gestureSettingsRepository: GestureSettingsRepository,
     signInLauncher: ActivityResultLauncher<Intent>,
     signInError: State<String?>,
+    syncViewModel: SyncViewModel,
     onNotebookSelected: (String, String) -> Unit // notebookId, noteId
 ) {
     val currentFolder by viewModel.currentFolder.collectAsState()
@@ -175,6 +177,7 @@ fun HomeView(
         GoogleDriveDialog(
             signInLauncher = signInLauncher,
             signInError = signInError,
+            syncViewModel = syncViewModel,
             onDismiss = { showGoogleDriveDialog = false }
         )
     }

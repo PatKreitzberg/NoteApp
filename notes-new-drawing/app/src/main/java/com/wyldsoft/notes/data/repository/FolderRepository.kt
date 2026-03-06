@@ -1,6 +1,8 @@
 package com.wyldsoft.notes.data.repository
 
+import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.FolderDao
+import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -16,7 +18,8 @@ interface FolderRepository {
 }
 
 class FolderRepositoryImpl(
-    private val folderDao: FolderDao
+    private val folderDao: FolderDao,
+    private val deletedItemDao: DeletedItemDao? = null
 ) : FolderRepository {
     
     override suspend fun getFolder(folderId: String): FolderEntity? {
@@ -56,6 +59,7 @@ class FolderRepositoryImpl(
     }
     
     override suspend fun deleteFolder(folderId: String) {
+        deletedItemDao?.insert(DeletedItemEntity(entityId = folderId, entityType = "folder"))
         folderDao.deleteById(folderId)
     }
     

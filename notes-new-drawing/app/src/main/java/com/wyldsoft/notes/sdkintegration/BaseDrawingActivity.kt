@@ -27,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.wyldsoft.notes.sync.SyncWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
@@ -113,6 +114,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     override fun onPause() {
         super.onPause()
         onPauseDrawing()
+        SyncWorker.scheduleOneTime(this)
     }
 
     override fun onDestroy() {

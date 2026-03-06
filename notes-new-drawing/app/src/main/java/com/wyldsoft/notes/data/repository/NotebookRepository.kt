@@ -1,7 +1,9 @@
 package com.wyldsoft.notes.data.repository
 
+import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.NotebookDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
+import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRef
@@ -22,7 +24,8 @@ interface NotebookRepository {
 
 class NotebookRepositoryImpl(
     private val notebookDao: NotebookDao,
-    private val noteDao: NoteDao
+    private val noteDao: NoteDao,
+    private val deletedItemDao: DeletedItemDao? = null
 ) : NotebookRepository {
     
     override suspend fun getNotebook(notebookId: String): NotebookEntity? {
@@ -71,6 +74,7 @@ class NotebookRepositoryImpl(
     }
     
     override suspend fun deleteNotebook(notebookId: String) {
+        deletedItemDao?.insert(DeletedItemEntity(entityId = notebookId, entityType = "notebook"))
         notebookDao.deleteById(notebookId)
     }
     
