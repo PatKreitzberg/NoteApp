@@ -185,7 +185,7 @@ fun Toolbar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Profiles:", color = Color.Black, fontSize = 12.sp)
+                //Text("Profiles:", color = Color.Black, fontSize = 12.sp)
 
                 // 5 Profile buttons
                 profiles.forEachIndexed { index, profile ->
