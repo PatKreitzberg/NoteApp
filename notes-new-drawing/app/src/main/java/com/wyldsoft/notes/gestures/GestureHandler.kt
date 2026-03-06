@@ -212,6 +212,7 @@ class GestureHandler(
     private fun handleMove(event: MotionEvent) {
         val x = event.x
         val y = event.y
+        Log.d("Debug26", "handleMove called with coordinates: ($x, $y)")
 
         val deltaX = x - panStartX
         val deltaY = y - panStartY

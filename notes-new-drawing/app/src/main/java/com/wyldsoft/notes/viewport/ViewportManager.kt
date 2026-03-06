@@ -111,12 +111,12 @@ class ViewportManager {
      * @param deltaY The vertical pixel distance the finger moved (positive = finger moved down)
      */
     fun updateOffset(deltaX: Float, deltaY: Float) {
-        Log.d("ViewportManager", "updateOffset: deltaX=$deltaX, deltaY=$deltaY")
+
         val currentState = _viewportState.value
         // Dragging finger right (deltaX > 0) moves content right → scrollX decreases.
         val newScrollX = constrainScrollX(currentState.scrollX - deltaX / currentState.scale, currentState.scale)
         val newScrollY = constrainScrollY(currentState.scrollY - deltaY / currentState.scale)
-
+        Log.d("ViewportManager", "updateOffset: offset (${newScrollX}, ${newScrollY} deltaX=$deltaX, deltaY=$deltaY")
         _viewportState.value = currentState.copy(
             scrollX = newScrollX,
             scrollY = newScrollY
