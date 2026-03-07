@@ -36,6 +36,10 @@ class BitmapManager(
 ) {
     companion object {
         private var TAG = "BitmapManager"
+        // Extra padding (note coords) around a dirty rect to include handles and stroke edges
+        private const val HANDLE_NOTE_PADDING = 80f
+        // Extra surface-pixel buffer after note→surface conversion for antialiasing
+        private const val SURFACE_PIXEL_BUFFER = 20f
     }
     private val rendererHelper = RendererHelper()
 
@@ -179,6 +183,93 @@ class BitmapManager(
     fun endGeometryDrawing() {
         geometrySnapshotBitmap?.recycle()
         geometrySnapshotBitmap = null
+    }
+
+    /**
+     * Re-renders only the region covered by [dirtyRectNote] (note coordinates) to the bitmap,
+     * then pushes the result to screen. Shapes outside the region are not re-rendered.
+     * Optionally draws the selection overlay (bounding box + handles) after shapes.
+     *
+     * Use instead of a full recreateBitmapFromShapes() when the changed area is small.
+     */
+    internal fun partialRefresh(
+        dirtyRectNote: RectF,
+        shapes: List<BaseShape>,
+        selectionManager: SelectionManager?
+    ) {
+        val bitmap = getBitmap() ?: return
+        val canvas = getBitmapCanvas() ?: return
+        val viewportManager = viewModel.viewportManager
+
+        // Expand note-coord rect to include handle pixels, then convert to surface coords
+        val expandedNote = RectF(
+            dirtyRectNote.left - HANDLE_NOTE_PADDING,
+            dirtyRectNote.top - HANDLE_NOTE_PADDING,
+            dirtyRectNote.right + HANDLE_NOTE_PADDING,
+            dirtyRectNote.bottom + HANDLE_NOTE_PADDING
+        )
+        val tl = viewportManager.noteToSurfaceCoordinates(expandedNote.left, expandedNote.top)
+        val br = viewportManager.noteToSurfaceCoordinates(expandedNote.right, expandedNote.bottom)
+        val dirtyRectSurface = RectF(
+            minOf(tl.x, br.x) - SURFACE_PIXEL_BUFFER,
+            minOf(tl.y, br.y) - SURFACE_PIXEL_BUFFER,
+            maxOf(tl.x, br.x) + SURFACE_PIXEL_BUFFER,
+            maxOf(tl.y, br.y) + SURFACE_PIXEL_BUFFER
+        )
+        // Clamp to bitmap bounds so lockCanvas never gets an out-of-bounds rect
+        dirtyRectSurface.intersect(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
+        if (dirtyRectSurface.isEmpty) return
+
+        val renderContext = rendererHelper.getRenderContext() ?: return
+        renderContext.bitmap = bitmap
+
+        canvas.save()
+        canvas.clipRect(dirtyRectSurface)
+
+        // Clear only the dirty region
+        canvas.drawColor(Color.WHITE)
+
+        // Draw paper template in the dirty region if applicable
+        val template = viewModel.paperTemplate.value
+        if (template != PaperTemplate.BLANK) {
+            templateRenderer.drawTemplate(
+                canvas, template, viewModel.screenWidth.value,
+                viewModel.isPaginationEnabled.value, viewModel.pageHeight.value
+            )
+        }
+
+        // Render shapes whose surface bounds intersect the dirty region
+        for (shape in shapes) {
+            shape.updateShapeRect()
+            val noteBounds = shape.boundingRect ?: continue
+            val sTl = viewportManager.noteToSurfaceCoordinates(noteBounds.left, noteBounds.top)
+            val sBr = viewportManager.noteToSurfaceCoordinates(noteBounds.right, noteBounds.bottom)
+            val shapeSurface = RectF(
+                minOf(sTl.x, sBr.x), minOf(sTl.y, sBr.y),
+                maxOf(sTl.x, sBr.x), maxOf(sTl.y, sBr.y)
+            )
+            if (!RectF.intersects(shapeSurface, dirtyRectSurface)) continue
+
+            canvas.withSave {
+                val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
+                val originalTouchPoints = shape.touchPointList
+                shape.touchPointList = surfaceTouchPoints
+                initRenderContext(renderContext, this)
+                shape.render(renderContext)
+                shape.touchPointList = originalTouchPoints
+            }
+        }
+
+        // Draw selection overlay if present
+        selectionManager?.selectionBoundingBox?.let { box ->
+            SelectionRenderer.drawBoundingBox(canvas, box, viewportManager)
+            selectionManager.getHandlePositions()?.let { handles ->
+                SelectionRenderer.drawHandles(canvas, handles, viewportManager)
+            }
+        }
+
+        canvas.restore()
+        renderBitmapToScreen()
     }
 
     fun clearDrawing() {

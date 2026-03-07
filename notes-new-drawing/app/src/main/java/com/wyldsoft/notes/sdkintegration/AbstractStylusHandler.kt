@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.sdkintegration
 
 import android.graphics.PointF
+import android.graphics.RectF
 import android.view.SurfaceView
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
@@ -253,18 +254,41 @@ abstract class AbstractStylusHandler(
 
         when {
             selectionManager.isDragging -> {
+                val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
                 selectionManager.updateDrag(currentPoint, shapesManager.shapes())
-                onForceScreenRefresh()
+                doPartialSelectionRefresh(oldBBox, selectionManager.selectionBoundingBox)
             }
             selectionManager.transformMode == TransformMode.SCALE -> {
+                val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
                 selectionManager.updateScale(currentPoint, shapesManager.shapes())
-                onForceScreenRefresh()
+                doPartialSelectionRefresh(oldBBox, selectionManager.selectionBoundingBox)
             }
             selectionManager.transformMode == TransformMode.ROTATE -> {
+                val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
                 selectionManager.updateRotate(currentPoint, shapesManager.shapes())
-                onForceScreenRefresh()
+                doPartialSelectionRefresh(oldBBox, selectionManager.selectionBoundingBox)
             }
         }
+    }
+
+    /**
+     * Performs a partial bitmap refresh covering the union of [oldBBoxNote] and [newBBoxNote]
+     * (both in note coordinates). Falls back to a full refresh if both are null.
+     * Draws the selection overlay when [drawOverlay] is true.
+     */
+    protected fun doPartialSelectionRefresh(
+        oldBBoxNote: RectF?,
+        newBBoxNote: RectF?,
+        drawOverlay: Boolean = true
+    ) {
+        val dirtyNote = when {
+            oldBBoxNote != null && newBBoxNote != null -> RectF(oldBBoxNote).apply { union(newBBoxNote) }
+            oldBBoxNote != null -> RectF(oldBBoxNote)
+            newBBoxNote != null -> RectF(newBBoxNote)
+            else -> { onForceScreenRefresh(); return }
+        }
+        val overlayMgr = if (drawOverlay) selectionManager else null
+        bitmapManager.partialRefresh(dirtyNote, shapesManager.shapes(), overlayMgr)
     }
 
     // --- Selection handling ---
