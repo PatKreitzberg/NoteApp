@@ -258,15 +258,20 @@ class SelectionManager {
         return PointF(totalDx, totalDy)
     }
 
-    private fun moveShapeTouchPoints(shape: BaseShape, dx: Float, dy: Float) {
+    private fun transformShapeTouchPoints(shape: BaseShape, transform: (TouchPoint) -> TouchPoint) {
         val oldList = shape.touchPointList ?: return
         val newList = TouchPointList()
         for (i in 0 until oldList.size()) {
-            val tp = oldList.get(i)
-            newList.add(TouchPoint(tp.x + dx, tp.y + dy, tp.pressure, tp.size, tp.timestamp))
+            newList.add(transform(oldList.get(i)))
         }
         shape.touchPointList = newList
         shape.updateShapeRect()
+    }
+
+    private fun moveShapeTouchPoints(shape: BaseShape, dx: Float, dy: Float) {
+        transformShapeTouchPoints(shape) { tp ->
+            TouchPoint(tp.x + dx, tp.y + dy, tp.pressure, tp.size, tp.timestamp)
+        }
     }
 
     // --- Handle Detection ---
@@ -375,16 +380,13 @@ class SelectionManager {
     }
 
     private fun scaleShapeTouchPoints(shape: BaseShape, scaleFactor: Float, centerX: Float, centerY: Float) {
-        val oldList = shape.touchPointList ?: return
-        val newList = TouchPointList()
-        for (i in 0 until oldList.size()) {
-            val tp = oldList.get(i)
-            val newX = centerX + (tp.x - centerX) * scaleFactor
-            val newY = centerY + (tp.y - centerY) * scaleFactor
-            newList.add(TouchPoint(newX, newY, tp.pressure, tp.size, tp.timestamp))
+        transformShapeTouchPoints(shape) { tp ->
+            TouchPoint(
+                centerX + (tp.x - centerX) * scaleFactor,
+                centerY + (tp.y - centerY) * scaleFactor,
+                tp.pressure, tp.size, tp.timestamp
+            )
         }
-        shape.touchPointList = newList
-        shape.updateShapeRect()
     }
 
     // --- Rotate Phase ---
@@ -455,20 +457,17 @@ class SelectionManager {
     }
 
     private fun rotateShapeTouchPoints(shape: BaseShape, angleRad: Float, centerX: Float, centerY: Float) {
-        val oldList = shape.touchPointList ?: return
-        val newList = TouchPointList()
         val cosA = cos(angleRad)
         val sinA = sin(angleRad)
-        for (i in 0 until oldList.size()) {
-            val tp = oldList.get(i)
+        transformShapeTouchPoints(shape) { tp ->
             val dx = tp.x - centerX
             val dy = tp.y - centerY
-            val newX = centerX + dx * cosA - dy * sinA
-            val newY = centerY + dx * sinA + dy * cosA
-            newList.add(TouchPoint(newX, newY, tp.pressure, tp.size, tp.timestamp))
+            TouchPoint(
+                centerX + dx * cosA - dy * sinA,
+                centerY + dx * sinA + dy * cosA,
+                tp.pressure, tp.size, tp.timestamp
+            )
         }
-        shape.touchPointList = newList
-        shape.updateShapeRect()
     }
 
     // --- Cancel / Clear ---
