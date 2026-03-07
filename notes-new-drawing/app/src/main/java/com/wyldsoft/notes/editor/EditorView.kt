@@ -83,7 +83,10 @@ fun EditorView(
             onPaperTemplateChange = { newTemplate ->
                 viewModel.updatePaperTemplate(newTemplate)
             },
-            onDismiss = { showNoteSettingsDialog = false }
+            onDismiss = {
+                showNoteSettingsDialog = false
+                viewModel.forceRefresh()
+            }
         )
     }
 }

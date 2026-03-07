@@ -142,6 +142,7 @@ abstract class AbstractStylusHandler(
     protected fun endErasing() {
         isErasingInProgress = false
         viewModel.endErasing()
+        onForceScreenRefresh()
     }
 
     // --- Shared selection move/update dispatch ---

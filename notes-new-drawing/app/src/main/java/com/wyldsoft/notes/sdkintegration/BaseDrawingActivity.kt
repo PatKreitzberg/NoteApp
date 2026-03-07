@@ -332,6 +332,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             }
         }
 
+        // Observe explicit screen refresh requests (e.g. dialog dismissed)
+        lifecycleScope.launch {
+            editorViewModel.refreshUi.collect { timestamp ->
+                if (timestamp > 0L) forceScreenRefresh()
+            }
+        }
+
         Log.d("DebugAug12", "DONE Setting ViewModel in BaseDrawingActivity")
     }
 
