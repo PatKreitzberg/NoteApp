@@ -76,6 +76,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         // Set touch listener on the surface view to capture gestures
         surfaceView.setOnTouchListener { _, event ->
+            // If stroke options panel is open, close it on any canvas touch
+            if (editorViewModel.uiState.value.isStrokeOptionsOpen) {
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    editorViewModel.closeStrokeOptions()
+                }
+                return@setOnTouchListener true
+            }
+
             // Check if any pointer is a stylus or eraser
             var hasStylusOrEraser = false
             for (i in 0 until event.pointerCount) {

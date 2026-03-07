@@ -61,6 +61,13 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
     override fun createTouchHelper() {
         // Set touch listener for both stylus and finger input
         surfaceView.setOnTouchListener { _, event ->
+            // If stroke options panel is open, close it on any canvas touch
+            if (editorViewModel.uiState.value.isStrokeOptionsOpen) {
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    editorViewModel.closeStrokeOptions()
+                }
+                return@setOnTouchListener true
+            }
             if (!isDrawingEnabled) return@setOnTouchListener false
             val toolType = event.getToolType(0)
             val isStylus = toolType == MotionEvent.TOOL_TYPE_STYLUS

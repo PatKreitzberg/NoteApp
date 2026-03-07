@@ -95,9 +95,7 @@ fun Toolbar(
 
     fun closeStrokeOptionsPanel() {
         Log.d("Toolbar", "Closing stroke options panel")
-        if (isStrokeSelectionOpen) {
-            viewModel.toggleStrokeOptions()
-        }
+        viewModel.closeStrokeOptions()
         removeStrokeOptionPanelRect()
         forceUIRefresh()
     }
@@ -108,19 +106,18 @@ fun Toolbar(
             viewModel.cancelSelection()
         }
         if (selectedProfileIndex == profileIndex && isStrokeSelectionOpen) {
-            // Same profile clicked - close panel
+            // Same profile clicked while panel open - close panel
             closeStrokeOptionsPanel()
         } else if (selectedProfileIndex == profileIndex && !isStrokeSelectionOpen) {
-            // Same profile clicked - open panel
+            // Same profile clicked while panel closed - open panel
             openStrokeOptionsPanel()
         } else {
-            // Different profile - switch profile and update
-            if (isStrokeSelectionOpen) {
-                closeStrokeOptionsPanel()
-            }
+            // Different profile selected - switch profile
             selectedProfileIndex = profileIndex
             val newProfile = profiles[profileIndex]
             viewModel.updatePenProfile(newProfile)
+            // If panel was open, keep it open showing new profile's options
+            // If panel was closed, just switch profile (don't open panel)
         }
     }
 
@@ -134,16 +131,6 @@ fun Toolbar(
 
         Log.d("Toolbar", "Profile $selectedProfileIndex updated: $newProfile")
     }
-
-    // Listen for drawing events to close panel
-    val isDrawing by viewModel.isDrawing.collectAsState()
-    LaunchedEffect(isDrawing) {
-        if (isDrawing && isStrokeSelectionOpen) {
-            Log.d("Toolbar", "Drawing started - closing stroke options panel")
-            closeStrokeOptionsPanel()
-        }
-    }
-
 
     // Initialize with default profile
     LaunchedEffect(Unit) {
