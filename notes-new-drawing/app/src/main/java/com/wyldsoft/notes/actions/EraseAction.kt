@@ -17,13 +17,13 @@ class EraseAction(
         for (shape in erasedShapes) {
             ActionUtils.addShapeToNoteAndMemory(noteId, shape, noteRepository, shapesManager)
         }
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 
     override suspend fun redo() {
         for (shape in erasedShapes) {
             ActionUtils.removeShapeFromNoteAndMemory(noteId, shape, noteRepository, shapesManager)
         }
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 }

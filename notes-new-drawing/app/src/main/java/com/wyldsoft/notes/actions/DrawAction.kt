@@ -15,11 +15,11 @@ class DrawAction(
 
     override suspend fun undo() {
         ActionUtils.removeShapeFromNoteAndMemory(noteId, shape, noteRepository, shapesManager)
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 
     override suspend fun redo() {
         ActionUtils.addShapeToNoteAndMemory(noteId, shape, noteRepository, shapesManager)
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 }

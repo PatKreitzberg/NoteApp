@@ -1,8 +1,6 @@
 package com.wyldsoft.notes.actions
 
 import android.graphics.PointF
-import com.onyx.android.sdk.data.note.TouchPoint
-import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.rendering.BitmapManager
@@ -31,18 +29,9 @@ class TransformAction(
     override suspend fun undo() {
         for (original in originalShapes) {
             noteRepository.updateShape(noteId, original)
-            val sdkShape = shapesManager.shapes().find { it.id == original.id }
-            if (sdkShape != null) {
-                val newList = TouchPointList()
-                for ((idx, pt) in original.points.withIndex()) {
-                    val pressure = original.pressure.getOrElse(idx) { 0.5f }
-                    newList.add(TouchPoint(pt.x, pt.y, pressure, 1f, System.currentTimeMillis()))
-                }
-                sdkShape.touchPointList = newList
-                sdkShape.updateShapeRect()
-            }
+            ActionUtils.updateSdkShapePoints(original, original.points, shapesManager)
         }
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 
     override suspend fun redo() {
@@ -69,18 +58,8 @@ class TransformAction(
             }
             val transformedShape = original.copy(points = transformedPoints)
             noteRepository.updateShape(noteId, transformedShape)
-
-            val sdkShape = shapesManager.shapes().find { it.id == original.id }
-            if (sdkShape != null) {
-                val newList = TouchPointList()
-                for ((idx, pt) in transformedPoints.withIndex()) {
-                    val pressure = original.pressure.getOrElse(idx) { 0.5f }
-                    newList.add(TouchPoint(pt.x, pt.y, pressure, 1f, System.currentTimeMillis()))
-                }
-                sdkShape.touchPointList = newList
-                sdkShape.updateShapeRect()
-            }
+            ActionUtils.updateSdkShapePoints(original, transformedPoints, shapesManager)
         }
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 }
