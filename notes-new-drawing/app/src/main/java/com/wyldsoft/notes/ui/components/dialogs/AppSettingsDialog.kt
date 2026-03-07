@@ -137,7 +137,6 @@ fun AppSettingsDialog(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GestureMappingRow(
     mapping: GestureMapping,
@@ -146,10 +145,6 @@ private fun GestureMappingRow(
     onActionChange: (GestureAction) -> Unit,
     onRemove: () -> Unit
 ) {
-    var gestureExpanded by remember { mutableStateOf(false) }
-    var actionExpanded by remember { mutableStateOf(false) }
-
-    // Available gestures: current gesture + any unused ones
     val availableGestures = GestureType.entries.filter {
         it == mapping.gesture || it !in usedGestures
     }
@@ -159,71 +154,24 @@ private fun GestureMappingRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Gesture dropdown
-        ExposedDropdownMenuBox(
-            expanded = gestureExpanded,
-            onExpandedChange = { gestureExpanded = it },
-            modifier = Modifier.weight(1f)
-        ) {
-            OutlinedTextField(
-                value = mapping.gesture.displayName,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = gestureExpanded) },
-                modifier = Modifier.menuAnchor(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                singleLine = true
-            )
+        InlineDropdown(
+            items = availableGestures,
+            selectedItem = mapping.gesture,
+            displayName = { it.displayName },
+            onItemSelected = onGestureChange,
+            modifier = Modifier.weight(1f),
+            textStyle = MaterialTheme.typography.bodySmall
+        )
 
-            ExposedDropdownMenu(
-                expanded = gestureExpanded,
-                onDismissRequest = { gestureExpanded = false }
-            ) {
-                availableGestures.forEach { gesture ->
-                    DropdownMenuItem(
-                        text = { Text(gesture.displayName, style = MaterialTheme.typography.bodySmall) },
-                        onClick = {
-                            onGestureChange(gesture)
-                            gestureExpanded = false
-                        }
-                    )
-                }
-            }
-        }
+        InlineDropdown(
+            items = GestureAction.entries,
+            selectedItem = mapping.action,
+            displayName = { it.displayName },
+            onItemSelected = onActionChange,
+            modifier = Modifier.weight(1f),
+            textStyle = MaterialTheme.typography.bodySmall
+        )
 
-        // Action dropdown
-        ExposedDropdownMenuBox(
-            expanded = actionExpanded,
-            onExpandedChange = { actionExpanded = it },
-            modifier = Modifier.weight(1f)
-        ) {
-            OutlinedTextField(
-                value = mapping.action.displayName,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = actionExpanded) },
-                modifier = Modifier.menuAnchor(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                singleLine = true
-            )
-
-            ExposedDropdownMenu(
-                expanded = actionExpanded,
-                onDismissRequest = { actionExpanded = false }
-            ) {
-                GestureAction.entries.forEach { action ->
-                    DropdownMenuItem(
-                        text = { Text(action.displayName, style = MaterialTheme.typography.bodySmall) },
-                        onClick = {
-                            onActionChange(action)
-                            actionExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        // Remove button
         IconButton(
             onClick = onRemove,
             modifier = Modifier.size(36.dp)

@@ -60,6 +60,50 @@ fun SettingsDialogShell(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun <T> InlineDropdown(
+    items: List<T>,
+    selectedItem: T,
+    displayName: (T) -> String,
+    onItemSelected: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyMedium
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = displayName(selectedItem),
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(),
+            textStyle = textStyle,
+            singleLine = true
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            items.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(displayName(item), style = textStyle) },
+                    onClick = {
+                        onItemSelected(item)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun <T> SettingsDropdown(
     label: String,
     items: List<T>,
@@ -67,8 +111,6 @@ fun <T> SettingsDropdown(
     displayName: (T) -> String,
     onItemSelected: (T) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
@@ -77,34 +119,12 @@ fun <T> SettingsDropdown(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it }
-        ) {
-            OutlinedTextField(
-                value = displayName(selectedItem),
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                items.forEach { item ->
-                    DropdownMenuItem(
-                        text = { Text(displayName(item)) },
-                        onClick = {
-                            onItemSelected(item)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
+        InlineDropdown(
+            items = items,
+            selectedItem = selectedItem,
+            displayName = displayName,
+            onItemSelected = onItemSelected,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
