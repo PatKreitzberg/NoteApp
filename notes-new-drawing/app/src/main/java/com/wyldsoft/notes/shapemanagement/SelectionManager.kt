@@ -6,6 +6,7 @@ import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
+import com.wyldsoft.notes.utils.touchPointListToPoints
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -80,10 +81,7 @@ class SelectionManager {
      * Returns the lasso points for rendering the dashed line.
      */
     fun addLassoPoints(touchPointList: TouchPointList): List<PointF> {
-        for (i in 0 until touchPointList.size()) {
-            val tp = touchPointList.get(i)
-            lassoPoints.add(PointF(tp.x, tp.y))
-        }
+        lassoPoints.addAll(touchPointListToPoints(touchPointList))
         return lassoPoints.toList()
     }
 

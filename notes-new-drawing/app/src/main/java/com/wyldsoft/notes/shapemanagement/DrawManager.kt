@@ -7,6 +7,7 @@ import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.rendering.BitmapManager
 import android.graphics.PointF
 import android.util.Log
+import com.wyldsoft.notes.utils.extractTouchData
 
 /*
 Handles when the user creates a new shape by drawing with the stylus.
@@ -29,17 +30,9 @@ class DrawManager(
         Log.d("DrawManager", "Creating new shape with ${noteCoordinateTouchPointList.size()} points")
         // Create shape and add to bitmap then render to screen
         val shape = createShapeFromPenType(noteCoordinateTouchPointList)
-        // Convert TouchPointList to List<PointF> for ViewModel (in NoteCoordinates)
-        val pointFs = mutableListOf<PointF>()
-        val pressures = mutableListOf<Float>()
-        val timestamps = mutableListOf<Long>()
-        for (i in 0 until noteCoordinateTouchPointList.size()) {
-            val tp = noteCoordinateTouchPointList.get(i)
-            pointFs.add(PointF(tp.x, tp.y))
-            pressures.add(tp.pressure)
-            timestamps.add(tp.timestamp)
-        }
-        onShapeCompleted(shape.id, pointFs, pressures, timestamps)
+        // Convert TouchPointList to domain data for ViewModel (in NoteCoordinates)
+        val touchData = extractTouchData(noteCoordinateTouchPointList)
+        onShapeCompleted(shape.id, touchData.points, touchData.pressures, touchData.timestamps)
 
         // Render the new shape to the bitmap
         bitmapManager.renderShapeToBitmap(shape)
