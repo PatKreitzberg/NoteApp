@@ -7,6 +7,7 @@ import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.domain.models.Shape
+import com.wyldsoft.notes.geometry.GeometryShapeCalculator
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
@@ -14,6 +15,7 @@ import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.DrawManager
 import com.wyldsoft.notes.shapemanagement.EraseManager
+import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.TransformMode
 
@@ -44,6 +46,9 @@ abstract class AbstractStylusHandler(
 
     protected var isDrawingInProgress = false
     protected var isErasingInProgress = false
+    protected var isGeometryDrawingInProgress = false
+    protected var geometryStartNoteX = 0f
+    protected var geometryStartNoteY = 0f
     protected var selectionCancelledThisStroke = false
     protected var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
 
@@ -126,6 +131,83 @@ abstract class AbstractStylusHandler(
             return true
         }
         return false
+    }
+
+    // --- Geometry shape drawing ---
+
+    protected fun beginGeometryDrawing(touchPoint: TouchPoint) {
+        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
+        geometryStartNoteX = notePoint.x
+        geometryStartNoteY = notePoint.y
+        isGeometryDrawingInProgress = true
+        isDrawingInProgress = true
+        bitmapManager.beginGeometryDrawing()
+        onDrawingStateChanged(true)
+        viewModel.startDrawing()
+    }
+
+    protected fun updateGeometryPreview(touchPoint: TouchPoint) {
+        if (!isGeometryDrawingInProgress) return
+        val noteEnd = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
+        val shapeType = viewModel.uiState.value.selectedGeometricShape
+        val notePoints = GeometryShapeCalculator.calculate(
+            shapeType, geometryStartNoteX, geometryStartNoteY, noteEnd.x, noteEnd.y
+        )
+        bitmapManager.drawGeometryPreview(notePoints, currentPenProfile)
+    }
+
+    protected fun finalizeGeometryShape(touchPointList: TouchPointList) {
+        if (!isGeometryDrawingInProgress) return
+
+        val lastPoint = touchPointList.points?.lastOrNull()
+        if (lastPoint != null) {
+            val noteEnd = viewModel.viewportManager.surfaceToNoteCoordinates(lastPoint.x, lastPoint.y)
+            val geometricShapeType = viewModel.uiState.value.selectedGeometricShape
+
+            // Compute outline points in note coordinates
+            val notePoints = GeometryShapeCalculator.calculate(
+                geometricShapeType, geometryStartNoteX, geometryStartNoteY, noteEnd.x, noteEnd.y
+            )
+
+            // Build a TouchPointList from the note-coordinate outline points
+            val shapePointList = TouchPointList()
+            val now = System.currentTimeMillis()
+            notePoints.forEach { pt ->
+                shapePointList.add(TouchPoint(pt.x, pt.y, 1.0f, 1.0f, now))
+            }
+
+            // Create a BaseShape using current pen type so it renders correctly
+            val sdkShapeType = ShapesManager.penTypeToShapeType(currentPenProfile.penType)
+            val baseShape = ShapeFactory.createShape(sdkShapeType).apply {
+                setTouchPointList(shapePointList)
+                setStrokeColor(currentPenProfile.getColorAsInt())
+                setStrokeWidth(currentPenProfile.strokeWidth)
+                setShapeType(sdkShapeType)
+            }
+            ShapesManager.applyCharcoalTexture(baseShape, currentPenProfile.penType)
+            baseShape.updateShapeRect()
+
+            // Add to in-memory manager so it appears on next full refresh
+            shapesManager.addShape(baseShape)
+
+            // Persist and record undo action using the matching ID
+            val domainShape = Shape(
+                id = baseShape.id,
+                type = geometricShapeType.toDomainShapeType(),
+                points = notePoints,
+                strokeWidth = currentPenProfile.strokeWidth,
+                strokeColor = currentPenProfile.getColorAsInt(),
+                penType = currentPenProfile.penType
+            )
+            viewModel.addGeometricShape(domainShape)
+        }
+
+        bitmapManager.endGeometryDrawing()
+        isGeometryDrawingInProgress = false
+        isDrawingInProgress = false
+        onDrawingStateChanged(false)
+        viewModel.endDrawing()
+        onForceScreenRefresh()
     }
 
     // --- Shared erasing state transitions ---

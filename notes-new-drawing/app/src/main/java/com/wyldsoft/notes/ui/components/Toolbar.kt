@@ -30,6 +30,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import kotlinx.coroutines.launch
 
+import com.wyldsoft.notes.geometry.GeometricShapeType
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.presentation.viewmodel.Tool
@@ -101,9 +102,12 @@ fun Toolbar(
     }
 
     fun handleProfileClick(profileIndex: Int) {
-        // If in selection mode, switch back to pen
-        if (viewModel.uiState.value.selectedTool == Tool.SELECTOR) {
+        val currentTool = viewModel.uiState.value.selectedTool
+        // If in selection or geometry mode, switch back to pen
+        if (currentTool == Tool.SELECTOR) {
             viewModel.cancelSelection()
+        } else if (currentTool == Tool.GEOMETRY) {
+            viewModel.selectTool(Tool.PEN)
         }
         if (selectedProfileIndex == profileIndex && isStrokeSelectionOpen) {
             // Same profile clicked while panel open - close panel
@@ -185,8 +189,23 @@ fun Toolbar(
                     )
                 }
 
-                // Selection tool button
+                // Shape/geometry tool button
                 val uiState by viewModel.uiState.collectAsState()
+                val isGeometryActive = uiState.selectedTool == Tool.GEOMETRY
+
+                ShapeButton(
+                    selectedShape = uiState.selectedGeometricShape,
+                    isGeometryActive = isGeometryActive,
+                    onActivate = {
+                        if (isStrokeSelectionOpen) closeStrokeOptionsPanel()
+                        viewModel.selectTool(Tool.GEOMETRY)
+                    },
+                    onShapeSelected = { shape ->
+                        viewModel.selectGeometricShape(shape)
+                    }
+                )
+
+                // Selection tool button
                 val isSelectionActive = uiState.selectedTool == Tool.SELECTOR
 
                 IconButton(

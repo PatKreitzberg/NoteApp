@@ -16,6 +16,7 @@ import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
+import com.wyldsoft.notes.geometry.GeometricShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
 import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
@@ -247,6 +248,22 @@ class EditorViewModel(
             selectionManager.clearSelection()
         }
         _uiState.value = _uiState.value.copy(selectedTool = tool)
+    }
+
+    fun selectGeometricShape(shape: GeometricShapeType) {
+        _uiState.value = _uiState.value.copy(selectedGeometricShape = shape)
+    }
+
+    fun addGeometricShape(shape: Shape) {
+        viewModelScope.launch {
+            noteRepository.addShape(currentNote.value.id, shape)
+            val sm = shapesManager
+            val bm = bitmapManager
+            if (sm != null && bm != null) {
+                val action = DrawAction(currentNote.value.id, shape, noteRepository, sm, bm)
+                actionManager.recordAction(action)
+            }
+        }
     }
 
     fun cancelSelection() {
@@ -520,7 +537,8 @@ class EditorViewModel(
 
 data class EditorUiState(
     val isStrokeOptionsOpen: Boolean = false,
-    val selectedTool: Tool = Tool.PEN
+    val selectedTool: Tool = Tool.PEN,
+    val selectedGeometricShape: GeometricShapeType = GeometricShapeType.LINE
 )
 
 enum class Tool {

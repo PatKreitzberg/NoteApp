@@ -79,6 +79,13 @@ class GenericStylusHandler(
             beginSelectionStroke(tp)
             return
         }
+        if (tool == Tool.GEOMETRY) {
+            val tp = motionEventToTouchPoint(event, 0)
+            beginGeometryDrawing(tp)
+            currentPoints.clear()
+            currentPoints.add(tp)
+            return
+        }
         beginDrawing()
         currentPoints.clear()
         lastRenderedPointIndex = 0
@@ -87,6 +94,12 @@ class GenericStylusHandler(
 
     private fun handleDrawMove(event: MotionEvent) {
         val tool = viewModel.uiState.value.selectedTool
+        if (tool == Tool.GEOMETRY) {
+            val tp = motionEventToTouchPoint(event, 0)
+            currentPoints.add(tp)
+            updateGeometryPreview(tp)
+            return
+        }
         if (tool == Tool.SELECTOR && selectionManager.hasSelection) {
             val isTransforming = selectionManager.isDragging ||
                 selectionManager.transformMode == TransformMode.SCALE ||
@@ -107,6 +120,13 @@ class GenericStylusHandler(
     }
 
     private fun handleDrawEnd() {
+        val tool = viewModel.uiState.value.selectedTool
+        if (tool == Tool.GEOMETRY) {
+            val touchPointList = buildTouchPointList()
+            finalizeGeometryShape(touchPointList)
+            currentPoints.clear()
+            return
+        }
         if (handleCancelledStroke()) {
             currentPoints.clear()
             return

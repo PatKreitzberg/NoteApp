@@ -65,14 +65,27 @@ class OnyxStylusHandler(
                 beginSelectionStroke(touchPoint)
                 return
             }
+            if (tool == Tool.GEOMETRY) {
+                onSetRawDrawingRenderEnabled(false) // We handle rendering for geometry
+                touchPoint?.let { beginGeometryDrawing(it) }
+                return
+            }
             beginDrawing()
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
-            isDrawingInProgress = false
+            if (!isGeometryDrawingInProgress) {
+                isDrawingInProgress = false
+            }
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
+            val tool = viewModel.uiState.value.selectedTool
+            if (tool == Tool.GEOMETRY) {
+                touchPoint?.let { updateGeometryPreview(it) }
+                return
+            }
+
             if (refreshCount < REFRESH_COUNT_LIMIT) {
                 refreshCount++
                 return
@@ -80,7 +93,6 @@ class OnyxStylusHandler(
             refreshCount = 0
 
             if (touchPoint == null) return
-            val tool = viewModel.uiState.value.selectedTool
             if (tool != Tool.SELECTOR) return
             if (!selectionManager.hasSelection) return
 
@@ -88,6 +100,11 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
+            val tool = viewModel.uiState.value.selectedTool
+            if (tool == Tool.GEOMETRY) {
+                touchPointList?.let { finalizeGeometryShape(it) }
+                return
+            }
             if (handleCancelledStroke()) return
             if (touchPointList != null && handleSelectorStrokeEnd(touchPointList)) return
 

@@ -3,6 +3,8 @@ package com.wyldsoft.notes.rendering
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Path
+import android.graphics.PointF
 import android.graphics.Rect
 import android.util.Log
 import android.view.SurfaceView
@@ -36,6 +38,9 @@ class BitmapManager(
         private var TAG = "BitmapManager"
     }
     private val rendererHelper = RendererHelper()
+
+    // Snapshot of bitmap taken when geometry drawing begins, used to restore between preview frames
+    private var geometrySnapshotBitmap: Bitmap? = null
     private val templateRenderer = PaperTemplateRenderer(viewModel.viewportManager)
 
     /**
@@ -121,6 +126,59 @@ class BitmapManager(
         // Check if the shape intersects with the screen
         return !(topLeft.x > screenWidth || bottomRight.x < 0 ||
                 topLeft.y > screenHeight || bottomRight.y < 0)
+    }
+
+    /**
+     * Snapshot the current bitmap so geometry preview frames can restore it.
+     * Call at the start of a geometry drawing stroke.
+     */
+    fun beginGeometryDrawing() {
+        val bmp = getBitmap() ?: return
+        geometrySnapshotBitmap?.recycle()
+        geometrySnapshotBitmap = bmp.copy(bmp.config ?: Bitmap.Config.ARGB_8888, true)
+    }
+
+    /**
+     * Restore the snapshot, draw the geometry outline on top, then render to screen.
+     * [notePoints] are in note coordinates and will be transformed to surface coordinates.
+     */
+    fun drawGeometryPreview(notePoints: List<PointF>, penProfile: PenProfile) {
+        val snapshot = geometrySnapshotBitmap ?: return
+        val canvas = getBitmapCanvas() ?: return
+        if (notePoints.size < 2) return
+
+        // Restore the clean snapshot
+        canvas.drawBitmap(snapshot, 0f, 0f, null)
+
+        // Convert note → surface coordinates
+        val viewportManager = viewModel.viewportManager
+        val surfacePoints = notePoints.map { pt ->
+            viewportManager.noteToSurfaceCoordinates(pt.x, pt.y)
+        }
+
+        // Draw the shape outline
+        val paint = createStrokePaint().apply {
+            color = penProfile.getColorAsInt()
+            strokeWidth = penProfile.strokeWidth
+            style = android.graphics.Paint.Style.STROKE
+        }
+        val path = Path().apply {
+            moveTo(surfacePoints[0].x, surfacePoints[0].y)
+            for (i in 1 until surfacePoints.size) {
+                lineTo(surfacePoints[i].x, surfacePoints[i].y)
+            }
+        }
+        canvas.drawPath(path, paint)
+
+        renderBitmapToScreen()
+    }
+
+    /**
+     * Release the geometry snapshot. Call when geometry drawing ends.
+     */
+    fun endGeometryDrawing() {
+        geometrySnapshotBitmap?.recycle()
+        geometrySnapshotBitmap = null
     }
 
     fun clearDrawing() {
