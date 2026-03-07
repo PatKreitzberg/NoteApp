@@ -21,6 +21,7 @@ class PaginationRendererToScreenRequest(
 
     override fun execute() {
         val viewRect = RenderingUtils.checkSurfaceView(surfaceView)
+        RenderingUtils.enableScreenPost(surfaceView)
         if (DeviceHelper.isOnyxDevice) {
             EpdController.setViewDefaultUpdateMode(surfaceView, UpdateMode.HAND_WRITING_REPAINT_MODE)
         }
