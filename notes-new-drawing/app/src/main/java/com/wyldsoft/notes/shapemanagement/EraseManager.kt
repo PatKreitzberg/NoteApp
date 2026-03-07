@@ -2,6 +2,7 @@ package com.wyldsoft.notes.shapemanagement
 
 import android.graphics.RectF
 import android.util.Log
+import com.wyldsoft.notes.utils.calculateShapesBoundingBox
 import android.view.SurfaceView
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
@@ -86,27 +87,6 @@ class EraseManager(
     }
 
     fun calculateRefreshRect(erasedShapes: List<BaseShape>): RectF? {
-        if (erasedShapes.isEmpty()) return null
-
-        var refreshRect: RectF? = null
-        
-        for (shape in erasedShapes) {
-            val boundingRect = shape.boundingRect
-            if (boundingRect != null) {
-                if (refreshRect == null) {
-                    refreshRect = RectF(boundingRect)
-                } else {
-                    refreshRect.union(boundingRect)
-                }
-            }
-        }
-
-        // Add some padding around the refresh area
-        refreshRect?.let { rect ->
-            val padding = 20f
-            rect.inset(-padding, -padding)
-        }
-
-        return refreshRect
+        return calculateShapesBoundingBox(erasedShapes, padding = 20f)
     }
 }

@@ -6,6 +6,7 @@ import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
+import com.wyldsoft.notes.utils.calculateShapesBoundingBox
 import com.wyldsoft.notes.utils.touchPointListToPoints
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -148,20 +149,8 @@ class SelectionManager {
     }
 
     private fun calculateBoundingBox(shapes: List<BaseShape>): RectF? {
-        if (shapes.isEmpty()) return null
-        var rect: RectF? = null
-        for (shape in shapes) {
-            shape.updateShapeRect()
-            val br = shape.boundingRect ?: continue
-            if (rect == null) {
-                rect = RectF(br)
-            } else {
-                rect.union(br)
-            }
-        }
-        // Add padding
-        rect?.inset(-10f, -10f)
-        return rect
+        shapes.forEach { it.updateShapeRect() }
+        return calculateShapesBoundingBox(shapes)
     }
 
     // --- Move Phase ---
