@@ -27,6 +27,7 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
     private lateinit var stylusHandler: GenericStylusHandler
     // gestureHandler is declared in BaseDrawingActivity
     private var deviceReceiver: GenericDeviceReceiverWrapper? = null
+    private var isDrawingEnabled = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +61,7 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
     override fun createTouchHelper() {
         // Set touch listener for both stylus and finger input
         surfaceView.setOnTouchListener { _, event ->
+            if (!isDrawingEnabled) return@setOnTouchListener false
             val toolType = event.getToolType(0)
             val isStylus = toolType == MotionEvent.TOOL_TYPE_STYLUS
             val isEraser = toolType == MotionEvent.TOOL_TYPE_ERASER
@@ -78,12 +80,6 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
             }
         }
 
-        // Observe tool changes
-        lifecycleScope.launch {
-            editorViewModel.uiState.collect { state ->
-                // No touch helper reconfiguration needed on generic devices
-            }
-        }
     }
 
     override fun initializeBitmapManager(sv: SurfaceView, vm: EditorViewModel) {
@@ -100,6 +96,10 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
     override fun createDeviceReceiver(): BaseDeviceReceiver {
         deviceReceiver = GenericDeviceReceiverWrapper()
         return deviceReceiver!!
+    }
+
+    override fun setDrawingEnabled(enabled: Boolean) {
+        isDrawingEnabled = enabled
     }
 
     override fun enableFingerTouch() {

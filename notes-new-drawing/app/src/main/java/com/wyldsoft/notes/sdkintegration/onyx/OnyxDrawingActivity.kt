@@ -98,15 +98,17 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             }
         }
 
-        // Observe tool changes to reconfigure touch helper for selection mode
-        lifecycleScope.launch {
-            editorViewModel.uiState.collect { state ->
-                if (state.selectedTool == Tool.SELECTOR) {
-                    reconfigureTouchHelperForSelection()
-                } else {
-                    // Restore normal pen profile rendering
-                    reconfigureTouchHelper(editorViewModel.excludeRects.value, applyColor = true)
-                }
+    }
+
+    override fun setDrawingEnabled(enabled: Boolean) {
+        if (!enabled) {
+            onyxTouchHelper?.setRawDrawingEnabled(false)
+        } else {
+            val state = editorViewModel.uiState.value
+            if (state.selectedTool == Tool.SELECTOR) {
+                reconfigureTouchHelperForSelection()
+            } else {
+                reconfigureTouchHelper(editorViewModel.excludeRects.value, applyColor = true)
             }
         }
     }

@@ -325,6 +325,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             }
         }
 
+        // Observe UI state changes to enable/disable drawing (e.g. when stroke panel opens)
+        lifecycleScope.launch {
+            editorViewModel.uiState.collect { state ->
+                setDrawingEnabled(!state.isStrokeOptionsOpen)
+            }
+        }
+
         Log.d("DebugAug12", "DONE Setting ViewModel in BaseDrawingActivity")
     }
 
@@ -440,6 +447,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected open fun refreshUIChrome() {
         window.decorView.postInvalidate()
     }
+
+    /**
+     * Called whenever drawing should be enabled or disabled.
+     * Triggered by UI state changes such as the stroke options panel opening/closing.
+     * Override in SDK-specific subclasses to gate raw input accordingly.
+     */
+    open fun setDrawingEnabled(enabled: Boolean) {}
 
     // Abstract methods for SDK-specific lifecycle
     protected abstract fun onResumeDrawing()
