@@ -349,9 +349,12 @@
   │
   ├── EditorUiState (data class)
   │   ├── isStrokeOptionsOpen: Boolean
-  │   └── selectedTool: Tool
+  │   ├── selectedTool: Tool
+  │   └── selectedGeometricShape: GeometricShapeType
   │
   ├── Tool (enum): PEN | ERASER | SELECTOR | GEOMETRY
+  ├── selectGeometricShape()
+  └── addGeometricShape(Shape)
   │
   └── uses: NoteRepository, NotebookRepository, ViewportManager
 
@@ -374,6 +377,7 @@
   EditorView
   ├── Toolbar
   │   ├── ProfileButton (x5) → delegates to PenButton
+  │   ├── ShapeButton → dropdown for GeometricShapeType selection
   │   └── StrokeOptionsPanel
   │       ├── PenTypeButton   → delegates to PenButton
   │       └── adjusts PenProfile properties
@@ -591,5 +595,26 @@
   └── Arguments for erase operations
 
   ActionInterface / ActionManager / DrawAction
-  └── Action history and undo support
+  └── Action history and undo support (works for geometric shapes too)
+
+  geometry/GeometricShapeType (enum)
+  ├── LINE | TRIANGLE | SQUARE | CIRCLE
+  └── toDomainShapeType() → ShapeType
+
+  geometry/GeometryShapeCalculator (object)
+  ├── calculate(shapeType, startX, startY, endX, endY) → List<PointF>
+  ├── Center at start point, size from distance, rotation from angle
+  └── Shapes: line (2pts), circle (36pts), square (5pts), triangle (4pts)
+
+  Geometry Drawing Flow:
+  1. User activates ShapeButton in toolbar → Tool.GEOMETRY
+  2. Stylus down → AbstractStylusHandler.beginGeometryDrawing()
+     → snapshots bitmap via BitmapManager.beginGeometryDrawing()
+  3. Stylus move → AbstractStylusHandler.updateGeometryPreview()
+     → GeometryShapeCalculator.calculate() → note coords
+     → BitmapManager.drawGeometryPreview() → restore snapshot + draw outline
+  4. Stylus up → AbstractStylusHandler.finalizeGeometryShape()
+     → creates BaseShape from outline points
+     → adds to ShapesManager + persists via EditorViewModel.addGeometricShape()
+     → onForceScreenRefresh() redraws from shapes
 #+end_example
