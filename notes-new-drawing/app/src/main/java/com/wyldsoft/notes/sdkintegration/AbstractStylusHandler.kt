@@ -19,6 +19,7 @@ import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.shapemanagement.TransformMode
+import com.wyldsoft.notes.utils.surfacePointsToNoteTouchPoints
 
 /**
  * Base class for stylus handlers, containing shared drawing, erasing,
@@ -370,14 +371,6 @@ abstract class AbstractStylusHandler(
     }
 
     protected fun convertTouchPointListToNoteCoordinates(surfacePointList: TouchPointList): TouchPointList {
-        val notePointList = TouchPointList()
-        val viewportManager = viewModel.viewportManager
-        for (i in 0 until surfacePointList.size()) {
-            val tp = surfacePointList.get(i)
-            val notePoint = viewportManager.surfaceToNoteCoordinates(tp.x, tp.y)
-            val noteTouchPoint = TouchPoint(notePoint.x, notePoint.y, tp.pressure, tp.size, tp.timestamp)
-            notePointList.add(noteTouchPoint)
-        }
-        return notePointList
+        return surfacePointsToNoteTouchPoints(surfacePointList, viewModel.viewportManager)
     }
 }
