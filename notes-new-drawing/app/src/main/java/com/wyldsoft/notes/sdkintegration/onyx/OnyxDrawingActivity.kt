@@ -165,7 +165,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun onResumeDrawing() {
         Log.d(TAG, "onResumeDrawing")
-        onyxTouchHelper?.setRawDrawingEnabled(true)
+        if (!editorViewModel.uiState.value.isStrokeOptionsOpen) {
+            onyxTouchHelper?.setRawDrawingEnabled(true)
+        }
     }
 
     override fun onPauseDrawing() {
@@ -216,8 +218,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 .setLimitRect(limit, ArrayList(editorViewModel.excludeRects.value))
                 .openRawDrawing()
 
-            helper.setRawDrawingEnabled(true)
-            helper.setRawDrawingRenderEnabled(true)
+            // Don't re-enable drawing if the stroke options panel is open
+            if (!editorViewModel.uiState.value.isStrokeOptionsOpen) {
+                helper.setRawDrawingEnabled(true)
+                helper.setRawDrawingRenderEnabled(true)
+            }
         }
     }
 
@@ -237,8 +242,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 .openRawDrawing()
 
             helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
-            helper.setRawDrawingEnabled(true)
-            helper.setRawDrawingRenderEnabled(true)
+            // Don't re-enable drawing if the stroke options panel is open
+            if (!editorViewModel.uiState.value.isStrokeOptionsOpen) {
+                helper.setRawDrawingEnabled(true)
+                helper.setRawDrawingRenderEnabled(true)
+            }
         }
     }
 
