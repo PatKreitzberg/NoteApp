@@ -274,6 +274,7 @@
   │
   ├── setViewportManager()
   ├── cleanup()
+  ├── onScrollingStateChanged callback  ← notifies scroll/zoom start/end
   │
   └── uses: Context, View, ViewportManager
 #+end_example
@@ -285,6 +286,13 @@
   ├── forceScreenRefresh()
   ├── cleanSurfaceView: lambda
   └── renderToScreen: lambda
+
+  Display Settings (throttling applied in BaseDrawingActivity):
+  ├── Viewport observer respects maxRefreshRate (skips if too soon)
+  ├── When smoothMotion=false: skips refreshes during scroll/zoom,
+  │   refreshes only on gesture end
+  └── Geometry preview: skipped when smoothMotion=false,
+      throttled by maxRefreshRate when on
 
   RefreshCoordinator
   ├── createRefreshingSurfaceCallback()
@@ -570,7 +578,16 @@
   ├── Initializes NotesDatabase
   ├── Lazy-initializes all DAOs
   ├── Lazy-initializes all Repositories
+  ├── DisplaySettingsRepository     ← max refresh rate + smooth motion
   └── Onyx SDK initialization
+
+  DisplaySettingsRepository
+  ├── maxRefreshRate: StateFlow<Int>      ← 1-15 Hz (default 5)
+  ├── smoothMotion: StateFlow<Boolean>    ← default true
+  ├── minRefreshIntervalMs: Long          ← derived from maxRefreshRate
+  ├── setMaxRefreshRate(rate)
+  ├── setSmoothMotion(enabled)
+  └── uses: SharedPreferences ("display_settings")
 
   PaginationUtils
   ├── PaginationConstants.SEPARATOR_HEIGHT  ← shared constant (10f)
