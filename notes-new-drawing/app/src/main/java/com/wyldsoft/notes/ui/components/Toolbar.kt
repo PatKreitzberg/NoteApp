@@ -80,6 +80,7 @@ fun Toolbar(
     }
 
     fun removeStrokeOptionPanelRect() {
+        Log.d("Toolbar", "Removing stroke options panel rect from exclusion zones")
         strokePanelRect?.let { rect ->
             val currentRects = viewModel.excludeRects.value.toMutableList()
             currentRects.remove(rect)

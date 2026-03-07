@@ -150,11 +150,13 @@ class EditorViewModel(
     }
     
     fun startDrawing() {
+        Log.d("DebugMarch6", "Starting drawing on note: ${currentNote.value.id}")
         _isDrawing.value = true
         _uiState.value = _uiState.value.copy(isStrokeOptionsOpen = false)
     }
     
     fun endDrawing() {
+        Log.d("DebugMarch6", "Ending drawing on note: ${currentNote.value.id}")
         _isDrawing.value = false
     }
     
