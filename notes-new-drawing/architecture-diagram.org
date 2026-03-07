@@ -382,9 +382,15 @@
   │   ├── subfolders
   │   ├── notebooks
   │   ├── showCreateFolderDialog
-  │   └── showCreateNotebookDialog
+  │   ├── showCreateNotebookDialog
+  │   ├── searchResults: List<SearchResult>
+  │   └── isSearching: Boolean
   │
-  └── uses: NoteRepository, NotebookRepository, FolderRepository
+  ├── search(query)              ← searches recognized text segments
+  ├── clearSearch()
+  │
+  └── uses: NoteRepository, NotebookRepository, FolderRepository,
+            RecognizedSegmentRepository
 #+end_example
 
 ** Composable UI Components
@@ -417,7 +423,11 @@
   ├── folder navigation
   ├── notebook list
   ├── create folder dialog
-  └── create notebook dialog
+  ├── create notebook dialog
+  └── SearchDialog            → search handwritten text via HTR
+      ├── text input field
+      ├── queries RecognizedSegmentRepository
+      └── shows results: note title + matched text snippet
 #+end_example
 
 ** Pen Profiles
@@ -450,12 +460,16 @@
   ScrotesApp (Application)
   └── initializes NotesDatabase + all repositories
 
-  NotesDatabase (Room, version 2)
+  NotesDatabase (Room, version 6)
   ├── NoteDao      → NoteEntity (notes table)
   ├── ShapeDao     → ShapeEntity (shapes table)
   ├── NotebookDao  → NotebookEntity (notebooks table)
-  └── FolderDao    → FolderEntity (folders table)
-                     NoteNotebookCrossRef (junction table)
+  ├── FolderDao    → FolderEntity (folders table)
+  │                  NoteNotebookCrossRef (junction table)
+  └── RecognizedSegmentDao → RecognizedSegmentEntity (recognized_segments table)
+      ├── searchText(query) ← LIKE search across all notes
+      ├── getSegmentsForNote()
+      └── deleteByIds()
 #+end_example
 
 ** Entity Relationships
@@ -630,6 +644,24 @@
   ├── calculate(shapeType, startX, startY, endX, endY) → List<PointF>
   ├── Center at start point, size from distance, rotation from angle
   └── Shapes: line (2pts), circle (36pts), square (5pts), triangle (4pts)
+
+  HTR (Handwriting Text Recognition):
+  HTRManager
+  ├── uses Google ML Kit Digital Ink Recognition
+  ├── downloadModel()          ← downloads en-US model
+  ├── basicRecognize()         ← returns List<RecognitionResult>
+  └── isReady()
+
+  HTRRunManager
+  ├── addShapesForRecognition() ← debounced (2s), batches shapes per note
+  ├── basicRecognition()        ← runs HTR and saves to RecognizedSegmentRepository
+  ├── onShapesDeleted()         ← cleans up segments for deleted shapes
+  └── uses: HTRManager, RecognizedSegmentRepository
+
+  RecognizedSegmentRepository
+  ├── searchText(query)        ← used by HomeViewModel search
+  ├── saveSegments()
+  └── deleteByIds()
 
   Geometry Drawing Flow:
   1. User activates ShapeButton in toolbar → Tool.GEOMETRY

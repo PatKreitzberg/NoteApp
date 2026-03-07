@@ -13,7 +13,7 @@ interface RecognizedSegmentDao {
     @Query("SELECT * FROM recognized_segments WHERE noteId = :noteId ORDER BY lineNumber")
     suspend fun getSegmentsForNoteOnce(noteId: String): List<RecognizedSegmentEntity>
 
-    @Query("SELECT * FROM recognized_segments WHERE recognizedText LIKE '%' || :query || '%'")
+    @Query("SELECT * FROM recognized_segments WHERE recognizedText LIKE '%' || :query || '%' ORDER BY timestamp DESC")
     suspend fun searchText(query: String): List<RecognizedSegmentEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

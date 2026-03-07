@@ -7,6 +7,17 @@ import com.google.mlkit.vision.digitalink.*
 import com.wyldsoft.notes.domain.models.Shape
 import kotlinx.coroutines.tasks.await
 
+data class RecognitionResult(
+    val noteId: String,
+    val text: String,
+    val confidence: Float,
+    val shapeIds: List<String>,
+    val boundingBoxLeft: Float,
+    val boundingBoxTop: Float,
+    val boundingBoxRight: Float,
+    val boundingBoxBottom: Float
+)
+
 class HTRManager {
     companion object {
         private const val TAG = "HTRManager"
@@ -69,32 +80,58 @@ class HTRManager {
         modelReady = false
     }
 
-    internal suspend fun basicRecognize(map: MutableMap<String, MutableList<Shape>>) {
+    internal suspend fun basicRecognize(map: MutableMap<String, MutableList<Shape>>): List<RecognitionResult> {
         Log.d(TAG, "Starting basic recognition with ${map.size} notes")
-        // Build out ink objects for MLKit
-        val inkBuilder = Ink.builder()
-        for ((noteId, shapes) in map) {
-            Log.d(TAG, "Processing note $noteId with ${shapes.size} shapes")
-            for (shape in shapes) {
-                Log.d(TAG, "Processing shape ${shape.id} with ${shape.points.size} points")
-                val strokeBuilder = Ink.Stroke.builder()
+        val results = mutableListOf<RecognitionResult>()
 
-                // process each point in the shape, using timestamps if available
+        for ((noteId, shapes) in map) {
+            if (shapes.isEmpty()) continue
+            Log.d(TAG, "Processing note $noteId with ${shapes.size} shapes")
+
+            val inkBuilder = Ink.builder()
+            var minX = Float.MAX_VALUE
+            var minY = Float.MAX_VALUE
+            var maxX = Float.MIN_VALUE
+            var maxY = Float.MIN_VALUE
+
+            for (shape in shapes) {
+                val strokeBuilder = Ink.Stroke.builder()
                 for (i in shape.points.indices) {
                     val point = shape.points[i]
                     strokeBuilder.addPoint(Ink.Point.create(point.x, point.y, shape.pointTimestamps[i]))
+                    if (point.x < minX) minX = point.x
+                    if (point.y < minY) minY = point.y
+                    if (point.x > maxX) maxX = point.x
+                    if (point.y > maxY) maxY = point.y
                 }
                 inkBuilder.addStroke(strokeBuilder.build())
             }
-        }
-        Log.d(TAG, "Finished building ink with ${inkBuilder.build().strokes.size} strokes")
-        // Build out ink
-        val ink = inkBuilder.build()
-        Log.d(TAG, "Built ink with ${ink.strokes.size} strokes")
-        if (ink.strokes.isEmpty()) return
 
-        val resultString = recognizer?.recognize(ink)?.await()?.candidates?.getOrNull(0)?.text ?: "No text recognized"
-        Log.d(TAG, "Basic recognition result: $resultString")
+            val ink = inkBuilder.build()
+            if (ink.strokes.isEmpty()) continue
+
+            val candidates = recognizer?.recognize(ink)?.await()?.candidates
+            val topCandidate = candidates?.getOrNull(0)
+            val text = topCandidate?.text ?: continue
+            val score = topCandidate.score?.toFloat() ?: 0f
+
+            Log.d(TAG, "Recognition result for note $noteId: $text (score: $score)")
+
+            results.add(
+                RecognitionResult(
+                    noteId = noteId,
+                    text = text,
+                    confidence = score,
+                    shapeIds = shapes.map { it.id },
+                    boundingBoxLeft = minX,
+                    boundingBoxTop = minY,
+                    boundingBoxRight = maxX,
+                    boundingBoxBottom = maxY
+                )
+            )
+        }
+
+        return results
     }
 
 }

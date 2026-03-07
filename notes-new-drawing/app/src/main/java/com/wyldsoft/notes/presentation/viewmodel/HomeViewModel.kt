@@ -8,13 +8,22 @@ import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.repository.FolderRepository
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
+import com.wyldsoft.notes.data.repository.RecognizedSegmentRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
+data class SearchResult(
+    val noteId: String,
+    val noteTitle: String,
+    val notebookId: String?,
+    val matchedText: String
+)
 
 class HomeViewModel(
     private val noteRepository: NoteRepository,
     private val notebookRepository: NotebookRepository,
     private val folderRepository: FolderRepository,
+    private val recognizedSegmentRepository: RecognizedSegmentRepository? = null,
 ) : ViewModel() {
     private val _currentFolderId = MutableStateFlow<String?>(null)
     val currentFolderId: StateFlow<String?> = _currentFolderId.asStateFlow()
@@ -112,5 +121,48 @@ class HomeViewModel(
         viewModelScope.launch {
             notebookRepository.renameNotebook(notebookId, newName)
         }
+    }
+
+    private val _searchResults = MutableStateFlow<List<SearchResult>>(emptyList())
+    val searchResults: StateFlow<List<SearchResult>> = _searchResults.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    fun search(query: String) {
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            _isSearching.value = true
+            val repo = recognizedSegmentRepository
+            if (repo == null) {
+                _isSearching.value = false
+                return@launch
+            }
+            val segments = repo.searchText(query)
+            val results = segments.mapNotNull { segment ->
+                try {
+                    val note = noteRepository.getNote(segment.noteId)
+                    val notebookId = noteRepository.getParentNotebookId(segment.noteId)
+                    SearchResult(
+                        noteId = segment.noteId,
+                        noteTitle = note.title,
+                        notebookId = notebookId,
+                        matchedText = segment.recognizedText
+                    )
+                } catch (e: Exception) {
+                    Log.w("HomeViewModel", "Note ${segment.noteId} not found for search result", e)
+                    null
+                }
+            }.distinctBy { it.noteId }
+            _searchResults.value = results
+            _isSearching.value = false
+        }
+    }
+
+    fun clearSearch() {
+        _searchResults.value = emptyList()
     }
 }

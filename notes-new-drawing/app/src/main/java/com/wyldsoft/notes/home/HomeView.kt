@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import kotlinx.coroutines.launch
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
+import com.wyldsoft.notes.presentation.viewmodel.SearchResult
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
@@ -58,6 +60,9 @@ fun HomeView(
     var showAppSettingsDialog by remember { mutableStateOf(false) }
     var showGoogleDriveDialog by remember { mutableStateOf(false) }
     var selectedNotebook by remember { mutableStateOf<NotebookEntity?>(null) }
+    var showSearchDialog by remember { mutableStateOf(false) }
+    val searchResults by viewModel.searchResults.collectAsState()
+    val isSearching by viewModel.isSearching.collectAsState()
 
 
 
@@ -101,6 +106,14 @@ fun HomeView(
                 )
             }
             
+            // Search icon
+            IconButton(onClick = { showSearchDialog = true }) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search Notes"
+                )
+            }
+
             // Settings icon
             IconButton(onClick = { showAppSettingsDialog = true }) {
                 Icon(
@@ -195,6 +208,27 @@ fun HomeView(
             },
             onDismiss = {
                 selectedNotebook = null
+            }
+        )
+    }
+
+    // Search dialog
+    if (showSearchDialog) {
+        SearchDialog(
+            searchResults = searchResults,
+            isSearching = isSearching,
+            onSearch = { query -> viewModel.search(query) },
+            onResultClick = { result ->
+                showSearchDialog = false
+                viewModel.clearSearch()
+                val notebookId = result.notebookId
+                if (notebookId != null) {
+                    onNotebookSelected(notebookId, result.noteId)
+                }
+            },
+            onDismiss = {
+                showSearchDialog = false
+                viewModel.clearSearch()
             }
         )
     }
@@ -372,6 +406,99 @@ fun ItemCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun SearchDialog(
+    searchResults: List<SearchResult>,
+    isSearching: Boolean,
+    onSearch: (String) -> Unit,
+    onResultClick: (SearchResult) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Search Notes") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        onSearch(it)
+                    },
+                    label = { Text("Search handwritten text") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (isSearching) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else if (query.isNotBlank() && searchResults.isEmpty()) {
+                    Text(
+                        text = "No results found",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        searchResults.forEach { result ->
+                            SearchResultItem(
+                                result = result,
+                                onClick = { onResultClick(result) }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+@Composable
+fun SearchResultItem(
+    result: SearchResult,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(12.dp)
+    ) {
+        Text(
+            text = result.noteTitle,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = result.matchedText,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

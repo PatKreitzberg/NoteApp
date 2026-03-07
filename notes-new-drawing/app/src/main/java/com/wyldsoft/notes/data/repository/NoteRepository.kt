@@ -27,6 +27,7 @@ interface NoteRepository {
     suspend fun updatePaginationSettings(noteId: String, isPaginationEnabled: Boolean, paperSize: String)
     suspend fun updatePaperTemplate(noteId: String, paperTemplate: String)
     suspend fun updateShape(noteId: String, shape: Shape)
+    suspend fun getParentNotebookId(noteId: String): String?
 }
 
 class NoteRepositoryImpl(
@@ -189,6 +190,14 @@ class NoteRepositoryImpl(
             pointTimestamps = pointTimestamps,
             timestamp = timestamp
         )
+    }
+
+    override suspend fun getParentNotebookId(noteId: String): String? {
+        return try {
+            noteDao.getNote(noteId).parentNotebookId
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun Shape.toEntity(noteId: String): ShapeEntity {
