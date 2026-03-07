@@ -49,6 +49,7 @@ abstract class AbstractStylusHandler(
 
     protected var isDrawingInProgress = false
     protected var isErasingInProgress = false
+    private var lastEraseDidPartialRefresh = false
     protected var isGeometryDrawingInProgress = false
     protected var geometryStartNoteX = 0f
     protected var geometryStartNoteY = 0f
@@ -232,13 +233,16 @@ abstract class AbstractStylusHandler(
     }
 
     protected fun finalizeErase(noteErasePointList: TouchPointList) {
-        eraseManager.handleErasing(noteErasePointList, shapesManager)
+        lastEraseDidPartialRefresh = eraseManager.handleErasing(noteErasePointList, shapesManager)
     }
 
     protected fun endErasing() {
         isErasingInProgress = false
         viewModel.endErasing()
-        onForceScreenRefresh()
+        if (!lastEraseDidPartialRefresh) {
+            onForceScreenRefresh()
+        }
+        lastEraseDidPartialRefresh = false
     }
 
     // --- Shared selection move/update dispatch ---

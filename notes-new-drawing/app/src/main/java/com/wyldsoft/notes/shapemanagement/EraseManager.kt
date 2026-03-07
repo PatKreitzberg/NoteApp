@@ -32,7 +32,12 @@ class EraseManager(
         private const val TAG = "EraseManager"
     }
 
-    internal fun handleErasing(noteErasePointList: TouchPointList, shapesManager: ShapesManager) {
+    /**
+     * Handles erasing shapes at the given touch points.
+     * Returns true if a partial screen refresh was performed (Onyx only), false otherwise.
+     * Callers should skip a full forceScreenRefresh() when this returns true.
+     */
+    internal fun handleErasing(noteErasePointList: TouchPointList, shapesManager: ShapesManager): Boolean {
         // Find shapes that intersect with the erase touch points
         val intersectingShapes = findIntersectingShapes(
             noteErasePointList,
@@ -62,11 +67,15 @@ class EraseManager(
                         rxManager
                     )
                 }
+                // Also update the main bitmap so it matches the partial-refreshed surface
+                bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+                return true
             }
 
-            // Also update the main bitmap by recreating it from remaining shapes
+            // Non-Onyx path: update bitmap only; caller does the screen render
             bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
         }
+        return false
     }
 
 
