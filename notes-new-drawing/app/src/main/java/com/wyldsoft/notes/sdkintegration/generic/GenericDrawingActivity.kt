@@ -40,6 +40,7 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
             editorViewModel,
             bitmapManager,
             shapesManager,
+            displaySettingsRepository,
             onDrawingStateChanged = { isDrawing ->
                 // No finger touch enable/disable needed on generic devices
             },

@@ -12,6 +12,7 @@ import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.sdkintegration.AbstractStylusHandler
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
 
 /**
  * Onyx-specific stylus handler. Receives input via Onyx SDK's RawInputCallback
@@ -24,13 +25,14 @@ class OnyxStylusHandler(
     rxManager: RxManager,
     bitmapManager: BitmapManager,
     shapesManager: ShapesManager,
+    displaySettingsRepository: DisplaySettingsRepository,
     onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
     onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
     onShapeRemoved: (shapeId: String) -> Unit,
     private val onSetRawDrawingRenderEnabled: (Boolean) -> Unit,
     onForceScreenRefresh: () -> Unit
 ) : AbstractStylusHandler(
-    surfaceView, viewModel, bitmapManager, shapesManager,
+    surfaceView, viewModel, bitmapManager, shapesManager, displaySettingsRepository,
     onDrawingStateChanged, onShapeCompleted, onShapeRemoved,
     onForceScreenRefresh, rxManager
 ) {

@@ -7,6 +7,7 @@ import com.onyx.android.sdk.utils.ResManager
 import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.data.repository.*
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.htr.HTRManager
 import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
@@ -44,6 +45,10 @@ class ScrotesApp : Application() {
 
     val gestureSettingsRepository: GestureSettingsRepository by lazy {
         GestureSettingsRepository(this)
+    }
+
+    val displaySettingsRepository: DisplaySettingsRepository by lazy {
+        DisplaySettingsRepository(this)
     }
 
     val recognizedSegmentRepository: RecognizedSegmentRepository by lazy {

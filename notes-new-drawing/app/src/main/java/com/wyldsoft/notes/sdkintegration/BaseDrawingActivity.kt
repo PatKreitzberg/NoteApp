@@ -29,6 +29,7 @@ import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.gestures.GestureHandler
 import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.sync.SyncWorker
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +51,11 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
     protected lateinit var shapesManager: ShapesManager
     protected lateinit var gestureHandler: GestureHandler
+    protected lateinit var displaySettingsRepository: DisplaySettingsRepository
+
+    // Viewport refresh throttling
+    private var lastViewportRefreshTime = 0L
+    private var isScrollingOrZooming = false
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun initializeShapeMaanager()
@@ -65,6 +71,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         super.onCreate(savedInstanceState)
 
         val app = application as com.wyldsoft.notes.ScrotesApp
+        displaySettingsRepository = app.displaySettingsRepository
         val noteRepository = app.noteRepository
         val notebookRepository = app.notebookRepository
         val noteId = intent.getStringExtra("noteId") ?: return
@@ -307,6 +314,23 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     updatePaginationExclusionZones()
                 }
 
+                val smoothMotion = displaySettingsRepository.smoothMotion.value
+
+                // When smooth motion is off, skip refreshes during active scrolling/zooming
+                if (!smoothMotion && isScrollingOrZooming) {
+                    Log.d("DebugAug12", "OBSERVER Viewport changed but smooth motion off - skipping refresh")
+                    return@collect
+                }
+
+                // Throttle refresh rate
+                val now = System.currentTimeMillis()
+                val minInterval = displaySettingsRepository.minRefreshIntervalMs
+                if (now - lastViewportRefreshTime < minInterval) {
+                    Log.d("DebugAug12", "OBSERVER Viewport changed but throttled - skipping refresh")
+                    return@collect
+                }
+                lastViewportRefreshTime = now
+
                 Log.d("DebugAug12", "OBSERVER Viewport changed calling onViewportChanged()")
                 // Trigger redraw of shapes when viewport changes
                 onViewportChanged()
@@ -349,6 +373,14 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
         val app = application as com.wyldsoft.notes.ScrotesApp
         gestureHandler.gestureMappings = app.gestureSettingsRepository.mappings.value
+
+        gestureHandler.onScrollingStateChanged = { isScrolling ->
+            isScrollingOrZooming = isScrolling
+            if (!isScrolling) {
+                // Scrolling/zooming ended — always do a final refresh
+                onViewportChanged()
+            }
+        }
 
         gestureHandler.onGestureAction = { action ->
             when (action) {

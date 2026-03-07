@@ -17,6 +17,7 @@ import com.wyldsoft.notes.shapemanagement.DrawManager
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.shapemanagement.TransformMode
 
 /**
@@ -30,6 +31,7 @@ abstract class AbstractStylusHandler(
     protected val viewModel: EditorViewModel,
     protected val bitmapManager: BitmapManager,
     protected val shapesManager: ShapesManager,
+    protected val displaySettingsRepository: DisplaySettingsRepository,
     protected val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
     protected val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
     protected val onShapeRemoved: (shapeId: String) -> Unit,
@@ -54,6 +56,7 @@ abstract class AbstractStylusHandler(
 
     protected var refreshCount: Int = 0
     protected val REFRESH_COUNT_LIMIT: Int = 100
+    private var lastGeometryPreviewTime = 0L
 
     fun isErasing(): Boolean = isErasingInProgress
 
@@ -148,6 +151,16 @@ abstract class AbstractStylusHandler(
 
     protected fun updateGeometryPreview(touchPoint: TouchPoint) {
         if (!isGeometryDrawingInProgress) return
+
+        // Skip live preview when smooth motion is off
+        if (!displaySettingsRepository.smoothMotion.value) return
+
+        // Throttle preview refresh rate
+        val now = System.currentTimeMillis()
+        val minInterval = displaySettingsRepository.minRefreshIntervalMs
+        if (now - lastGeometryPreviewTime < minInterval) return
+        lastGeometryPreviewTime = now
+
         val noteEnd = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
         val shapeType = viewModel.uiState.value.selectedGeometricShape
         val notePoints = GeometryShapeCalculator.calculate(

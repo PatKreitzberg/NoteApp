@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
                             HomeView(
                                 viewModel,
                                 gestureSettingsRepository = app.gestureSettingsRepository,
+                                displaySettingsRepository = app.displaySettingsRepository,
                                 signInLauncher = signInLauncher,
                                 signInError = signInError,
                                 syncViewModel = app.syncViewModel,

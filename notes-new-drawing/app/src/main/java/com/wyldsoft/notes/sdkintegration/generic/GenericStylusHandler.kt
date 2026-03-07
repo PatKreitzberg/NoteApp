@@ -12,6 +12,7 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.TransformMode
 import com.wyldsoft.notes.sdkintegration.AbstractStylusHandler
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
 
 /**
  * Stylus handler for non-Onyx devices using standard Android MotionEvent.
@@ -23,12 +24,13 @@ class GenericStylusHandler(
     viewModel: EditorViewModel,
     bitmapManager: BitmapManager,
     shapesManager: ShapesManager,
+    displaySettingsRepository: DisplaySettingsRepository,
     onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
     onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
     onShapeRemoved: (shapeId: String) -> Unit,
     onForceScreenRefresh: () -> Unit
 ) : AbstractStylusHandler(
-    surfaceView, viewModel, bitmapManager, shapesManager,
+    surfaceView, viewModel, bitmapManager, shapesManager, displaySettingsRepository,
     onDrawingStateChanged, onShapeCompleted, onShapeRemoved,
     onForceScreenRefresh
 ) {

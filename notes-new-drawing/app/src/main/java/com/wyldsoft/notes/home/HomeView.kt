@@ -27,6 +27,7 @@ import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.GoogleDriveDialog
 import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
@@ -42,6 +43,7 @@ import androidx.compose.foundation.combinedClickable
 fun HomeView(
     viewModel: HomeViewModel,
     gestureSettingsRepository: GestureSettingsRepository,
+    displaySettingsRepository: DisplaySettingsRepository,
     signInLauncher: ActivityResultLauncher<Intent>,
     signInError: State<String?>,
     syncViewModel: SyncViewModel,
@@ -164,6 +166,7 @@ fun HomeView(
     if (showAppSettingsDialog) {
         AppSettingsDialog(
             gestureSettingsRepository = gestureSettingsRepository,
+            displaySettingsRepository = displaySettingsRepository,
             onDismiss = { showAppSettingsDialog = false },
             onOpenGoogleDrive = {
                 showAppSettingsDialog = false

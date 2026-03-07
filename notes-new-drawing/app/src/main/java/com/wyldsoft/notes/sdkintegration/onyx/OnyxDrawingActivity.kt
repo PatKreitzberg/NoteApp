@@ -47,6 +47,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             getRxManager(),
             bitmapManager,
             shapesManager,
+            displaySettingsRepository,
             onDrawingStateChanged = { isDrawing ->
                 if (isDrawing) {
                     disableFingerTouch()

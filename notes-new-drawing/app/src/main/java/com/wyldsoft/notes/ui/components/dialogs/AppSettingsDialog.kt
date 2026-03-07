@@ -12,19 +12,29 @@ import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.gestures.GestureMapping
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.gestures.GestureType
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSettingsDialog(
     gestureSettingsRepository: GestureSettingsRepository,
+    displaySettingsRepository: DisplaySettingsRepository,
     onDismiss: () -> Unit,
     onOpenGoogleDrive: () -> Unit = {}
 ) {
     val savedMappings by gestureSettingsRepository.mappings.collectAsState()
     var mappings by remember { mutableStateOf(savedMappings) }
 
+    val currentRefreshRate by displaySettingsRepository.maxRefreshRate.collectAsState()
+    val currentSmoothMotion by displaySettingsRepository.smoothMotion.collectAsState()
+    var refreshRate by remember { mutableStateOf(currentRefreshRate.toFloat()) }
+    var smoothMotion by remember { mutableStateOf(currentSmoothMotion) }
+
     val saveAndDismiss = {
         gestureSettingsRepository.saveMappings(mappings)
+        displaySettingsRepository.setMaxRefreshRate(refreshRate.roundToInt())
+        displaySettingsRepository.setSmoothMotion(smoothMotion)
         onDismiss()
     }
 
@@ -33,6 +43,37 @@ fun AppSettingsDialog(
         onDismiss = saveAndDismiss,
         scrollable = true
     ) {
+        Text(
+            text = "Display",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Smooth motion", style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = smoothMotion,
+                onCheckedChange = { smoothMotion = it }
+            )
+        }
+
+        Text(
+            text = "Max refresh rate: ${refreshRate.roundToInt()} Hz",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Slider(
+            value = refreshRate,
+            onValueChange = { refreshRate = it },
+            valueRange = 1f..15f,
+            steps = 13,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Divider()
+
         Text(
             text = "Gestures",
             style = MaterialTheme.typography.titleMedium

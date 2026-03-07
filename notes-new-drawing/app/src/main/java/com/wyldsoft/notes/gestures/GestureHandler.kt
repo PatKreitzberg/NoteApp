@@ -78,6 +78,7 @@ class GestureHandler(
     // Gesture mappings and action callback
     var gestureMappings: List<GestureMapping> = GestureSettingsRepository.DEFAULT_MAPPINGS
     var onGestureAction: ((GestureAction) -> Unit)? = null
+    var onScrollingStateChanged: ((isScrolling: Boolean) -> Unit)? = null
     
     init {
         // Scale gesture detector for pinch/expand
@@ -104,6 +105,7 @@ class GestureHandler(
                 if (abs(currentScale - 1f) > MEANINGFUL_SCALE_THRESHOLD && pinchAction == GestureAction.ZOOM) {
                     if (!hasScaledMeaningfully) {
                         hasScaledMeaningfully = true
+                        onScrollingStateChanged?.invoke(true)
                         // Cancel pending taps only once we know it's a real pinch
                         tapRunnable?.let {
                             tapHandler.removeCallbacks(it)
@@ -219,6 +221,7 @@ class GestureHandler(
         if (distance > 10 && !isPanning) { // Threshold to start panning
             isPanning = true
             Log.d(TAG, "Pan/Scroll gesture started")
+            onScrollingStateChanged?.invoke(true)
 
             // Cancel any pending tap detection since we're now panning
             tapRunnable?.let {
@@ -342,8 +345,14 @@ class GestureHandler(
         // Log end of pan if it was happening
         if (isPanning) {
             Log.d(TAG, "Pan/Scroll gesture ended - Total distance: ${sqrt(totalPanX * totalPanX + totalPanY * totalPanY)}")
+            onScrollingStateChanged?.invoke(false)
         }
-        
+
+        // Notify if pinch ended
+        if (hasScaledMeaningfully) {
+            onScrollingStateChanged?.invoke(false)
+        }
+
         resetStates()
     }
     
