@@ -103,6 +103,14 @@ fun Toolbar(
 
     fun handleProfileClick(profileIndex: Int) {
         val currentTool = viewModel.uiState.value.selectedTool
+        // If shapes are selected, apply the pen profile to them
+        if (currentTool == Tool.SELECTOR && viewModel.selectionManager.hasSelection) {
+            val profile = profiles[profileIndex]
+            viewModel.applyPenProfileToSelection(profile)
+            selectedProfileIndex = profileIndex
+            viewModel.updatePenProfile(profile)
+            return
+        }
         // If in selection or geometry mode, switch back to pen
         if (currentTool == Tool.SELECTOR) {
             viewModel.cancelSelection()

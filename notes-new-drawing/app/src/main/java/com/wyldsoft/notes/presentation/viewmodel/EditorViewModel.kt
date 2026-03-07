@@ -120,6 +120,16 @@ class EditorViewModel(
         this.shapesManager = shapesManager
         this.bitmapManager = bitmapManager
         this.onScreenRefreshNeeded = onScreenRefreshNeeded
+        updateContentBounds()
+    }
+
+    /**
+     * Updates the ViewportManager's contentMaxY from the current shapes.
+     * Call after shapes are added, removed, moved, or loaded.
+     */
+    fun updateContentBounds() {
+        val sm = shapesManager ?: return
+        viewportManager.contentMaxY = sm.getContentMaxY()
     }
 
     init {
@@ -186,6 +196,7 @@ class EditorViewModel(
             // Submit shape for HTR recognition
             htrRunManager?.addShapesForRecognition(currentNote.value.id, listOf(shape))
 
+            updateContentBounds()
         }
     }
 
@@ -209,6 +220,7 @@ class EditorViewModel(
 
     fun endErasing() {
         isErasingInProgress = false
+        updateContentBounds()
         if (pendingErasedShapes.isNotEmpty()) {
             val sm = shapesManager
             val bm = bitmapManager
@@ -232,6 +244,7 @@ class EditorViewModel(
     fun undo() {
         viewModelScope.launch {
             actionManager.undo()
+            updateContentBounds()
             onScreenRefreshNeeded?.invoke()
         }
     }
@@ -239,6 +252,7 @@ class EditorViewModel(
     fun redo() {
         viewModelScope.launch {
             actionManager.redo()
+            updateContentBounds()
             onScreenRefreshNeeded?.invoke()
         }
     }
@@ -263,12 +277,56 @@ class EditorViewModel(
                 val action = DrawAction(currentNote.value.id, shape, noteRepository, sm, bm)
                 actionManager.recordAction(action)
             }
+            updateContentBounds()
         }
     }
 
     fun cancelSelection() {
         selectionManager.clearSelection()
         _uiState.value = _uiState.value.copy(selectedTool = Tool.PEN)
+    }
+
+    /**
+     * Apply a pen profile's properties (color, width, penType) to all selected shapes.
+     * Updates both in-memory SDK shapes and persisted domain shapes.
+     */
+    fun applyPenProfileToSelection(profile: PenProfile) {
+        val sm = shapesManager ?: return
+        val bm = bitmapManager ?: return
+        val selectedIds = selectionManager.selectedShapeIds
+        if (selectedIds.isEmpty()) return
+
+        val colorInt = profile.getColorAsInt()
+        val shapeType = ShapesManager.penTypeToShapeType(profile.penType)
+
+        // Update in-memory SDK shapes
+        for (shape in sm.shapes()) {
+            if (shape.id in selectedIds) {
+                shape.setStrokeColor(colorInt)
+                    .setStrokeWidth(profile.strokeWidth)
+                    .setShapeType(shapeType)
+                ShapesManager.applyCharcoalTexture(shape, profile.penType)
+            }
+        }
+
+        // Re-render bitmap
+        bm.recreateBitmapFromShapes(sm.shapes())
+        onScreenRefreshNeeded?.invoke()
+
+        // Update domain shapes in database
+        viewModelScope.launch {
+            val note = currentNote.value
+            for (shape in note.shapes) {
+                if (shape.id in selectedIds) {
+                    val updated = shape.copy(
+                        strokeColor = colorInt,
+                        strokeWidth = profile.strokeWidth,
+                        penType = profile.penType
+                    )
+                    noteRepository.updateShape(note.id, updated)
+                }
+            }
+        }
     }
 
     /**
@@ -300,6 +358,7 @@ class EditorViewModel(
                     noteRepository.updateShape(note.id, movedShape)
                 }
             }
+            updateContentBounds()
         }
     }
 
@@ -471,6 +530,7 @@ class EditorViewModel(
     private fun calculatePageDimensions() {
         if (_screenWidth.value > 0) {
             _pageHeight.value = _screenWidth.value * _paperSize.value.aspectRatio
+            viewportManager.pageHeight = _pageHeight.value
         }
     }
 

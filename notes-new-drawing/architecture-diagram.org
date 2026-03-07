@@ -51,6 +51,7 @@
   ├── removeAll()
   ├── convertDomainShapeToSdkShape()   ← bridges Domain Shape ↔ SDK BaseShape
   ├── penTypeToShapeType()
+  ├── getContentMaxY()                 ← max Y across all shapes (for scroll limits)
   └── uses: EditorViewModel
 
   ShapeFactory
@@ -194,15 +195,20 @@
   │   ├── reset()
   │   └── setState()
   │
+  ├── Scroll Limits:
+  │   ├── contentMaxY: Float            ← updated by EditorViewModel
+  │   ├── Pagination ON: scroll to first empty page after content
+  │   └── Pagination OFF: scroll until screen is fully empty
+  │
   ├── Pagination:
-  │   ├── setPaginationMode()          ← locks zoom to 1.0, no horiz scroll
+  │   ├── isPaginationEnabled, pageWidth, pageHeight
   │   └── getScrollPosition()
   │
   ├── State:
   │   └── ViewportState (data class)
   │       ├── scale: Float
-  │       ├── offsetX: Float
-  │       └── offsetY: Float
+  │       ├── scrollX: Float
+  │       └── scrollY: Float
   │
   └── Query:
       ├── getZoomPercentage()
@@ -362,7 +368,9 @@
   │
   ├── Tool (enum): PEN | ERASER | SELECTOR | GEOMETRY
   ├── selectGeometricShape()
-  └── addGeometricShape(Shape)
+  ├── addGeometricShape(Shape)
+  ├── updateContentBounds()              ← syncs contentMaxY to ViewportManager
+  ├── applyPenProfileToSelection()       ← changes selected strokes' pen properties
   │
   └── uses: NoteRepository, NotebookRepository, ViewportManager
 

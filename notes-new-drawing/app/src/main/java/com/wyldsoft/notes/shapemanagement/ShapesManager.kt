@@ -105,4 +105,20 @@ class ShapesManager(
     fun findShapeById(id: String): BaseShape? {
         return shapes.find { it.id == id }
     }
+
+    /**
+     * Returns the maximum Y coordinate across all shapes (bottom of lowest shape).
+     * Returns 0f if there are no shapes.
+     */
+    fun getContentMaxY(): Float {
+        var maxY = 0f
+        for (shape in shapes) {
+            shape.updateShapeRect()
+            val rect = shape.boundingRect ?: continue
+            if (rect.bottom > maxY) {
+                maxY = rect.bottom
+            }
+        }
+        return maxY
+    }
 }

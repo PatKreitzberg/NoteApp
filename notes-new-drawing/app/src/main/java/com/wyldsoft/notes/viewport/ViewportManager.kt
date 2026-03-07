@@ -46,6 +46,10 @@ class ViewportManager {
     // Pagination state (updated from EditorViewModel)
     var isPaginationEnabled: Boolean = false
     var pageWidth: Float = 0f
+    var pageHeight: Float = 0f
+
+    // Content bounds: the maximum Y coordinate across all shapes (updated externally)
+    var contentMaxY: Float = 0f
 
     /**
      * Constrains scrollX based on pagination mode and scale.
@@ -66,10 +70,32 @@ class ViewportManager {
     }
 
     /**
-     * Constrains scrollY so the top of the note cannot scroll above the screen top.
+     * Constrains scrollY:
+     * - Minimum: 0 (can't scroll above top of note)
+     * - Maximum: depends on pagination mode and content bounds
+     *   - Pagination ON: can scroll to the first completely empty page after content
+     *   - Pagination OFF: can scroll until all content is above the viewport (screen is empty)
      */
     private fun constrainScrollY(scrollY: Float): Float {
-        return max(0f, scrollY)
+        val scale = _viewportState.value.scale
+        val maxScrollY = computeMaxScrollY(scale)
+        return scrollY.coerceIn(0f, maxScrollY)
+    }
+
+    private fun computeMaxScrollY(scale: Float): Float {
+        if (contentMaxY <= 0f) return Float.MAX_VALUE
+
+        if (isPaginationEnabled && pageHeight > 0f) {
+            // Find which page the lowest content is on
+            val contentPage = (contentMaxY / pageHeight).toInt()
+            // Allow scrolling to the top of the next page (first empty page)
+            val firstEmptyPageTop = (contentPage + 1) * pageHeight
+            return firstEmptyPageTop
+        } else {
+            // Non-paginated: allow scrolling until screen is completely empty
+            // (all content above viewport top)
+            return contentMaxY
+        }
     }
 
     /**
