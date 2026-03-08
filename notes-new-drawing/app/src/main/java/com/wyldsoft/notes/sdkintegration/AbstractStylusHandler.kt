@@ -45,6 +45,7 @@ abstract class AbstractStylusHandler(
 
     protected val selectionManager get() = viewModel.selectionManager
     protected var preTransformShapeSnapshots: List<Shape>? = null
+    protected var preTransformBoundingBox: RectF? = null
     protected var transformCenterX: Float = 0f
     protected var transformCenterY: Float = 0f
 
@@ -203,7 +204,7 @@ abstract class AbstractStylusHandler(
             ShapesManager.applyCharcoalTexture(baseShape, currentPenProfile.penType)
             baseShape.updateShapeRect()
 
-            // Add to in-memory manager so it appears on next full refresh
+            // Add to in-memory manager so it appears on next refresh
             shapesManager.addShape(baseShape)
 
             // Persist and record undo action using the matching ID
@@ -216,6 +217,16 @@ abstract class AbstractStylusHandler(
                 penType = currentPenProfile.penType
             )
             viewModel.addGeometricShape(domainShape)
+
+            // Impl 5: partial refresh — only redraw the new shape's bounding area
+            val noteBounds = baseShape.boundingRect
+            if (noteBounds != null) {
+                bitmapManager.partialRefresh(noteBounds, shapesManager.shapes(), null)
+            } else {
+                onForceScreenRefresh()
+            }
+        } else {
+            onForceScreenRefresh()
         }
 
         bitmapManager.endGeometryDrawing()
@@ -223,7 +234,6 @@ abstract class AbstractStylusHandler(
         isDrawingInProgress = false
         onDrawingStateChanged(false)
         viewModel.endDrawing()
-        onForceScreenRefresh()
     }
 
     // --- Shared erasing state transitions ---
@@ -312,6 +322,7 @@ abstract class AbstractStylusHandler(
             if (selectionManager.isOnRotationHandle(notePoint.x, notePoint.y)) {
                 onSelectionTransformStarted()
                 preTransformShapeSnapshots = snapshotSelectedShapes()
+                preTransformBoundingBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
                 recordTransformCenter()
                 selectionManager.beginRotate(notePoint)
             } else {
@@ -319,16 +330,20 @@ abstract class AbstractStylusHandler(
                 if (cornerIndex != null) {
                     onSelectionTransformStarted()
                     preTransformShapeSnapshots = snapshotSelectedShapes()
+                    preTransformBoundingBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
                     recordTransformCenter()
                     selectionManager.beginScale(cornerIndex, notePoint)
                 } else if (selectionManager.isInsideBoundingBox(notePoint.x, notePoint.y)) {
                     onSelectionTransformStarted()
                     preTransformShapeSnapshots = snapshotSelectedShapes()
+                    preTransformBoundingBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
                     selectionManager.beginDrag(notePoint)
                 } else {
+                    // Impl 4: capture bbox before clearing, then partial refresh to erase the overlay
+                    val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
                     selectionCancelledThisStroke = true
                     viewModel.cancelSelection()
-                    onForceScreenRefresh()
+                    doPartialSelectionRefresh(oldBBox, null, drawOverlay = false)
                 }
             }
         } else {
@@ -355,8 +370,11 @@ abstract class AbstractStylusHandler(
                         transformCenterX, transformCenterY
                     )
                 }
+                // Impl 3: partial refresh using pre/post bounding boxes
+                val preBBox = preTransformBoundingBox
                 preTransformShapeSnapshots = null
-                onForceScreenRefresh()
+                preTransformBoundingBox = null
+                doPartialSelectionRefresh(preBBox, selectionManager.selectionBoundingBox)
             }
             TransformMode.ROTATE -> {
                 val angleRad = selectionManager.finishRotate(notePointList, shapesManager.shapes())
@@ -372,8 +390,11 @@ abstract class AbstractStylusHandler(
                         transformCenterX, transformCenterY
                     )
                 }
+                // Impl 3: partial refresh using pre/post bounding boxes
+                val preBBox = preTransformBoundingBox
                 preTransformShapeSnapshots = null
-                onForceScreenRefresh()
+                preTransformBoundingBox = null
+                doPartialSelectionRefresh(preBBox, selectionManager.selectionBoundingBox)
             }
             TransformMode.MOVE, TransformMode.NONE -> {
                 if (selectionManager.isDragging) {
@@ -384,14 +405,18 @@ abstract class AbstractStylusHandler(
                         }
                         viewModel.persistMovedShapes(selectionManager.selectedShapeIds, delta.x, delta.y)
                     }
+                    // Impl 3: partial refresh using pre/post bounding boxes
+                    val preBBox = preTransformBoundingBox
                     preTransformShapeSnapshots = null
-                    onForceScreenRefresh()
+                    preTransformBoundingBox = null
+                    doPartialSelectionRefresh(preBBox, selectionManager.selectionBoundingBox)
                 } else if (selectionManager.isLassoInProgress) {
                     selectionManager.addLassoPoints(notePointList)
                     selectionManager.finishLasso(shapesManager.shapes())
                     if (selectionManager.hasSelection) {
                         onLassoSelectionCompleted()
                     }
+                    // Lasso path can span full screen; full refresh is correct here
                     onForceScreenRefresh()
                 }
             }
