@@ -10,12 +10,16 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.TransformMode
+import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.utils.surfacePointsToNoteTouchPoints
 
 /**
  * Handles lasso + drag/scale/rotate input for selection mode.
  * Extracted from AbstractStylusHandler to keep it under 300 lines.
  */
+private const val TAP_MAX_MOVEMENT_PX = 20f
+private const val TAP_HIT_RADIUS = 30f
+
 class SelectionInputHandler(
     private val viewModel: EditorViewModel,
     private val bitmapManager: BitmapManager,
@@ -124,11 +128,25 @@ class SelectionInputHandler(
                     val preBBox = preTransformBoundingBox.also { preTransformShapeSnapshots = null; preTransformBoundingBox = null }
                     doPartialRefresh(preBBox, selectionManager.selectionBoundingBox)
                 } else if (selectionManager.isLassoInProgress) {
-                    selectionManager.addLassoPoints(notePointList)
-                    selectionManager.finishLasso(shapesManager.shapes())
-                    viewModel.notifySelectionChanged()
-                    if (selectionManager.hasSelection) onLassoSelectionCompleted()
-                    onForceScreenRefresh()
+                    if (isTap(notePointList)) {
+                        selectionManager.clearSelection()
+                        val first = notePointList.get(0)
+                        val hit = findShapeAtPoint(first.x, first.y)
+                        if (hit != null) {
+                            hit.updateShapeRect()
+                            val bbox = hit.boundingRect ?: RectF(first.x, first.y, first.x, first.y)
+                            selectionManager.setSelection(setOf(hit.id), bbox)
+                        }
+                        viewModel.notifySelectionChanged()
+                        if (selectionManager.hasSelection) onLassoSelectionCompleted()
+                        onForceScreenRefresh()
+                    } else {
+                        selectionManager.addLassoPoints(notePointList)
+                        selectionManager.finishLasso(shapesManager.shapes())
+                        viewModel.notifySelectionChanged()
+                        if (selectionManager.hasSelection) onLassoSelectionCompleted()
+                        onForceScreenRefresh()
+                    }
                 }
             }
         }
@@ -150,5 +168,24 @@ class SelectionInputHandler(
         preTransformBoundingBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
         val box = selectionManager.selectionBoundingBox
         if (box != null) { transformCenterX = box.centerX(); transformCenterY = box.centerY() }
+    }
+
+    private fun isTap(notePointList: TouchPointList): Boolean {
+        if (notePointList.size() == 0) return false
+        val first = notePointList.get(0)
+        val threshold = TAP_MAX_MOVEMENT_PX * TAP_MAX_MOVEMENT_PX
+        for (i in 0 until notePointList.size()) {
+            val p = notePointList.get(i)
+            val dx = p.x - first.x
+            val dy = p.y - first.y
+            if (dx * dx + dy * dy > threshold) return false
+        }
+        return true
+    }
+
+    private fun findShapeAtPoint(noteX: Float, noteY: Float): BaseShape? {
+        val tpl = TouchPointList()
+        tpl.add(TouchPoint(noteX, noteY, 1f, 1f, System.currentTimeMillis()))
+        return shapesManager.shapes().asReversed().firstOrNull { it.hitTestPoints(tpl, TAP_HIT_RADIUS) }
     }
 }
