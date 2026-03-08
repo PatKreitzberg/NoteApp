@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.ui.components
 
+import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -28,8 +29,8 @@ fun ToolbarEditButtons(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val copiedShapes by viewModel.copiedShapes.collectAsState()
+    val hasSelection by viewModel.hasSelection.collectAsState()
     val isSelectionActive = uiState.selectedTool == Tool.SELECTOR
-    val hasSelection = viewModel.selectionManager.hasSelection
     val hasCopied = copiedShapes.isNotEmpty()
 
     IconButton(
@@ -51,7 +52,10 @@ fun ToolbarEditButtons(
     }
 
     IconButton(
-        onClick = { viewModel.copySelection() },
+        onClick = {
+            Log.d("ToolbarEditButtons", "Copy button clicked. Has selection: $hasSelection")
+            viewModel.copySelection()
+                  },
         enabled = hasSelection
     ) {
         Icon(

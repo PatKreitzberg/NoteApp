@@ -126,6 +126,7 @@ class SelectionInputHandler(
                 } else if (selectionManager.isLassoInProgress) {
                     selectionManager.addLassoPoints(notePointList)
                     selectionManager.finishLasso(shapesManager.shapes())
+                    viewModel.notifySelectionChanged()
                     if (selectionManager.hasSelection) onLassoSelectionCompleted()
                     onForceScreenRefresh()
                 }

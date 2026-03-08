@@ -59,6 +59,7 @@ class ShapesManager(
         val shapeType = penTypeToShapeType(domainShape.penType)
 
         val shape = ShapeFactory.createShape(shapeType)
+        shape.setId(domainShape.id)
         shape.setTouchPointList(touchPointList)
             .setStrokeColor(domainShape.strokeColor)
             .setStrokeWidth(domainShape.strokeWidth)

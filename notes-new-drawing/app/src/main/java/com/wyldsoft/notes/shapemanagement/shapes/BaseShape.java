@@ -95,6 +95,10 @@ public class BaseShape {
         return this.id;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public int getStrokeColor() {
         return strokeColor;
     }
@@ -112,7 +116,6 @@ public class BaseShape {
                 continue;
             }
             if (originRect == null) {
-                Log.d("BaseShape", "Creating originRect for touchPoint: " + touchPoint);
                 originRect = new RectF(touchPoint.x, touchPoint.y, touchPoint.x, touchPoint.y);
             } else {
                 originRect.union(touchPoint.x, touchPoint.y);

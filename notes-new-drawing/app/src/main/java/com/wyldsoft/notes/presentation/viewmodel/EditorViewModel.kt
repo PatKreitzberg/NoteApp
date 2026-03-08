@@ -74,6 +74,13 @@ class EditorViewModel(
     private val _copiedShapes = MutableStateFlow<List<Shape>>(emptyList())
     val copiedShapes: StateFlow<List<Shape>> = _copiedShapes.asStateFlow()
 
+    private val _hasSelection = MutableStateFlow(false)
+    val hasSelection: StateFlow<Boolean> = _hasSelection.asStateFlow()
+
+    fun notifySelectionChanged() {
+        _hasSelection.value = selectionManager.hasSelection
+    }
+
     // Erase stroke grouping
     private val pendingErasedShapes = mutableListOf<Shape>()
     private var isErasingInProgress = false
@@ -246,6 +253,7 @@ class EditorViewModel(
 
     fun selectTool(tool: Tool) {
         if (tool != Tool.SELECTOR) selectionManager.clearSelection()
+        notifySelectionChanged()
         _uiState.value = _uiState.value.copy(selectedTool = tool)
     }
 
@@ -267,6 +275,7 @@ class EditorViewModel(
 
     fun cancelSelection() {
         selectionManager.clearSelection()
+        notifySelectionChanged()
         _uiState.value = _uiState.value.copy(selectedTool = Tool.PEN)
     }
 
@@ -316,6 +325,7 @@ class EditorViewModel(
 
             selectionManager.clearSelection()
             selectionManager.setSelection(newShapes.map { it.id }.toSet(), newBox)
+            notifySelectionChanged()
 
             bm.recreateBitmapFromShapes(sm.shapes())
             onScreenRefreshNeeded?.invoke()
