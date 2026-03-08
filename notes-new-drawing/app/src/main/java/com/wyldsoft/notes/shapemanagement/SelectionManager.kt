@@ -225,4 +225,9 @@ class SelectionManager {
     }
 
     fun getLassoPoints(): List<PointF> = lassoHandler.getPoints()
+
+    fun setSelection(ids: Set<String>, boundingBox: RectF) {
+        selectedShapeIds = ids
+        selectionBoundingBox = RectF(boundingBox)
+    }
 }

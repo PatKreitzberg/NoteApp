@@ -23,17 +23,20 @@ class SelectionRotateHandler {
 
     private var startAngle: Float = 0f
     private var lastAngle: Float = 0f
+    private var rotationCenterX: Float = 0f
+    private var rotationCenterY: Float = 0f
 
     fun begin(startPoint: PointF, boundingBox: RectF) {
-        val centerX = boundingBox.centerX()
-        val centerY = boundingBox.centerY()
-        startAngle = atan2(startPoint.y - centerY, startPoint.x - centerX)
+        rotationCenterX = boundingBox.centerX()
+        rotationCenterY = boundingBox.centerY()
+        startAngle = atan2(startPoint.y - rotationCenterY, startPoint.x - rotationCenterX)
         lastAngle = startAngle
         Log.d(TAG, "Rotate started")
     }
 
     /**
-     * Incrementally rotate shapes. Returns new bounding box, or null if no update needed.
+     * Incrementally rotate shapes around the fixed center captured at begin().
+     * Returns new bounding box, or null if no update needed.
      */
     fun update(
         currentPoint: PointF,
@@ -41,8 +44,8 @@ class SelectionRotateHandler {
         selectedIds: Set<String>,
         boundingBox: RectF
     ): RectF? {
-        val centerX = boundingBox.centerX()
-        val centerY = boundingBox.centerY()
+        val centerX = rotationCenterX
+        val centerY = rotationCenterY
         val currentAngle = atan2(currentPoint.y - centerY, currentPoint.x - centerX)
         val incrementalAngle = currentAngle - lastAngle
         if (abs(incrementalAngle) < 0.005f) return null
@@ -71,8 +74,8 @@ class SelectionRotateHandler {
         }
 
         val lastPt = endPointList.get(endPointList.size() - 1)
-        val centerX = boundingBox.centerX()
-        val centerY = boundingBox.centerY()
+        val centerX = rotationCenterX
+        val centerY = rotationCenterY
         val endAngle = atan2(lastPt.y - centerY, lastPt.x - centerX)
 
         val remainingAngle = endAngle - lastAngle
@@ -94,6 +97,8 @@ class SelectionRotateHandler {
     fun reset() {
         startAngle = 0f
         lastAngle = 0f
+        rotationCenterX = 0f
+        rotationCenterY = 0f
     }
 
     private fun rotateShapePoints(shape: BaseShape, angleRad: Float, centerX: Float, centerY: Float) {

@@ -4,7 +4,9 @@ import android.graphics.Rect
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.graphics.RectF
 import com.wyldsoft.notes.actions.ActionManager
+import com.wyldsoft.notes.actions.ActionUtils
 import com.wyldsoft.notes.actions.DrawAction
 import com.wyldsoft.notes.actions.EraseAction
 import com.wyldsoft.notes.actions.TransformType
@@ -68,6 +70,9 @@ class EditorViewModel(
     private var onScreenRefreshNeeded: (() -> Unit)? = null
 
     val selectionManager = SelectionManager()
+
+    private val _copiedShapes = MutableStateFlow<List<Shape>>(emptyList())
+    val copiedShapes: StateFlow<List<Shape>> = _copiedShapes.asStateFlow()
 
     // Erase stroke grouping
     private val pendingErasedShapes = mutableListOf<Shape>()
@@ -263,6 +268,60 @@ class EditorViewModel(
     fun cancelSelection() {
         selectionManager.clearSelection()
         _uiState.value = _uiState.value.copy(selectedTool = Tool.PEN)
+    }
+
+    fun copySelection() {
+        val selectedIds = selectionManager.selectedShapeIds
+        if (selectedIds.isEmpty()) return
+        _copiedShapes.value = currentNote.value.shapes.filter { it.id in selectedIds }
+    }
+
+    fun pasteSelection() {
+        val shapes = _copiedShapes.value
+        if (shapes.isEmpty()) return
+
+        viewModelScope.launch {
+            val sm = shapesManager ?: return@launch
+            val bm = bitmapManager ?: return@launch
+            val note = currentNote.value
+
+            val allPoints = shapes.flatMap { it.points }
+            if (allPoints.isEmpty()) return@launch
+
+            val copyBox = RectF()
+            allPoints.forEach { copyBox.union(it.x, it.y) }
+            val copyCenterX = copyBox.centerX()
+            val copyCenterY = copyBox.centerY()
+
+            val viewport = viewportManager.viewportState.value
+            val screenCenterNoteX = viewportManager.viewWidth / 2f / viewport.scale + viewport.scrollX
+            val screenCenterNoteY = viewportManager.viewHeight / 2f / viewport.scale + viewport.scrollY
+            val dx = screenCenterNoteX - copyCenterX
+            val dy = screenCenterNoteY - copyCenterY
+
+            val newShapes = shapes.map { shape ->
+                shape.copy(
+                    id = java.util.UUID.randomUUID().toString(),
+                    points = shape.points.map { pt -> android.graphics.PointF(pt.x + dx, pt.y + dy) }
+                )
+            }
+
+            for (newShape in newShapes) {
+                ActionUtils.addShapeToNoteAndMemory(note.id, newShape, noteRepository, sm)
+                actionManager.recordAction(DrawAction(note.id, newShape, noteRepository, sm, bm))
+            }
+
+            val newBox = RectF()
+            newShapes.flatMap { it.points }.forEach { newBox.union(it.x, it.y) }
+
+            selectionManager.clearSelection()
+            selectionManager.setSelection(newShapes.map { it.id }.toSet(), newBox)
+
+            bm.recreateBitmapFromShapes(sm.shapes())
+            onScreenRefreshNeeded?.invoke()
+            updateContentBounds()
+            _uiState.value = _uiState.value.copy(selectedTool = Tool.SELECTOR)
+        }
     }
 
     // --- Delegation to SelectionTransformHandler ---
