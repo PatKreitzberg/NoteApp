@@ -39,23 +39,20 @@ import kotlinx.coroutines.runBlocking
 abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterface {
     protected val TAG = "BaseDrawingActivity"
 
-    // Common drawing state
     protected var paint = Paint()
     protected var bitmap: Bitmap? = null
     protected var bitmapCanvas: Canvas? = null
     protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
 
-    // Need EditorView to be created in order for them to be initialized.
-    protected lateinit var surfaceView: SurfaceView // lateinite instead of ? = null if I am sure it will be initialized before use
-    protected lateinit var bitmapManager: BitmapManager // lateinite instead of ? = null if I am sure it will be initialized before use
-    protected lateinit var editorViewModel: EditorViewModel // lateinite instead of ? = null if I am sure it will be initialized before use
+    protected lateinit var surfaceView: SurfaceView
+    protected lateinit var bitmapManager: BitmapManager
+    protected lateinit var editorViewModel: EditorViewModel
     protected lateinit var shapesManager: ShapesManager
     protected lateinit var gestureHandler: GestureHandler
     protected lateinit var displaySettingsRepository: DisplaySettingsRepository
 
-    // Viewport refresh throttling
+    protected var isScrollingOrZooming = false
     private var lastViewportRefreshTime = 0L
-    private var isScrollingOrZooming = false
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun initializeShapeMaanager()
@@ -66,10 +63,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     abstract fun cleanSurfaceView(surfaceView: SurfaceView): Boolean
     abstract fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?)
 
-    // Template methods - common implementation for all SDKs
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val app = application as com.wyldsoft.notes.ScrotesApp
         displaySettingsRepository = app.displaySettingsRepository
         val noteRepository = app.noteRepository
@@ -77,62 +72,33 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         val noteId = intent.getStringExtra("noteId") ?: return
         val notebookId = intent.getStringExtra("notebookId")
 
-        // Must complete before creating UI so ShapesManager reads the correct note
-        runBlocking(Dispatchers.IO) {
-            noteRepository.setCurrentNote(noteId)
-        }
+        runBlocking(Dispatchers.IO) { noteRepository.setCurrentNote(noteId) }
 
-        // Create EditorViewModel with repositories
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId, notebookId: $notebookId")
         editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrRunManager, notebookId)
-
-        // Create the UI
         setEditorViewAsContent()
-        // setEditorViewAsContent will create a SurfaceView and then call handleSurfaceViewCreated
-        // which will initialize rest of items.
     }
 
     fun setEditorViewAsContent() {
-        Log.d(TAG, "ViewModel created")
         setContent {
             MinimaleditorTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    EditorView(
-                        editorViewModel,
-                        onSurfaceViewCreated = { sv, vm ->
-                            Log.d(TAG, "SurfaceView created in EditorView")
-                            handleSurfaceViewCreated(sv, vm)
-                        }
-                    )
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    EditorView(editorViewModel, onSurfaceViewCreated = { sv, vm ->
+                        Log.d(TAG, "SurfaceView created in EditorView")
+                        handleSurfaceViewCreated(sv, vm)
+                    })
                 }
             }
         }
     }
 
-    open fun createTouchHelper() { }
+    open fun createTouchHelper() {}
+    open fun initializeBitmapManager(surfaceView: SurfaceView, editorViewModel: EditorViewModel) {}
 
-    open fun initializeBitmapManager(surfaceView: SurfaceView, editorViewModel: EditorViewModel) { }
+    override fun onResume() { super.onResume(); onResumeDrawing() }
+    override fun onPause() { super.onPause(); onPauseDrawing(); SyncWorker.scheduleOneTime(this) }
+    override fun onDestroy() { super.onDestroy(); cleanupResources() }
 
-    override fun onResume() {
-        super.onResume()
-        onResumeDrawing()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        onPauseDrawing()
-        SyncWorker.scheduleOneTime(this)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        cleanupResources()
-    }
-
-    // Common functionality
     private fun initializePaint() {
         paint.isAntiAlias = true
         paint.style = Paint.Style.STROKE
@@ -142,115 +108,41 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     protected fun updatePaintFromProfile() {
         paint.color = currentPenProfile.getColorAsInt()
         paint.strokeWidth = currentPenProfile.strokeWidth
-        Log.d(TAG, "Updated paint: color=${currentPenProfile.strokeColor}, width=${currentPenProfile.strokeWidth}")
     }
 
     private fun handleSurfaceViewCreated(sv: SurfaceView, vm: EditorViewModel) {
         surfaceView = sv
         initializeBitmapManager(surfaceView, vm)
-        /* NEEDS
-        1. surfaceView
-        2. editorViewModel
-         */
-
         initializeGestureHandler()
-        /* NEEDS
-        1. surfaceView
-        2. editorViewModel
-         */
         setViewModel(vm)
-
-        // Create items used for drawing
         initializeShapeMaanager()
-        /* NEEDS
-        1. editorViewModel
-         */
-
         initializeStylusHandler()
-        /*  NEEDS
-        1. surfaceView
-        2. editorViewModel
-        3. bitmapManager
-        4. shapesManager
-         */
-
-        // Wire up drawing references for undo/redo actions
-        editorViewModel.setDrawingReferences(shapesManager, bitmapManager) {
-            forceScreenRefresh()
-        }
-
+        editorViewModel.setDrawingReferences(shapesManager, bitmapManager) { forceScreenRefresh() }
         initializePaint()
-
         initializeDeviceReceiver()
-        /* NEEDS
-        1. surfaceView
-        2. onyxTouchHelper
-        3. bitmap (can be null maybe?)
-        */
-
         initializeSurfaceCallback()
-        /* NEEDS
-        1. surfaceView
-        2. bitmap
-        3. bitmapCanvas
-         */
-
         createTouchHelper()
-        /* NEEDS
-        1. surfaceView
-        2. stylusHandler
-         */
-
-        // Set observers for:
-        // 1. When pen profile changes
-        // 2. Pagination is enabled or disabled
-        // 3. ViewportState changes
         setObservers()
-
-        // Initialize note navigation state
         editorViewModel.initNavigationState()
-
-        // Wire up note switch callback for re-initializing drawing surfaces
-        editorViewModel.onNoteSwitched = {
-            onNoteSwitched()
-        }
+        editorViewModel.onNoteSwitched = { onNoteSwitched() }
     }
 
-    /**
-     * Called when the user navigates to a different note within a notebook.
-     * Clears the bitmap and re-renders shapes from the new note.
-     */
     private fun onNoteSwitched() {
         lifecycleScope.launch(Dispatchers.Main) {
             Log.d(TAG, "Note switched — reinitializing drawing surfaces")
-            // Clear the bitmap
-            bitmap?.let { bm ->
-                bitmapCanvas?.drawColor(Color.WHITE)
-            }
-            // Reinitialize shapes manager to pick up new note's shapes
+            bitmapCanvas?.drawColor(Color.WHITE)
             initializeShapeMaanager()
-            // Re-wire drawing references for undo/redo
-            editorViewModel.setDrawingReferences(shapesManager, bitmapManager) {
-                forceScreenRefresh()
-            }
-            // Redraw from the new note's shapes
+            editorViewModel.setDrawingReferences(shapesManager, bitmapManager) { forceScreenRefresh() }
             recreateBitmapFromShapes()
             bitmap?.let { renderToScreen(surfaceView, it) }
         }
     }
 
     protected open fun initializeSurfaceCallback() {
-        Log.d("DebugAug12", "Initializing touch helper")
+        surfaceView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateActiveSurface() }
 
-        surfaceView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            updateActiveSurface()
-        }
-
-        val surfaceCallback = object : SurfaceHolder.Callback {
+        surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
-                // cleanSurfaceView is needed here (unlike forceScreenRefresh) because
-                // this is the first draw after the surface is created — no bitmap exists
-                // yet to render over the potentially-stale surface contents.
                 cleanSurfaceView(surfaceView)
                 createDrawingBitmap()
                 bitmap?.let { renderToScreen(surfaceView, it) }
@@ -259,7 +151,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
                 updateActiveSurface()
                 if (bitmap == null || bitmap!!.width != width || bitmap!!.height != height) {
-                    // Recreate bitmap if size changed
                     bitmap?.recycle()
                     bitmap = null
                     bitmapCanvas = null
@@ -269,141 +160,103 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                 bitmap?.let { renderToScreen(surfaceView, it) }
             }
 
-            override fun surfaceDestroyed(holder: SurfaceHolder) {
-                holder.removeCallback(this)
-            }
-        }
-        surfaceView.holder.addCallback(surfaceCallback)
+            override fun surfaceDestroyed(holder: SurfaceHolder) { holder.removeCallback(this) }
+        })
     }
 
     override fun setViewModel(viewModel: EditorViewModel) {
-        Log.d("DebugAug12", "Setting ViewModel in BaseDrawingActivity")
         this.editorViewModel = viewModel
-
-        // Set screen width for pagination calculations
-        val screenWidth = resources.displayMetrics.widthPixels
-        viewModel.setScreenWidth(screenWidth)
+        viewModel.setScreenWidth(resources.displayMetrics.widthPixels)
     }
 
     fun setObservers() {
-        // Observe pen profile changes
+        observePenProfile()
+        observePaginationState()
+        observeViewportChanges()
+        observeUndoRedoState()
+        observeUiState()
+        observeRefreshRequests()
+        Log.d("DebugAug12", "DONE Setting observers in BaseDrawingActivity")
+    }
+
+    private fun observePenProfile() {
         lifecycleScope.launch {
             editorViewModel.currentPenProfile.collect { profile ->
                 Log.d("DebugAug12", "OBSERVER: Pen profile changed: $profile")
                 updatePenProfile(profile)
             }
         }
-        
-        // Observe pagination state changes
+    }
+
+    private fun observePaginationState() {
         lifecycleScope.launch {
             editorViewModel.isPaginationEnabled.collect { enabled ->
-                // Update exclusion zones when pagination state changes
                 updatePaginationExclusionZones()
                 Log.d("DebugAug12", "OBSERVER: Pagination enabled: $enabled")
             }
         }
-        
-        // Observe viewport changes to update page separator positions and redraw shapes
+    }
+
+    private fun observeViewportChanges() {
         lifecycleScope.launch {
             editorViewModel.viewportState.collect { _ ->
-                Log.d("DebugAug12", "OBSERVER Viewport changed: ${editorViewModel.viewportState.value}")
-                if (editorViewModel.isPaginationEnabled.value) {
-                    // Update scroll position for page number calculation
-                    editorViewModel.updateCurrentPage(editorViewModel.viewportState.value.scrollY)
-                    // Update exclusion zones when viewport changes
+                val vm = editorViewModel
+                if (vm.isPaginationEnabled.value) {
+                    vm.updateCurrentPage(vm.viewportState.value.scrollY)
                     updatePaginationExclusionZones()
                 }
-
                 val smoothMotion = displaySettingsRepository.smoothMotion.value
-
-                // When smooth motion is off, skip refreshes during active scrolling/zooming
-                if (!smoothMotion && isScrollingOrZooming) {
-                    Log.d("DebugAug12", "OBSERVER Viewport changed but smooth motion off - skipping refresh")
-                    return@collect
-                }
-
-                // Throttle refresh rate
+                if (!smoothMotion && isScrollingOrZooming) return@collect
                 val now = System.currentTimeMillis()
-                val minInterval = displaySettingsRepository.minRefreshIntervalMs
-                if (now - lastViewportRefreshTime < minInterval) {
-                    Log.d("DebugAug12", "OBSERVER Viewport changed but throttled - skipping refresh")
-                    return@collect
-                }
+                if (now - lastViewportRefreshTime < displaySettingsRepository.minRefreshIntervalMs) return@collect
                 lastViewportRefreshTime = now
-
-                Log.d("DebugAug12", "OBSERVER Viewport changed calling onViewportChanged()")
-                // Trigger redraw of shapes when viewport changes
                 onViewportChanged()
             }
         }
+    }
 
-        // Observe undo/redo state changes to refresh toolbar on e-ink display
-        lifecycleScope.launch {
-            editorViewModel.canUndo.collect { _ ->
-                refreshUIChrome()
-            }
-        }
-        lifecycleScope.launch {
-            editorViewModel.canRedo.collect { _ ->
-                refreshUIChrome()
-            }
-        }
+    private fun observeUndoRedoState() {
+        lifecycleScope.launch { editorViewModel.canUndo.collect { refreshUIChrome() } }
+        lifecycleScope.launch { editorViewModel.canRedo.collect { refreshUIChrome() } }
+    }
 
-        // Observe UI state changes to enable/disable drawing (e.g. when stroke panel opens)
+    private fun observeUiState() {
         lifecycleScope.launch {
-            editorViewModel.uiState.collect { state ->
-                setDrawingEnabled(!state.isStrokeOptionsOpen)
-            }
+            editorViewModel.uiState.collect { state -> setDrawingEnabled(!state.isStrokeOptionsOpen) }
         }
+    }
 
-        // Observe explicit screen refresh requests (e.g. dialog dismissed)
+    private fun observeRefreshRequests() {
         lifecycleScope.launch {
-            editorViewModel.refreshUi.collect { timestamp ->
-                if (timestamp > 0L) forceScreenRefresh()
-            }
+            editorViewModel.refreshUi.collect { timestamp -> if (timestamp > 0L) forceScreenRefresh() }
         }
-
-        Log.d("DebugAug12", "DONE Setting ViewModel in BaseDrawingActivity")
     }
 
     open fun initializeGestureHandler() {
-        Log.d(TAG, "initializeGestureHandler called")
         gestureHandler = GestureHandler(this, surfaceView)
         gestureHandler.setViewportManager(editorViewModel.viewportManager)
-
         val app = application as com.wyldsoft.notes.ScrotesApp
         gestureHandler.gestureMappings = app.gestureSettingsRepository.mappings.value
 
         gestureHandler.onScrollingStateChanged = { isScrolling ->
             isScrollingOrZooming = isScrolling
-            if (!isScrolling) {
-                // Scrolling/zooming ended — always do a final refresh
-                onViewportChanged()
-            }
+            if (!isScrolling) onViewportChanged()
         }
 
         gestureHandler.onGestureAction = { action ->
             when (action) {
                 GestureAction.RESET_ZOOM_AND_CENTER -> {
                     val vm = editorViewModel
-                    val isPagination = vm.isPaginationEnabled.value
-                    val pageWidth = vm.screenWidth.value.toFloat()
-                    vm.viewportManager.resetZoomAndCenter(isPagination, pageWidth)
+                    vm.viewportManager.resetZoomAndCenter(vm.isPaginationEnabled.value, vm.screenWidth.value.toFloat())
                     forceScreenRefresh()
                 }
                 GestureAction.TOGGLE_SELECTION_MODE -> {
                     val vm = editorViewModel
-                    val currentTool = vm.uiState.value.selectedTool
-                    if (currentTool == Tool.SELECTOR) {
-                        vm.cancelSelection()
-                    } else {
-                        vm.selectTool(Tool.SELECTOR)
-                    }
+                    if (vm.uiState.value.selectedTool == Tool.SELECTOR) vm.cancelSelection()
+                    else vm.selectTool(Tool.SELECTOR)
                     forceScreenRefresh()
                 }
-                else -> {
-                    Log.d(TAG, "Gesture action $action handled inline")
-                }
+                else -> Log.d(TAG, "Gesture action $action handled inline")
             }
         }
     }
@@ -415,30 +268,19 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     override fun onShapeRemoved(shapeId: String) {
         editorViewModel.removeShape(shapeId)
     }
-    
+
     private fun updatePaginationExclusionZones() {
-        editorViewModel.let { viewModel ->
-            val currentExcludeRects = viewModel.excludeRects.value.toMutableList()
-            val pageSeparatorRects = viewModel.getPageSeparatorRects()
-            
-            // Combine current exclusion rects with page separator rects
-            val allExcludeRects = currentExcludeRects + pageSeparatorRects
-            
-            // Update touch helper with all exclusion zones
-            updateTouchHelperExclusionZones(allExcludeRects)
-        }
+        val allExcludeRects = editorViewModel.excludeRects.value + editorViewModel.getPageSeparatorRects()
+        updateTouchHelperExclusionZones(allExcludeRects)
     }
 
     fun updatePenProfile(penProfile: PenProfile) {
-        Log.d(TAG, "Updating pen profile: $penProfile")
         currentPenProfile = penProfile
         updatePaintFromProfile()
         updateTouchHelperWithProfile()
-        // Don't call viewModel?.updatePenProfile here to avoid infinite loop
     }
 
     open fun recreateBitmapFromShapes() {
-        Log.d(TAG, "recreateBitmapFromShapes")
         getOrCreateBitmap()
         bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
         val selMgr = editorViewModel.selectionManager
@@ -448,27 +290,21 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     }
 
     protected fun createDrawingBitmap(): Bitmap? {
-        return surfaceView.let { sv ->
-            if (bitmap == null) {
-                bitmap = createBitmap(sv.width, sv.height)
-                bitmapCanvas = Canvas(bitmap!!)
-                bitmapCanvas?.drawColor(Color.WHITE)
-            }
-            bitmap
-        }
-    }
-    
-    fun getOrCreateBitmap(): Bitmap? {
         if (bitmap == null) {
-            createDrawingBitmap()
+            bitmap = createBitmap(surfaceView.width, surfaceView.height)
+            bitmapCanvas = Canvas(bitmap!!)
+            bitmapCanvas?.drawColor(Color.WHITE)
         }
         return bitmap
     }
-    
+
+    fun getOrCreateBitmap(): Bitmap? {
+        if (bitmap == null) createDrawingBitmap()
+        return bitmap
+    }
+
     fun ensureBitmapCanvas(): Canvas? {
-        if (bitmapCanvas == null && bitmap != null) {
-            bitmapCanvas = Canvas(bitmap!!)
-        }
+        if (bitmapCanvas == null && bitmap != null) bitmapCanvas = Canvas(bitmap!!)
         return bitmapCanvas
     }
 
@@ -479,22 +315,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         onCleanupDeviceReceiver()
     }
 
-    /**
-     * Refresh the UI chrome (toolbar, etc.) on e-ink display.
-     * Override in SDK-specific classes for device-specific refresh behavior.
-     */
-    protected open fun refreshUIChrome() {
-        window.decorView.postInvalidate()
-    }
-
-    /**
-     * Called whenever drawing should be enabled or disabled.
-     * Triggered by UI state changes such as the stroke options panel opening/closing.
-     * Override in SDK-specific subclasses to gate raw input accordingly.
-     */
+    protected open fun refreshUIChrome() { window.decorView.postInvalidate() }
     open fun setDrawingEnabled(enabled: Boolean) {}
 
-    // Abstract methods for SDK-specific lifecycle
     protected abstract fun onResumeDrawing()
     protected abstract fun onPauseDrawing()
     protected abstract fun onCleanupSDK()
