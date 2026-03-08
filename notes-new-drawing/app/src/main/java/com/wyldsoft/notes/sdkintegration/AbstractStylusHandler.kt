@@ -1,14 +1,10 @@
 package com.wyldsoft.notes.sdkintegration
 
-import android.graphics.PointF
 import android.graphics.RectF
 import android.view.SurfaceView
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
-import com.wyldsoft.notes.actions.TransformType
-import com.wyldsoft.notes.domain.models.Shape
-import com.wyldsoft.notes.geometry.GeometryShapeCalculator
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
@@ -16,17 +12,16 @@ import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.DrawManager
 import com.wyldsoft.notes.shapemanagement.EraseManager
-import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
-import com.wyldsoft.notes.shapemanagement.TransformMode
 import com.wyldsoft.notes.utils.surfacePointsToNoteTouchPoints
+import android.graphics.PointF
 
 /**
- * Base class for stylus handlers, containing shared drawing, erasing,
- * and selection logic. Subclasses wire up device-specific input events
- * (Onyx SDK callbacks vs standard Android MotionEvents) and override
- * hooks for SDK-specific behavior.
+ * Base class for stylus handlers. Coordinates drawing, erasing, geometry, and selection.
+ * SDK-specific input wiring is done by subclasses (Onyx, Generic).
+ * Geometry drawing delegated to [GeometryDrawingHandler].
+ * Selection input delegated to [SelectionInputHandler].
  */
 abstract class AbstractStylusHandler(
     protected val surfaceView: SurfaceView,
@@ -43,49 +38,40 @@ abstract class AbstractStylusHandler(
     protected var drawManager = DrawManager(bitmapManager, onShapeCompleted)
     protected val eraseManager = EraseManager(surfaceView, rxManager, bitmapManager, onShapeRemoved)
 
-    protected val selectionManager get() = viewModel.selectionManager
-    protected var preTransformShapeSnapshots: List<Shape>? = null
-    protected var preTransformBoundingBox: RectF? = null
-    protected var transformCenterX: Float = 0f
-    protected var transformCenterY: Float = 0f
-
     protected var isDrawingInProgress = false
     protected var isErasingInProgress = false
     private var lastEraseDidPartialRefresh = false
-    protected var isGeometryDrawingInProgress = false
-    protected var geometryStartNoteX = 0f
-    protected var geometryStartNoteY = 0f
-    protected var selectionCancelledThisStroke = false
     protected var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
-
     protected var refreshCount: Int = 0
     protected val REFRESH_COUNT_LIMIT: Int = 100
-    private var lastGeometryPreviewTime = 0L
 
-    fun isErasing(): Boolean = isErasingInProgress
+    protected val geometryHandler = GeometryDrawingHandler(
+        viewModel = viewModel,
+        bitmapManager = bitmapManager,
+        shapesManager = shapesManager,
+        displaySettingsRepository = displaySettingsRepository,
+        onStarted = { isDrawingInProgress = true; onDrawingStateChanged(true); viewModel.startDrawing() },
+        onFinalized = { isDrawingInProgress = false; onDrawingStateChanged(false); viewModel.endDrawing() },
+        onForceScreenRefresh = onForceScreenRefresh,
+        getCurrentPenProfile = { currentPenProfile }
+    )
 
-    fun updatePenProfile(penProfile: PenProfile) {
-        currentPenProfile = penProfile
-        drawManager.updatePenProfile(penProfile)
-    }
+    protected val selectionInputHandler = SelectionInputHandler(
+        viewModel = viewModel,
+        bitmapManager = bitmapManager,
+        shapesManager = shapesManager,
+        onSelectionTransformStarted = { onSelectionTransformStarted() },
+        onLassoStarted = { onLassoStarted() },
+        onLassoSelectionCompleted = { onLassoSelectionCompleted() },
+        onForceScreenRefresh = onForceScreenRefresh
+    )
 
-    fun clearDrawing() {
-        shapesManager.clear()
-        bitmapManager.clearDrawing()
-    }
-
-    // --- Hooks for SDK-specific behavior (no-ops by default) ---
-
-    /** Called when a selection transform (drag/scale/rotate) begins. */
+    // --- Hooks for SDK-specific behavior ---
     protected open fun onSelectionTransformStarted() {}
-
-    /** Called when a lasso selection completes and shapes are selected. */
     protected open fun onLassoSelectionCompleted() {}
-
-    /** Called when starting a new lasso (no existing selection). */
     protected open fun onLassoStarted() {}
 
-    // --- Shared drawing state transitions ---
+    // --- Drawing ---
 
     protected fun beginDrawing() {
         isDrawingInProgress = true
@@ -95,16 +81,12 @@ abstract class AbstractStylusHandler(
 
     protected fun beginSelectionStroke(touchPoint: TouchPoint?) {
         onDrawingStateChanged(true)
-        handleSelectionBegin(touchPoint)
+        selectionInputHandler.handleBegin(touchPoint)
     }
 
-    /**
-     * Finalizes a completed stroke by creating a shape and adding it to the manager.
-     * Called by subclasses once they have a complete TouchPointList.
-     */
     protected fun finalizeStroke(touchPointList: TouchPointList) {
         touchPointList.points?.let {
-            val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
+            val notePointList = surfacePointsToNoteTouchPoints(touchPointList, viewModel.viewportManager)
             val newShape = drawManager.newShape(notePointList)
             shapesManager.addShape(newShape)
         }
@@ -113,130 +95,31 @@ abstract class AbstractStylusHandler(
         viewModel.endDrawing()
     }
 
-    /**
-     * Handles the end of a stroke when selection was cancelled during it.
-     * Returns true if the stroke was cancelled (caller should return early).
-     */
     protected fun handleCancelledStroke(): Boolean {
-        if (selectionCancelledThisStroke) {
-            selectionCancelledThisStroke = false
+        if (selectionInputHandler.wasCancelled) {
+            selectionInputHandler.clearCancelled()
             onDrawingStateChanged(false)
             return true
         }
         return false
     }
 
-    /**
-     * Handles the end of a stroke when the selector tool is active.
-     * Returns true if handled (caller should return early).
-     */
     protected fun handleSelectorStrokeEnd(touchPointList: TouchPointList): Boolean {
-        val tool = viewModel.uiState.value.selectedTool
-        if (tool == Tool.SELECTOR) {
-            handleSelectionInput(touchPointList)
+        if (viewModel.uiState.value.selectedTool == Tool.SELECTOR) {
+            selectionInputHandler.handleEnd(touchPointList)
             onDrawingStateChanged(false)
             return true
         }
         return false
     }
 
-    // --- Geometry shape drawing ---
+    // --- Geometry (delegated) ---
 
-    protected fun beginGeometryDrawing(touchPoint: TouchPoint) {
-        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
-        geometryStartNoteX = notePoint.x
-        geometryStartNoteY = notePoint.y
-        isGeometryDrawingInProgress = true
-        isDrawingInProgress = true
-        bitmapManager.beginGeometryDrawing()
-        onDrawingStateChanged(true)
-        viewModel.startDrawing()
-    }
+    protected fun beginGeometryDrawing(touchPoint: TouchPoint) = geometryHandler.begin(touchPoint)
+    protected fun updateGeometryPreview(touchPoint: TouchPoint) = geometryHandler.updatePreview(touchPoint)
+    protected fun finalizeGeometryShape(touchPointList: TouchPointList) = geometryHandler.finalize(touchPointList)
 
-    protected fun updateGeometryPreview(touchPoint: TouchPoint) {
-        if (!isGeometryDrawingInProgress) return
-
-        // Skip live preview when smooth motion is off
-        if (!displaySettingsRepository.smoothMotion.value) return
-
-        // Throttle preview refresh rate
-        val now = System.currentTimeMillis()
-        val minInterval = displaySettingsRepository.minRefreshIntervalMs
-        if (now - lastGeometryPreviewTime < minInterval) return
-        lastGeometryPreviewTime = now
-
-        val noteEnd = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
-        val shapeType = viewModel.uiState.value.selectedGeometricShape
-        val notePoints = GeometryShapeCalculator.calculate(
-            shapeType, geometryStartNoteX, geometryStartNoteY, noteEnd.x, noteEnd.y
-        )
-        bitmapManager.drawGeometryPreview(notePoints, currentPenProfile)
-    }
-
-    protected fun finalizeGeometryShape(touchPointList: TouchPointList) {
-        if (!isGeometryDrawingInProgress) return
-
-        val lastPoint = touchPointList.points?.lastOrNull()
-        if (lastPoint != null) {
-            val noteEnd = viewModel.viewportManager.surfaceToNoteCoordinates(lastPoint.x, lastPoint.y)
-            val geometricShapeType = viewModel.uiState.value.selectedGeometricShape
-
-            // Compute outline points in note coordinates
-            val notePoints = GeometryShapeCalculator.calculate(
-                geometricShapeType, geometryStartNoteX, geometryStartNoteY, noteEnd.x, noteEnd.y
-            )
-
-            // Build a TouchPointList from the note-coordinate outline points
-            val shapePointList = TouchPointList()
-            val now = System.currentTimeMillis()
-            notePoints.forEach { pt ->
-                shapePointList.add(TouchPoint(pt.x, pt.y, 1.0f, 1.0f, now))
-            }
-
-            // Create a BaseShape using current pen type so it renders correctly
-            val sdkShapeType = ShapesManager.penTypeToShapeType(currentPenProfile.penType)
-            val baseShape = ShapeFactory.createShape(sdkShapeType).apply {
-                setTouchPointList(shapePointList)
-                setStrokeColor(currentPenProfile.getColorAsInt())
-                setStrokeWidth(currentPenProfile.strokeWidth)
-                setShapeType(sdkShapeType)
-            }
-            ShapesManager.applyCharcoalTexture(baseShape, currentPenProfile.penType)
-            baseShape.updateShapeRect()
-
-            // Add to in-memory manager so it appears on next refresh
-            shapesManager.addShape(baseShape)
-
-            // Persist and record undo action using the matching ID
-            val domainShape = Shape(
-                id = baseShape.id,
-                type = geometricShapeType.toDomainShapeType(),
-                points = notePoints,
-                strokeWidth = currentPenProfile.strokeWidth,
-                strokeColor = currentPenProfile.getColorAsInt(),
-                penType = currentPenProfile.penType
-            )
-            viewModel.addGeometricShape(domainShape)
-
-            // Impl 5: partial refresh — only redraw the new shape's bounding area
-            val noteBounds = baseShape.boundingRect
-            if (noteBounds != null) {
-                bitmapManager.partialRefresh(noteBounds, shapesManager.shapes(), null)
-            } else {
-                onForceScreenRefresh()
-            }
-        } else {
-            onForceScreenRefresh()
-        }
-
-        bitmapManager.endGeometryDrawing()
-        isGeometryDrawingInProgress = false
-        isDrawingInProgress = false
-        onDrawingStateChanged(false)
-        viewModel.endDrawing()
-    }
-
-    // --- Shared erasing state transitions ---
+    // --- Erasing ---
 
     protected fun beginErasing() {
         isErasingInProgress = true
@@ -250,180 +133,40 @@ abstract class AbstractStylusHandler(
     protected fun endErasing() {
         isErasingInProgress = false
         viewModel.endErasing()
-        if (!lastEraseDidPartialRefresh) {
-            onForceScreenRefresh()
-        }
+        if (!lastEraseDidPartialRefresh) onForceScreenRefresh()
         lastEraseDidPartialRefresh = false
     }
 
-    // --- Shared selection move/update dispatch ---
+    // --- Selection move (delegated) ---
 
-    protected fun handleSelectionMoveUpdate(touchPoint: TouchPoint) {
-        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
-        val currentPoint = PointF(notePoint.x, notePoint.y)
+    protected fun handleSelectionMoveUpdate(touchPoint: TouchPoint) =
+        selectionInputHandler.handleMoveUpdate(touchPoint)
 
-        when {
-            selectionManager.isDragging -> {
-                val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
-                selectionManager.updateDrag(currentPoint, shapesManager.shapes())
-                doPartialSelectionRefresh(oldBBox, selectionManager.selectionBoundingBox)
-            }
-            selectionManager.transformMode == TransformMode.SCALE -> {
-                val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
-                selectionManager.updateScale(currentPoint, shapesManager.shapes())
-                doPartialSelectionRefresh(oldBBox, selectionManager.selectionBoundingBox)
-            }
-            selectionManager.transformMode == TransformMode.ROTATE -> {
-                val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
-                selectionManager.updateRotate(currentPoint, shapesManager.shapes())
-                doPartialSelectionRefresh(oldBBox, selectionManager.selectionBoundingBox)
-            }
-        }
+    protected fun handleSelectionInput(touchPointList: TouchPointList) =
+        selectionInputHandler.handleEnd(touchPointList)
+
+    protected fun doPartialSelectionRefresh(oldBBoxNote: RectF?, newBBoxNote: RectF?, drawOverlay: Boolean = true) =
+        selectionInputHandler.doPartialRefresh(oldBBoxNote, newBBoxNote, drawOverlay)
+
+    // --- Backwards-compatible accessors for subclasses ---
+
+    protected val selectionManager get() = viewModel.selectionManager
+    protected val isGeometryDrawingInProgress get() = geometryHandler.isActive
+
+    protected fun convertTouchPointListToNoteCoordinates(surfacePointList: TouchPointList): TouchPointList =
+        surfacePointsToNoteTouchPoints(surfacePointList, viewModel.viewportManager)
+
+    // --- Utilities ---
+
+    fun isErasing(): Boolean = isErasingInProgress
+
+    fun updatePenProfile(penProfile: PenProfile) {
+        currentPenProfile = penProfile
+        drawManager.updatePenProfile(penProfile)
     }
 
-    /**
-     * Performs a partial bitmap refresh covering the union of [oldBBoxNote] and [newBBoxNote]
-     * (both in note coordinates). Falls back to a full refresh if both are null.
-     * Draws the selection overlay when [drawOverlay] is true.
-     */
-    protected fun doPartialSelectionRefresh(
-        oldBBoxNote: RectF?,
-        newBBoxNote: RectF?,
-        drawOverlay: Boolean = true
-    ) {
-        val dirtyNote = when {
-            oldBBoxNote != null && newBBoxNote != null -> RectF(oldBBoxNote).apply { union(newBBoxNote) }
-            oldBBoxNote != null -> RectF(oldBBoxNote)
-            newBBoxNote != null -> RectF(newBBoxNote)
-            else -> { onForceScreenRefresh(); return }
-        }
-        val overlayMgr = if (drawOverlay) selectionManager else null
-        bitmapManager.partialRefresh(dirtyNote, shapesManager.shapes(), overlayMgr)
-    }
-
-    // --- Selection handling ---
-
-    protected fun snapshotSelectedShapes(): List<Shape> {
-        return viewModel.currentNote.value.shapes
-            .filter { it.id in selectionManager.selectedShapeIds }
-    }
-
-    protected fun recordTransformCenter() {
-        val box = selectionManager.selectionBoundingBox ?: return
-        transformCenterX = box.centerX()
-        transformCenterY = box.centerY()
-    }
-
-    protected fun handleSelectionBegin(touchPoint: TouchPoint?) {
-        if (touchPoint == null) return
-        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
-
-        if (selectionManager.hasSelection) {
-            if (selectionManager.isOnRotationHandle(notePoint.x, notePoint.y)) {
-                onSelectionTransformStarted()
-                preTransformShapeSnapshots = snapshotSelectedShapes()
-                preTransformBoundingBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
-                recordTransformCenter()
-                selectionManager.beginRotate(notePoint)
-            } else {
-                val cornerIndex = selectionManager.isOnScaleHandle(notePoint.x, notePoint.y)
-                if (cornerIndex != null) {
-                    onSelectionTransformStarted()
-                    preTransformShapeSnapshots = snapshotSelectedShapes()
-                    preTransformBoundingBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
-                    recordTransformCenter()
-                    selectionManager.beginScale(cornerIndex, notePoint)
-                } else if (selectionManager.isInsideBoundingBox(notePoint.x, notePoint.y)) {
-                    onSelectionTransformStarted()
-                    preTransformShapeSnapshots = snapshotSelectedShapes()
-                    preTransformBoundingBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
-                    selectionManager.beginDrag(notePoint)
-                } else {
-                    // Impl 4: capture bbox before clearing, then partial refresh to erase the overlay
-                    val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
-                    selectionCancelledThisStroke = true
-                    viewModel.cancelSelection()
-                    doPartialSelectionRefresh(oldBBox, null, drawOverlay = false)
-                }
-            }
-        } else {
-            onLassoStarted()
-            selectionManager.beginLasso()
-        }
-    }
-
-    protected fun handleSelectionInput(touchPointList: TouchPointList) {
-        val notePointList = convertTouchPointListToNoteCoordinates(touchPointList)
-
-        when (selectionManager.transformMode) {
-            TransformMode.SCALE -> {
-                val scaleFactor = selectionManager.finishScale(notePointList, shapesManager.shapes())
-                if (scaleFactor != null) {
-                    preTransformShapeSnapshots?.let { originals ->
-                        viewModel.recordTransformAction(
-                            originals, TransformType.SCALE, scaleFactor,
-                            transformCenterX, transformCenterY
-                        )
-                    }
-                    viewModel.persistScaledShapes(
-                        selectionManager.selectedShapeIds, scaleFactor,
-                        transformCenterX, transformCenterY
-                    )
-                }
-                // Impl 3: partial refresh using pre/post bounding boxes
-                val preBBox = preTransformBoundingBox
-                preTransformShapeSnapshots = null
-                preTransformBoundingBox = null
-                doPartialSelectionRefresh(preBBox, selectionManager.selectionBoundingBox)
-            }
-            TransformMode.ROTATE -> {
-                val angleRad = selectionManager.finishRotate(notePointList, shapesManager.shapes())
-                if (angleRad != null) {
-                    preTransformShapeSnapshots?.let { originals ->
-                        viewModel.recordTransformAction(
-                            originals, TransformType.ROTATE, angleRad,
-                            transformCenterX, transformCenterY
-                        )
-                    }
-                    viewModel.persistRotatedShapes(
-                        selectionManager.selectedShapeIds, angleRad,
-                        transformCenterX, transformCenterY
-                    )
-                }
-                // Impl 3: partial refresh using pre/post bounding boxes
-                val preBBox = preTransformBoundingBox
-                preTransformShapeSnapshots = null
-                preTransformBoundingBox = null
-                doPartialSelectionRefresh(preBBox, selectionManager.selectionBoundingBox)
-            }
-            TransformMode.MOVE, TransformMode.NONE -> {
-                if (selectionManager.isDragging) {
-                    val delta = selectionManager.finishDrag(notePointList, shapesManager.shapes())
-                    if (delta != null) {
-                        preTransformShapeSnapshots?.let { originals ->
-                            viewModel.recordMoveAction(originals, delta.x, delta.y)
-                        }
-                        viewModel.persistMovedShapes(selectionManager.selectedShapeIds, delta.x, delta.y)
-                    }
-                    // Impl 3: partial refresh using pre/post bounding boxes
-                    val preBBox = preTransformBoundingBox
-                    preTransformShapeSnapshots = null
-                    preTransformBoundingBox = null
-                    doPartialSelectionRefresh(preBBox, selectionManager.selectionBoundingBox)
-                } else if (selectionManager.isLassoInProgress) {
-                    selectionManager.addLassoPoints(notePointList)
-                    selectionManager.finishLasso(shapesManager.shapes())
-                    if (selectionManager.hasSelection) {
-                        onLassoSelectionCompleted()
-                    }
-                    // Lasso path can span full screen; full refresh is correct here
-                    onForceScreenRefresh()
-                }
-            }
-        }
-    }
-
-    protected fun convertTouchPointListToNoteCoordinates(surfacePointList: TouchPointList): TouchPointList {
-        return surfacePointsToNoteTouchPoints(surfacePointList, viewModel.viewportManager)
+    fun clearDrawing() {
+        shapesManager.clear()
+        bitmapManager.clearDrawing()
     }
 }
