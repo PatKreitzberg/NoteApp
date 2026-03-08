@@ -76,6 +76,7 @@ class OnyxStylusHandler(
                 touchPoint?.let { beginGeometryDrawing(it) }
                 return
             }
+            onSetRawDrawingRenderEnabled(true) // Re-enable in case a prior snap had disabled it
             beginDrawing(touchPoint)
         }
 
