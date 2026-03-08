@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.sdkintegration
 
+import android.graphics.PointF
 import android.graphics.RectF
 import android.view.SurfaceView
 import com.onyx.android.sdk.data.note.TouchPoint
@@ -15,7 +16,6 @@ import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.utils.surfacePointsToNoteTouchPoints
-import android.graphics.PointF
 
 /**
  * Base class for stylus handlers. Coordinates drawing, erasing, geometry, and selection.
@@ -66,17 +66,29 @@ abstract class AbstractStylusHandler(
         onForceScreenRefresh = onForceScreenRefresh
     )
 
+    protected val lineSnapHandler = LineSnapHandler(
+        viewModel = viewModel,
+        bitmapManager = bitmapManager,
+        shapesManager = shapesManager,
+        onSnapActivated = { onLineSnapActivated() },
+        onFinalized = { isDrawingInProgress = false; onDrawingStateChanged(false); viewModel.endDrawing() },
+        onForceScreenRefresh = onForceScreenRefresh,
+        getCurrentPenProfile = { currentPenProfile }
+    )
+
     // --- Hooks for SDK-specific behavior ---
     protected open fun onSelectionTransformStarted() {}
     protected open fun onLassoSelectionCompleted() {}
     protected open fun onLassoStarted() {}
+    protected open fun onLineSnapActivated() {}
 
     // --- Drawing ---
 
-    protected fun beginDrawing() {
+    protected fun beginDrawing(touchPoint: TouchPoint? = null) {
         isDrawingInProgress = true
         onDrawingStateChanged(true)
         viewModel.startDrawing()
+        touchPoint?.let { lineSnapHandler.onStrokeBegin(it) }
     }
 
     protected fun beginSelectionStroke(touchPoint: TouchPoint?) {
@@ -112,6 +124,13 @@ abstract class AbstractStylusHandler(
         }
         return false
     }
+
+    // --- Line snap (delegated) ---
+
+    protected fun trackLineSnapMove(touchPoint: TouchPoint) = lineSnapHandler.onStrokeMove(touchPoint)
+    protected fun updateLineSnapMove(touchPoint: TouchPoint) = lineSnapHandler.onSnapMove(touchPoint)
+    protected fun finalizeWithLineSnap(touchPointList: TouchPointList): Boolean = lineSnapHandler.onStrokeEnd(touchPointList)
+    protected val isLineSnapped get() = lineSnapHandler.isSnapped
 
     // --- Geometry (delegated) ---
 

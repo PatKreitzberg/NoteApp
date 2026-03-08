@@ -149,6 +149,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             }
 
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+                editorViewModel.viewportManager.viewWidth = width
+                editorViewModel.viewportManager.viewHeight = height
                 updateActiveSurface()
                 if (bitmap == null || bitmap!!.width != width || bitmap!!.height != height) {
                     bitmap?.recycle()

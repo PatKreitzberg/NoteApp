@@ -58,6 +58,10 @@ class OnyxStylusHandler(
         onSetRawDrawingRenderEnabled(true)
     }
 
+    override fun onLineSnapActivated() {
+        onSetRawDrawingRenderEnabled(false)
+    }
+
     // --- Onyx SDK callback ---
 
     fun createOnyxCallback(): RawInputCallback = object : RawInputCallback() {
@@ -72,11 +76,11 @@ class OnyxStylusHandler(
                 touchPoint?.let { beginGeometryDrawing(it) }
                 return
             }
-            beginDrawing()
+            beginDrawing(touchPoint)
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
-            if (!isGeometryDrawingInProgress) {
+            if (!isGeometryDrawingInProgress && !isLineSnapped) {
                 isDrawingInProgress = false
             }
         }
@@ -86,6 +90,14 @@ class OnyxStylusHandler(
             if (tool == Tool.GEOMETRY) {
                 touchPoint?.let { updateGeometryPreview(it) }
                 return
+            }
+
+            if (tool == Tool.PEN && touchPoint != null) {
+                if (isLineSnapped) {
+                    updateLineSnapMove(touchPoint)
+                    return
+                }
+                trackLineSnapMove(touchPoint)
             }
 
             if (refreshCount < REFRESH_COUNT_LIMIT) {
@@ -109,6 +121,7 @@ class OnyxStylusHandler(
             }
             if (handleCancelledStroke()) return
             if (touchPointList != null && handleSelectorStrokeEnd(touchPointList)) return
+            if (touchPointList != null && finalizeWithLineSnap(touchPointList)) return
 
             touchPointList?.let { finalizeStroke(it) }
         }
