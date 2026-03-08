@@ -309,9 +309,14 @@ class EditorViewModel(
             }
         }
 
-        // Re-render bitmap
-        bm.recreateBitmapFromShapes(sm.shapes())
-        onScreenRefreshNeeded?.invoke()
+        // Re-render only the selection area (selected shapes changed appearance)
+        val bbox = selectionManager.selectionBoundingBox
+        if (bbox != null) {
+            bm.partialRefresh(bbox, sm.shapes(), selectionManager)
+        } else {
+            bm.recreateBitmapFromShapes(sm.shapes())
+            onScreenRefreshNeeded?.invoke()
+        }
 
         // Update domain shapes in database
         viewModelScope.launch {
