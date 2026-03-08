@@ -6,13 +6,11 @@ import com.wyldsoft.notes.utils.calculateShapesBoundingBox
 import android.view.SurfaceView
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
-import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
 import com.wyldsoft.notes.rendering.BitmapManager
-import com.wyldsoft.notes.rendering.RendererHelper
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 
 class EraseManager(
-    private val surfaceView: SurfaceView,
+    surfaceView: SurfaceView,
     private val rxManager: RxManager?,
     private val bitmapManager: BitmapManager,
     private val onShapeRemoved: (String) -> Unit
@@ -23,9 +21,6 @@ class EraseManager(
         bitmapManager: BitmapManager,
         onShapeRemoved: (String) -> Unit
     ) : this(surfaceView, null, bitmapManager, onShapeRemoved)
-
-    private val partialEraseRefresh = PartialEraseRefresh()
-    private val rendererHelper = RendererHelper()
 
     companion object {
         private const val ERASE_RADIUS = 15f // Default erase radius in pixels
@@ -56,19 +51,12 @@ class EraseManager(
                 onShapeRemoved(shape.id)
             }
 
-            // Perform partial refresh of the erased area (only on Onyx with RxManager)
+            // Perform partial refresh of the erased area using BitmapManager which
+            // correctly transforms coordinates and redraws non-erased shapes in the region
             if (rxManager != null) {
                 refreshRect?.let { rect: RectF ->
-                    partialEraseRefresh.performPartialRefresh(
-                        surfaceView,
-                        rect,
-                        shapesManager.shapes(),
-                        rendererHelper,
-                        rxManager
-                    )
-                }
-                // Also update the main bitmap so it matches the partial-refreshed surface
-                bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+                    bitmapManager.partialRefresh(rect, shapesManager.shapes(), null)
+                } ?: bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
                 return true
             }
 
