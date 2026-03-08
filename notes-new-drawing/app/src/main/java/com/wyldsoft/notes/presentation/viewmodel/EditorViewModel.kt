@@ -297,16 +297,18 @@ class EditorViewModel(
             val allPoints = shapes.flatMap { it.points }
             if (allPoints.isEmpty()) return@launch
 
-            val copyBox = RectF()
-            allPoints.forEach { copyBox.union(it.x, it.y) }
+            // Build tight bounding box from first point to avoid including origin
+            val copyBox = RectF(allPoints[0].x, allPoints[0].y, allPoints[0].x, allPoints[0].y)
+            allPoints.drop(1).forEach { copyBox.union(it.x, it.y) }
             val copyCenterX = copyBox.centerX()
             val copyCenterY = copyBox.centerY()
 
-            val viewport = viewportManager.viewportState.value
-            val screenCenterNoteX = viewportManager.viewWidth / 2f / viewport.scale + viewport.scrollX
-            val screenCenterNoteY = viewportManager.viewHeight / 2f / viewport.scale + viewport.scrollY
-            val dx = screenCenterNoteX - copyCenterX
-            val dy = screenCenterNoteY - copyCenterY
+            // Convert screen center to note coordinates using the viewport matrix
+            val screenCenter = viewportManager.surfaceToNoteCoordinates(
+                viewportManager.viewWidth / 2f, viewportManager.viewHeight / 2f
+            )
+            val dx = screenCenter.x - copyCenterX
+            val dy = screenCenter.y - copyCenterY
 
             val newShapes = shapes.map { shape ->
                 shape.copy(
@@ -320,8 +322,10 @@ class EditorViewModel(
                 actionManager.recordAction(DrawAction(note.id, newShape, noteRepository, sm, bm))
             }
 
-            val newBox = RectF()
-            newShapes.flatMap { it.points }.forEach { newBox.union(it.x, it.y) }
+            // Build tight bounding box for pasted shapes
+            val newPoints = newShapes.flatMap { it.points }
+            val newBox = RectF(newPoints[0].x, newPoints[0].y, newPoints[0].x, newPoints[0].y)
+            newPoints.drop(1).forEach { newBox.union(it.x, it.y) }
 
             selectionManager.clearSelection()
             selectionManager.setSelection(newShapes.map { it.id }.toSet(), newBox)
