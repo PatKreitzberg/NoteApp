@@ -300,18 +300,25 @@ class BitmapManager(
     }
 
     /**
-     * Renders a shape to the bitmap
+     * Renders a shape (whose touch points are in note coordinates) to the bitmap.
+     * Converts note coords to surface coords before rendering so the shape appears
+     * at the correct position regardless of scroll/scale.
      */
     fun renderShapeToBitmap(shape: BaseShape) {
         val bmp = getBitmap() ?: return
         val renderContext = rendererHelper.getRenderContext() ?: return
         val canvas = getBitmapCanvas() ?: return
+        val viewportManager = viewModel.viewportManager
 
-        // Don't apply viewport transformation here since shape is in surface coordinates
         renderContext.bitmap = bmp
-        initRenderContext(renderContext, canvas)
-
-        shape.render(renderContext)
+        val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
+        val originalTouchPoints = shape.touchPointList
+        shape.touchPointList = surfaceTouchPoints
+        canvas.withSave {
+            initRenderContext(renderContext, this)
+            shape.render(renderContext)
+        }
+        shape.touchPointList = originalTouchPoints
     }
 
     /**
