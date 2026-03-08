@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Path
 import android.graphics.PointF
 import android.graphics.Rect
+import android.graphics.RectF
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.rx.RxManager
