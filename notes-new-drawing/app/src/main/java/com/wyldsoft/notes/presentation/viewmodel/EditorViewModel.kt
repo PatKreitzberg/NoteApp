@@ -278,6 +278,7 @@ class EditorViewModel(
     }
 
     fun beginTextInput(noteX: Float, noteY: Float) {
+        if (_textInputPosition.value != null) return // dialog already open, ignore subsequent taps
         _textInputPosition.value = android.graphics.PointF(noteX, noteY)
     }
 
