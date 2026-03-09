@@ -26,7 +26,9 @@ data class Shape(
     val pressure: List<Float> = emptyList(),
     val pointTimestamps: List<Long> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
-    val text: String? = null
+    val text: String? = null,
+    val fontSize: Float = 32f,
+    val fontFamily: String = "sans-serif"
 )
 
 enum class ShapeType {

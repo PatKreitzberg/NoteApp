@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 
 import com.onyx.android.sdk.data.note.TouchPoint;
 import com.onyx.android.sdk.pen.data.TouchPointList;
@@ -13,8 +14,9 @@ import java.util.List;
 
 public class TextShape extends BaseShape {
 
-    private static final float TEXT_SIZE = 32f;
     private String text = "";
+    private float fontSize = 32f;
+    private String fontFamily = "sans-serif";
 
     public void setText(String text) {
         this.text = text != null ? text : "";
@@ -22,6 +24,26 @@ public class TextShape extends BaseShape {
 
     public String getText() {
         return text;
+    }
+
+    public void setFontSize(float fontSize) {
+        this.fontSize = fontSize;
+    }
+
+    public void setFontFamily(String fontFamily) {
+        this.fontFamily = fontFamily != null ? fontFamily : "sans-serif";
+    }
+
+    private Typeface resolveTypeface() {
+        switch (fontFamily) {
+            case "serif":
+                return Typeface.SERIF;
+            case "monospace":
+                return Typeface.MONOSPACE;
+            case "sans-serif":
+            default:
+                return Typeface.SANS_SERIF;
+        }
     }
 
     @Override
@@ -36,7 +58,8 @@ public class TextShape extends BaseShape {
 
         paint.reset();
         paint.setColor(strokeColor);
-        paint.setTextSize(TEXT_SIZE * (strokeWidth / 2f));
+        paint.setTextSize(fontSize);
+        paint.setTypeface(resolveTypeface());
         paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.FILL);
 
@@ -65,7 +88,8 @@ public class TextShape extends BaseShape {
         float y = points.get(0).y;
 
         Paint measurePaint = new Paint();
-        measurePaint.setTextSize(TEXT_SIZE * (strokeWidth / 2f));
+        measurePaint.setTextSize(fontSize);
+        measurePaint.setTypeface(resolveTypeface());
         Rect textBounds = new Rect();
         measurePaint.getTextBounds(text, 0, text.length(), textBounds);
 

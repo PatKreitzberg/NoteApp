@@ -27,7 +27,7 @@ import java.util.UUID
         DeletedItemEntity::class,
         SyncStateEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -75,6 +75,13 @@ abstract class NotesDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE shapes ADD COLUMN fontSize REAL NOT NULL DEFAULT 32.0")
+                db.execSQL("ALTER TABLE shapes ADD COLUMN fontFamily TEXT NOT NULL DEFAULT 'sans-serif'")
+            }
+        }
+
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -101,7 +108,7 @@ abstract class NotesDatabase : RoomDatabase() {
                     NotesDatabase::class.java,
                     "notes_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 .fallbackToDestructiveMigration()
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {

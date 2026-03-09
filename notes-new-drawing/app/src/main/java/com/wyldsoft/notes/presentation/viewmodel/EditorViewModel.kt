@@ -81,6 +81,20 @@ class EditorViewModel(
     private val _textInputPosition = MutableStateFlow<android.graphics.PointF?>(null)
     val textInputPosition: StateFlow<android.graphics.PointF?> = _textInputPosition.asStateFlow()
 
+    // Text formatting settings
+    private val _textFontSize = MutableStateFlow(32f)
+    val textFontSize: StateFlow<Float> = _textFontSize.asStateFlow()
+
+    private val _textFontFamily = MutableStateFlow("sans-serif")
+    val textFontFamily: StateFlow<String> = _textFontFamily.asStateFlow()
+
+    private val _textColor = MutableStateFlow(android.graphics.Color.BLACK)
+    val textColor: StateFlow<Int> = _textColor.asStateFlow()
+
+    fun setTextFontSize(size: Float) { _textFontSize.value = size }
+    fun setTextFontFamily(family: String) { _textFontFamily.value = family }
+    fun setTextColor(color: Int) { _textColor.value = color }
+
     fun notifySelectionChanged() {
         _hasSelection.value = selectionManager.hasSelection
     }
@@ -291,8 +305,10 @@ class EditorViewModel(
             type = ShapeType.TEXT,
             points = listOf(position),
             strokeWidth = 2f,
-            strokeColor = android.graphics.Color.BLACK,
-            text = text
+            strokeColor = _textColor.value,
+            text = text,
+            fontSize = _textFontSize.value,
+            fontFamily = _textFontFamily.value
         )
         viewModelScope.launch {
             noteRepository.addShape(currentNote.value.id, shape)

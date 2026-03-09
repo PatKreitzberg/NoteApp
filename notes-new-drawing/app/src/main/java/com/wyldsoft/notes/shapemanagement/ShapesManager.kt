@@ -61,6 +61,8 @@ class ShapesManager(
             val textShape = TextShape()
             textShape.setId(domainShape.id)
             textShape.setText(domainShape.text ?: "")
+            textShape.setFontSize(domainShape.fontSize)
+            textShape.setFontFamily(domainShape.fontFamily)
             textShape.setTouchPointList(touchPointList)
                 .setStrokeColor(domainShape.strokeColor)
                 .setStrokeWidth(domainShape.strokeWidth)

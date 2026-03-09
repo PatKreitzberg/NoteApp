@@ -189,7 +189,9 @@ class NoteRepositoryImpl(
             pressure = pressure,
             pointTimestamps = pointTimestamps,
             timestamp = timestamp,
-            text = text
+            text = text,
+            fontSize = fontSize,
+            fontFamily = fontFamily
         )
     }
 
@@ -214,7 +216,9 @@ class NoteRepositoryImpl(
             pressure = pressure,
             pointTimestamps = pointTimestamps,
             timestamp = timestamp,
-            text = text
+            text = text,
+            fontSize = fontSize,
+            fontFamily = fontFamily
         )
     }
 }
