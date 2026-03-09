@@ -24,8 +24,11 @@ import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.viewport.ViewportManager
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
@@ -91,9 +94,43 @@ class EditorViewModel(
     private val _textColor = MutableStateFlow(android.graphics.Color.BLACK)
     val textColor: StateFlow<Int> = _textColor.asStateFlow()
 
-    fun setTextFontSize(size: Float) { _textFontSize.value = size }
-    fun setTextFontFamily(family: String) { _textFontFamily.value = family }
-    fun setTextColor(color: Int) { _textColor.value = color }
+    // Dropdown open/close tracking
+    private val _openDropdownCount = MutableStateFlow(0)
+    val openDropdownCount: StateFlow<Int> = _openDropdownCount.asStateFlow()
+    val isAnyDropdownOpen: Boolean
+        get() = _openDropdownCount.value > 0 || _uiState.value.isStrokeOptionsOpen
+
+    private val _closeAllDropdownsEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val closeAllDropdownsEvent: SharedFlow<Unit> = _closeAllDropdownsEvent.asSharedFlow()
+
+    fun onDropdownOpened() { _openDropdownCount.value++ }
+    fun onDropdownClosed() { _openDropdownCount.value = maxOf(0, _openDropdownCount.value - 1) }
+    fun closeAllDropdowns() {
+        closeStrokeOptions()
+        _openDropdownCount.value = 0
+        _closeAllDropdownsEvent.tryEmit(Unit)
+    }
+
+    fun setTextFontSize(size: Float) {
+        _textFontSize.value = size
+        if (selectionManager.hasSelection) {
+            selectionTransformHandler.applyTextFormattingToSelection(size, _textFontFamily.value, _textColor.value)
+        }
+    }
+
+    fun setTextFontFamily(family: String) {
+        _textFontFamily.value = family
+        if (selectionManager.hasSelection) {
+            selectionTransformHandler.applyTextFormattingToSelection(_textFontSize.value, family, _textColor.value)
+        }
+    }
+
+    fun setTextColor(color: Int) {
+        _textColor.value = color
+        if (selectionManager.hasSelection) {
+            selectionTransformHandler.applyTextFormattingToSelection(_textFontSize.value, _textFontFamily.value, color)
+        }
+    }
 
     fun notifySelectionChanged() {
         _hasSelection.value = selectionManager.hasSelection
@@ -398,6 +435,9 @@ class EditorViewModel(
 
     fun applyPenProfileToSelection(profile: PenProfile) =
         selectionTransformHandler.applyPenProfileToSelection(profile)
+
+    fun applyTextFormattingToSelection(fontSize: Float, fontFamily: String, color: Int) =
+        selectionTransformHandler.applyTextFormattingToSelection(fontSize, fontFamily, color)
 
     fun recordMoveAction(originalShapes: List<Shape>, dx: Float, dy: Float) =
         selectionTransformHandler.recordMoveAction(originalShapes, dx, dy)

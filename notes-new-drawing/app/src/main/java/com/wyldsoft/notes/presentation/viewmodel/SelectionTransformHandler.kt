@@ -8,10 +8,12 @@ import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Note
 import com.wyldsoft.notes.domain.models.Shape
+import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -62,6 +64,42 @@ class SelectionTransformHandler(
                     noteRepository.updateShape(
                         note.id,
                         shape.copy(strokeColor = colorInt, strokeWidth = profile.strokeWidth, penType = profile.penType)
+                    )
+                }
+            }
+        }
+    }
+
+    fun applyTextFormattingToSelection(fontSize: Float, fontFamily: String, color: Int) {
+        val sm = getShapesManager() ?: return
+        val bm = getBitmapManager() ?: return
+        val selectedIds = selectionManager.selectedShapeIds
+        if (selectedIds.isEmpty()) return
+
+        for (shape in sm.shapes()) {
+            if (shape.id in selectedIds && shape is TextShape) {
+                shape.setFontSize(fontSize)
+                shape.setFontFamily(fontFamily)
+                shape.setStrokeColor(color)
+                shape.updateShapeRect()
+            }
+        }
+
+        val bbox = selectionManager.selectionBoundingBox
+        if (bbox != null) {
+            bm.partialRefresh(bbox, sm.shapes(), selectionManager)
+        } else {
+            bm.recreateBitmapFromShapes(sm.shapes())
+            onScreenRefreshNeeded()
+        }
+
+        scope.launch {
+            val note = getCurrentNote()
+            for (shape in note.shapes) {
+                if (shape.id in selectedIds && shape.type == ShapeType.TEXT) {
+                    noteRepository.updateShape(
+                        note.id,
+                        shape.copy(fontSize = fontSize, fontFamily = fontFamily, strokeColor = color)
                     )
                 }
             }

@@ -15,6 +15,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,6 +83,7 @@ fun ToolbarTextButtons(
         TextDropdown(
             label = fontOptions.firstOrNull { it.second == currentFontFamily }?.first ?: "Sans Serif",
             items = fontOptions.map { it.first },
+            viewModel = viewModel,
             onItemSelected = { index -> viewModel.setTextFontFamily(fontOptions[index].second) }
         )
 
@@ -91,6 +93,7 @@ fun ToolbarTextButtons(
         TextDropdown(
             label = "${currentFontSize.toInt()}px",
             items = sizeOptions.map { "${it.toInt()}px" },
+            viewModel = viewModel,
             onItemSelected = { index -> viewModel.setTextFontSize(sizeOptions[index]) }
         )
 
@@ -100,6 +103,7 @@ fun ToolbarTextButtons(
         TextDropdown(
             label = colorOptions.firstOrNull { it.second == currentTextColor }?.first ?: "Black",
             items = colorOptions.map { it.first },
+            viewModel = viewModel,
             onItemSelected = { index -> viewModel.setTextColor(colorOptions[index].second) }
         )
     }
@@ -109,20 +113,33 @@ fun ToolbarTextButtons(
 private fun TextDropdown(
     label: String,
     items: List<String>,
+    viewModel: EditorViewModel,
     onItemSelected: (Int) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        viewModel.closeAllDropdownsEvent.collect {
+            expanded = false
+        }
+    }
+
     Box {
         OutlinedButton(
-            onClick = { expanded = true },
+            onClick = {
+                if (!expanded) viewModel.onDropdownOpened()
+                expanded = true
+            },
             modifier = Modifier.height(36.dp)
         ) {
             Text(label, fontSize = 11.sp)
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = {
+                expanded = false
+                viewModel.onDropdownClosed()
+            }
         ) {
             items.forEachIndexed { index, item ->
                 DropdownMenuItem(
@@ -130,6 +147,7 @@ private fun TextDropdown(
                     onClick = {
                         onItemSelected(index)
                         expanded = false
+                        viewModel.onDropdownClosed()
                     }
                 )
             }

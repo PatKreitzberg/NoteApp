@@ -26,6 +26,9 @@ fun ToolbarToolButtons(
             if (isStrokeSelectionOpen) onCloseStrokePanel()
             viewModel.selectTool(Tool.GEOMETRY)
         },
-        onShapeSelected = { shape -> viewModel.selectGeometricShape(shape) }
+        onShapeSelected = { shape -> viewModel.selectGeometricShape(shape) },
+        onDropdownOpened = { viewModel.onDropdownOpened() },
+        onDropdownClosed = { viewModel.onDropdownClosed() },
+        closeSignal = viewModel.closeAllDropdownsEvent
     )
 }

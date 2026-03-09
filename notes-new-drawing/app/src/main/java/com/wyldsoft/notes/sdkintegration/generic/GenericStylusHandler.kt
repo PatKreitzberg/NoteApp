@@ -75,6 +75,10 @@ class GenericStylusHandler(
     // --- Drawing ---
 
     private fun handleDrawBegin(event: MotionEvent) {
+        if (viewModel.isAnyDropdownOpen) {
+            viewModel.closeAllDropdowns()
+            return
+        }
         val tool = viewModel.uiState.value.selectedTool
         if (tool == Tool.SELECTOR) {
             val tp = motionEventToTouchPoint(event, 0)

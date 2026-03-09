@@ -11,6 +11,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.geometry.GeometricShapeType
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun ShapeButton(
@@ -26,9 +28,20 @@ fun ShapeButton(
     isGeometryActive: Boolean,
     onActivate: () -> Unit,
     onShapeSelected: (GeometricShapeType) -> Unit,
+    onDropdownOpened: () -> Unit = {},
+    onDropdownClosed: () -> Unit = {},
+    closeSignal: Flow<Unit>? = null,
     modifier: Modifier = Modifier
 ) {
     var showDropdown by remember { mutableStateOf(false) }
+
+    if (closeSignal != null) {
+        LaunchedEffect(Unit) {
+            closeSignal.collect {
+                showDropdown = false
+            }
+        }
+    }
 
     Box(modifier = modifier) {
         SelectableIconButton(
@@ -38,6 +51,7 @@ fun ShapeButton(
             onClick = {
                 if (isGeometryActive) {
                     showDropdown = true
+                    onDropdownOpened()
                 } else {
                     onActivate()
                 }
@@ -48,7 +62,10 @@ fun ShapeButton(
 
         DropdownMenu(
             expanded = showDropdown,
-            onDismissRequest = { showDropdown = false }
+            onDismissRequest = {
+                showDropdown = false
+                onDropdownClosed()
+            }
         ) {
             GeometricShapeType.entries.forEach { shape ->
                 DropdownMenuItem(
@@ -62,6 +79,7 @@ fun ShapeButton(
                     onClick = {
                         onShapeSelected(shape)
                         showDropdown = false
+                        onDropdownClosed()
                     }
                 )
             }
