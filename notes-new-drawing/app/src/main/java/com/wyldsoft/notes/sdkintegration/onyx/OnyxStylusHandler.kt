@@ -64,17 +64,8 @@ class OnyxStylusHandler(
 
     // --- Onyx SDK callback ---
 
-    private var isConsumingForDropdown = false
-
     fun createOnyxCallback(): RawInputCallback = object : RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
-            if (viewModel.isAnyDropdownOpen) {
-                onSetRawDrawingRenderEnabled(false)
-                viewModel.closeAllDropdowns()
-                isConsumingForDropdown = true
-                return
-            }
-            isConsumingForDropdown = false
             val tool = viewModel.uiState.value.selectedTool
             if (tool == Tool.SELECTOR) {
                 beginSelectionStroke(touchPoint)
@@ -104,7 +95,6 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            if (isConsumingForDropdown) return
             val tool = viewModel.uiState.value.selectedTool
             if (tool == Tool.TEXT) return
             if (tool == Tool.GEOMETRY) {
@@ -134,10 +124,6 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
-            if (isConsumingForDropdown) {
-                isConsumingForDropdown = false
-                return
-            }
             val tool = viewModel.uiState.value.selectedTool
             if (tool == Tool.TEXT) return
             if (tool == Tool.GEOMETRY) {
