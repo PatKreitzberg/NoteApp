@@ -88,6 +88,12 @@ class GenericStylusHandler(
             currentPoints.add(tp)
             return
         }
+        if (tool == Tool.TEXT) {
+            val tp = motionEventToTouchPoint(event, 0)
+            val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(tp.x, tp.y)
+            viewModel.beginTextInput(notePoint.x, notePoint.y)
+            return
+        }
         beginDrawing()
         currentPoints.clear()
         lastRenderedPointIndex = 0
@@ -96,6 +102,7 @@ class GenericStylusHandler(
 
     private fun handleDrawMove(event: MotionEvent) {
         val tool = viewModel.uiState.value.selectedTool
+        if (tool == Tool.TEXT) return
         if (tool == Tool.GEOMETRY) {
             val tp = motionEventToTouchPoint(event, 0)
             currentPoints.add(tp)
@@ -123,6 +130,7 @@ class GenericStylusHandler(
 
     private fun handleDrawEnd() {
         val tool = viewModel.uiState.value.selectedTool
+        if (tool == Tool.TEXT) return
         if (tool == Tool.GEOMETRY) {
             val touchPointList = buildTouchPointList()
             finalizeGeometryShape(touchPointList)

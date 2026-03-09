@@ -188,7 +188,8 @@ class NoteRepositoryImpl(
             penType = penType,
             pressure = pressure,
             pointTimestamps = pointTimestamps,
-            timestamp = timestamp
+            timestamp = timestamp,
+            text = text
         )
     }
 
@@ -212,7 +213,8 @@ class NoteRepositoryImpl(
             penType = penType,
             pressure = pressure,
             pointTimestamps = pointTimestamps,
-            timestamp = timestamp
+            timestamp = timestamp,
+            text = text
         )
     }
 }

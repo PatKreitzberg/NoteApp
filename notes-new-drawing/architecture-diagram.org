@@ -22,7 +22,8 @@
   ├── RECTANGLE
   ├── CIRCLE
   ├── TRIANGLE
-  └── LINE
+  ├── LINE
+  └── TEXT
 #+end_example
 
 ** SDK Shape Hierarchy (Java)
@@ -39,7 +40,8 @@
   ├── BrushScribbleShape
   ├── MarkerScribbleShape
   ├── CharcoalScribbleShape
-  └── NewBrushScribbleShape
+  ├── NewBrushScribbleShape
+  └── TextShape              ← renders text via Canvas.drawText()
 #+end_example
 
 ** Shape Management Classes
@@ -366,7 +368,7 @@
   │   ├── selectedTool: Tool
   │   └── selectedGeometricShape: GeometricShapeType
   │
-  ├── Tool (enum): PEN | ERASER | SELECTOR | GEOMETRY
+  ├── Tool (enum): PEN | ERASER | SELECTOR | GEOMETRY | TEXT
   ├── selectGeometricShape()
   ├── addGeometricShape(Shape)
   ├── updateContentBounds()              ← syncs contentMaxY to ViewportManager
@@ -400,6 +402,7 @@
   ├── Toolbar
   │   ├── ProfileButton (x5) → delegates to PenButton
   │   ├── ShapeButton → dropdown for GeometricShapeType selection
+  │   ├── ToolbarTextButtons → text tool toggle button
   │   └── StrokeOptionsPanel
   │       ├── PenTypeButton   → delegates to PenButton
   │       └── adjusts PenProfile properties
@@ -460,7 +463,7 @@
   ScrotesApp (Application)
   └── initializes NotesDatabase + all repositories
 
-  NotesDatabase (Room, version 6)
+  NotesDatabase (Room, version 7)
   ├── NoteDao      → NoteEntity (notes table)
   ├── ShapeDao     → ShapeEntity (shapes table)
   ├── NotebookDao  → NotebookEntity (notebooks table)
@@ -662,6 +665,17 @@
   ├── searchText(query)        ← used by HomeViewModel search
   ├── saveSegments()
   └── deleteByIds()
+
+  Text Drawing Flow:
+  1. User taps Text tab → activates Tool.TEXT
+  2. Stylus tap on canvas → OnyxStylusHandler converts to note coords
+     → EditorViewModel.beginTextInput(noteX, noteY)
+  3. AlertDialog shown with TextField for text entry
+  4. User types text + presses OK → EditorViewModel.commitTextInput(text)
+     → creates Shape(type=TEXT, points=[tapPoint], text=text)
+     → persists to DB, creates TextShape SDK shape, renders to bitmap
+  5. Text rendered via TextShape.render() → Canvas.drawText()
+  6. Text selectable/movable/rotatable via existing selection system
 
   Geometry Drawing Flow:
   1. User activates ShapeButton in toolbar → Tool.GEOMETRY

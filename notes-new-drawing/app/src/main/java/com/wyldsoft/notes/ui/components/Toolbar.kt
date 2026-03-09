@@ -26,7 +26,7 @@ import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.presentation.viewmodel.Tool
 
-enum class ToolbarTab { DRAW, EDIT }
+enum class ToolbarTab { DRAW, EDIT, TEXT }
 
 @Composable
 fun Toolbar(
@@ -53,7 +53,11 @@ fun Toolbar(
 
     // Sync tab with current tool
     LaunchedEffect(uiState.selectedTool) {
-        selectedTab = if (uiState.selectedTool == Tool.SELECTOR) ToolbarTab.EDIT else ToolbarTab.DRAW
+        selectedTab = when (uiState.selectedTool) {
+            Tool.SELECTOR -> ToolbarTab.EDIT
+            Tool.TEXT -> ToolbarTab.TEXT
+            else -> ToolbarTab.DRAW
+        }
     }
 
     LaunchedEffect(isStrokeOptionsOpen) { isStrokeSelectionOpen = isStrokeOptionsOpen }
@@ -96,7 +100,7 @@ fun Toolbar(
             return
         }
         if (currentTool == Tool.SELECTOR) viewModel.cancelSelection()
-        else if (currentTool == Tool.GEOMETRY) viewModel.selectTool(Tool.PEN)
+        else if (currentTool == Tool.GEOMETRY || currentTool == Tool.TEXT) viewModel.selectTool(Tool.PEN)
 
         if (selectedProfileIndex == profileIndex && isStrokeSelectionOpen) {
             closeStrokeOptionsPanel()
@@ -151,6 +155,12 @@ fun Toolbar(
                         selected = selectedTab == ToolbarTab.EDIT,
                         onClick = { selectedTab = ToolbarTab.EDIT }
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    TabButton(
+                        label = "Text",
+                        selected = selectedTab == ToolbarTab.TEXT,
+                        onClick = { selectedTab = ToolbarTab.TEXT }
+                    )
 
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -196,6 +206,13 @@ fun Toolbar(
                         }
                         ToolbarTab.EDIT -> {
                             ToolbarEditButtons(
+                                viewModel = viewModel,
+                                isStrokeSelectionOpen = isStrokeSelectionOpen,
+                                onCloseStrokePanel = { closeStrokeOptionsPanel() }
+                            )
+                        }
+                        ToolbarTab.TEXT -> {
+                            ToolbarTextButtons(
                                 viewModel = viewModel,
                                 isStrokeSelectionOpen = isStrokeSelectionOpen,
                                 onCloseStrokePanel = { closeStrokeOptionsPanel() }

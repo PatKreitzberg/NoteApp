@@ -7,6 +7,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import com.wyldsoft.notes.DrawingCanvas
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.ui.components.Toolbar
@@ -31,6 +35,8 @@ fun EditorView(
     val canGoBack by viewModel.canGoBack.collectAsState()
     val canGoForward by viewModel.canGoForward.collectAsState()
     val hasNotebook = viewModel.notebookId != null
+    val textInputPosition by viewModel.textInputPosition.collectAsState()
+    var textInputValue by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -86,6 +92,39 @@ fun EditorView(
             onDismiss = {
                 showNoteSettingsDialog = false
                 viewModel.forceRefresh()
+            }
+        )
+    }
+
+    if (textInputPosition != null) {
+        AlertDialog(
+            onDismissRequest = {
+                textInputValue = ""
+                viewModel.cancelTextInput()
+            },
+            title = { Text("Enter Text") },
+            text = {
+                TextField(
+                    value = textInputValue,
+                    onValueChange = { textInputValue = it },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.commitTextInput(textInputValue)
+                    textInputValue = ""
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    textInputValue = ""
+                    viewModel.cancelTextInput()
+                }) {
+                    Text("Cancel")
+                }
             }
         )
     }

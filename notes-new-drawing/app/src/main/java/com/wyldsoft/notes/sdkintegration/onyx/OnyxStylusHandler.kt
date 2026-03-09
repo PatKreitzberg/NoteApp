@@ -76,6 +76,14 @@ class OnyxStylusHandler(
                 touchPoint?.let { beginGeometryDrawing(it) }
                 return
             }
+            if (tool == Tool.TEXT) {
+                onSetRawDrawingRenderEnabled(false)
+                touchPoint?.let {
+                    val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(it.x, it.y)
+                    viewModel.beginTextInput(notePoint.x, notePoint.y)
+                }
+                return
+            }
             onSetRawDrawingRenderEnabled(true) // Re-enable in case a prior snap had disabled it
             beginDrawing(touchPoint)
         }
@@ -88,6 +96,7 @@ class OnyxStylusHandler(
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
             val tool = viewModel.uiState.value.selectedTool
+            if (tool == Tool.TEXT) return
             if (tool == Tool.GEOMETRY) {
                 touchPoint?.let { updateGeometryPreview(it) }
                 return
@@ -116,6 +125,7 @@ class OnyxStylusHandler(
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
             val tool = viewModel.uiState.value.selectedTool
+            if (tool == Tool.TEXT) return
             if (tool == Tool.GEOMETRY) {
                 touchPointList?.let { finalizeGeometryShape(it) }
                 return

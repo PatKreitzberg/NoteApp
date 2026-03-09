@@ -1,9 +1,11 @@
 package com.wyldsoft.notes.shapemanagement
 
 import android.util.Log
+import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
+import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import com.wyldsoft.notes.utils.domainPointsToTouchPointList
 
 /*
@@ -54,6 +56,18 @@ class ShapesManager(
     fun convertDomainShapeToSdkShape(domainShape: com.wyldsoft.notes.domain.models.Shape): BaseShape {
         // Create TouchPointList from domain shape points
         val touchPointList = domainPointsToTouchPointList(domainShape.points, domainShape.pressure)
+
+        if (domainShape.type == ShapeType.TEXT) {
+            val textShape = TextShape()
+            textShape.setId(domainShape.id)
+            textShape.setText(domainShape.text ?: "")
+            textShape.setTouchPointList(touchPointList)
+                .setStrokeColor(domainShape.strokeColor)
+                .setStrokeWidth(domainShape.strokeWidth)
+                .setShapeType(ShapeFactory.SHAPE_TEXT)
+            textShape.updateShapeRect()
+            return textShape
+        }
 
         // Map pen type to SDK shape type
         val shapeType = penTypeToShapeType(domainShape.penType)

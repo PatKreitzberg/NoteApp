@@ -77,6 +77,10 @@ class EditorViewModel(
     private val _hasSelection = MutableStateFlow(false)
     val hasSelection: StateFlow<Boolean> = _hasSelection.asStateFlow()
 
+    // Text input state
+    private val _textInputPosition = MutableStateFlow<android.graphics.PointF?>(null)
+    val textInputPosition: StateFlow<android.graphics.PointF?> = _textInputPosition.asStateFlow()
+
     fun notifySelectionChanged() {
         _hasSelection.value = selectionManager.hasSelection
     }
@@ -273,6 +277,41 @@ class EditorViewModel(
         }
     }
 
+    fun beginTextInput(noteX: Float, noteY: Float) {
+        _textInputPosition.value = android.graphics.PointF(noteX, noteY)
+    }
+
+    fun commitTextInput(text: String) {
+        val position = _textInputPosition.value ?: return
+        _textInputPosition.value = null
+        if (text.isBlank()) return
+
+        val shape = Shape(
+            type = ShapeType.TEXT,
+            points = listOf(position),
+            strokeWidth = 2f,
+            strokeColor = android.graphics.Color.BLACK,
+            text = text
+        )
+        viewModelScope.launch {
+            noteRepository.addShape(currentNote.value.id, shape)
+            val sm = shapesManager
+            val bm = bitmapManager
+            if (sm != null && bm != null) {
+                val sdkShape = sm.convertDomainShapeToSdkShape(shape)
+                sm.addShape(sdkShape)
+                bm.recreateBitmapFromShapes(sm.shapes())
+                actionManager.recordAction(DrawAction(currentNote.value.id, shape, noteRepository, sm, bm))
+                onScreenRefreshNeeded?.invoke()
+            }
+            updateContentBounds()
+        }
+    }
+
+    fun cancelTextInput() {
+        _textInputPosition.value = null
+    }
+
     fun cancelSelection() {
         selectionManager.clearSelection()
         notifySelectionChanged()
@@ -408,5 +447,6 @@ enum class Tool {
     PEN,
     ERASER,
     SELECTOR,
-    GEOMETRY
+    GEOMETRY,
+    TEXT
 }
