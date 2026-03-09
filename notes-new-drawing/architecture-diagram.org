@@ -376,6 +376,11 @@
   ├── addGeometricShape(Shape)
   ├── updateContentBounds()              ← syncs contentMaxY to ViewportManager
   ├── applyPenProfileToSelection()       ← changes selected strokes' pen properties
+  ├── applyTextFormattingToSelection()   ← live updates font/size/color of selected TEXT shapes
+  ├── isAnyDropdownOpen: Boolean         ← true if stroke panel OR any dropdown menu is open
+  ├── closeAllDropdowns()               ← closes stroke panel + all dropdowns, emits event
+  ├── closeAllDropdownsEvent: SharedFlow ← signal consumed by TextDropdown/ShapeButton to close
+  ├── onDropdownOpened() / onDropdownClosed() ← called by each DropdownMenu composable
   │
   └── uses: NoteRepository, NotebookRepository, ViewportManager
 
@@ -681,6 +686,26 @@
   5. Text rendered via TextShape.render() → Canvas.drawText()
      with configurable font (sans-serif/serif/monospace), size, and color
   6. Text selectable/movable/rotatable via existing selection system
+
+  Text Formatting on Selected Shapes:
+  1. User uses SELECTOR tool (lasso) to select one or more text shapes
+  2. User switches to Text tab and changes font, size, or color dropdown
+  3. EditorViewModel.setTextFontFamily/Size/Color() detects hasSelection
+  4. Calls selectionTransformHandler.applyTextFormattingToSelection()
+     → Updates in-memory TextShape SDK objects (setFontSize/Family/StrokeColor)
+     → Triggers partialRefresh (or full recreateBitmap) for live update
+     → Persists to DB via noteRepository.updateShape() for each selected text shape
+
+  Universal Dropdown Close Behavior:
+  - When any dropdown (text dropdowns, geometry dropdown, stroke panel) is open
+    and the user touches the canvas:
+    • Finger touch: OnyxDrawingActivity.setOnTouchListener checks isAnyDropdownOpen
+      → calls closeAllDropdowns() which emits closeAllDropdownsEvent + resets count
+    • Stylus touch: OnyxStylusHandler.onBeginRawDrawing checks isAnyDropdownOpen
+      → sets isConsumingForDropdown=true, closes dropdowns, skips drawing
+      → onRawDrawingTouchPointListReceived clears flag without creating a shape
+  - Dropdowns register open/close with EditorViewModel.onDropdownOpened/Closed()
+  - Dropdowns collect closeAllDropdownsEvent via LaunchedEffect to close themselves
 
   Geometry Drawing Flow:
   1. User activates ShapeButton in toolbar → Tool.GEOMETRY
