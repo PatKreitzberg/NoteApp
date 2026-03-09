@@ -15,7 +15,10 @@
   ├── strokeColor: String
   ├── penType: PenType
   ├── pressure: List<Float>
-  └── timestamp: Long
+  ├── timestamp: Long
+  ├── text: String?
+  ├── fontSize: Float          ← text font size (default 32f)
+  └── fontFamily: String       ← "sans-serif", "serif", or "monospace"
 
   ShapeType (enum)
   ├── STROKE
@@ -402,7 +405,7 @@
   ├── Toolbar
   │   ├── ProfileButton (x5) → delegates to PenButton
   │   ├── ShapeButton → dropdown for GeometricShapeType selection
-  │   ├── ToolbarTextButtons → text tool toggle button
+  │   ├── ToolbarTextButtons → text tool toggle + font/size/color dropdowns
   │   └── StrokeOptionsPanel
   │       ├── PenTypeButton   → delegates to PenButton
   │       └── adjusts PenProfile properties
@@ -463,7 +466,7 @@
   ScrotesApp (Application)
   └── initializes NotesDatabase + all repositories
 
-  NotesDatabase (Room, version 7)
+  NotesDatabase (Room, version 8)
   ├── NoteDao      → NoteEntity (notes table)
   ├── ShapeDao     → ShapeEntity (shapes table)
   ├── NotebookDao  → NotebookEntity (notebooks table)
@@ -672,9 +675,11 @@
      → EditorViewModel.beginTextInput(noteX, noteY)
   3. AlertDialog shown with TextField for text entry
   4. User types text + presses OK → EditorViewModel.commitTextInput(text)
-     → creates Shape(type=TEXT, points=[tapPoint], text=text)
+     → creates Shape(type=TEXT, points=[tapPoint], text=text,
+        fontSize=current, fontFamily=current, strokeColor=textColor)
      → persists to DB, creates TextShape SDK shape, renders to bitmap
   5. Text rendered via TextShape.render() → Canvas.drawText()
+     with configurable font (sans-serif/serif/monospace), size, and color
   6. Text selectable/movable/rotatable via existing selection system
 
   Geometry Drawing Flow:
