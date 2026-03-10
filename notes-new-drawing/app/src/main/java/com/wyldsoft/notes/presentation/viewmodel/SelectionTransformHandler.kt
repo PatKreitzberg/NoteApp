@@ -14,6 +14,7 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
+import com.wyldsoft.notes.utils.calculateShapesBoundingBox
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -84,6 +85,10 @@ class SelectionTransformHandler(
                 shape.updateShapeRect()
             }
         }
+
+        // Recalculate bounding box to reflect new text dimensions
+        val selectedShapes = sm.shapes().filter { it.id in selectedIds }
+        calculateShapesBoundingBox(selectedShapes)?.let { selectionManager.setSelection(selectedIds, it) }
 
         val bbox = selectionManager.selectionBoundingBox
         if (bbox != null) {

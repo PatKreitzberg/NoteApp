@@ -34,6 +34,7 @@ fun ToolbarEditButtons(
     val copiedShapes by viewModel.copiedShapes.collectAsState()
     val hasSelection by viewModel.hasSelection.collectAsState()
     val isConvertingToText by viewModel.isConvertingToText.collectAsState()
+    val selectionContainsTextShape by viewModel.selectionContainsTextShape.collectAsState()
     val isSelectionActive = uiState.selectedTool == Tool.SELECTOR
     val hasCopied = copiedShapes.isNotEmpty()
 
@@ -80,9 +81,10 @@ fun ToolbarEditButtons(
         )
     }
 
+    val canConvert = hasSelection && !isConvertingToText && !selectionContainsTextShape
     IconButton(
         onClick = { viewModel.convertSelectionToText() },
-        enabled = hasSelection && !isConvertingToText
+        enabled = canConvert
     ) {
         if (isConvertingToText) {
             CircularProgressIndicator(
@@ -94,7 +96,7 @@ fun ToolbarEditButtons(
             Icon(
                 imageVector = Icons.Default.TextFields,
                 contentDescription = "Convert to Text",
-                tint = if (hasSelection) Color.Black else Color.LightGray
+                tint = if (canConvert) Color.Black else Color.LightGray
             )
         }
     }

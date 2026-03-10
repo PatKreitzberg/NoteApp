@@ -22,6 +22,7 @@ import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import com.wyldsoft.notes.viewport.ViewportManager
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -83,6 +84,9 @@ class EditorViewModel(
     private val _isConvertingToText = MutableStateFlow(false)
     val isConvertingToText: StateFlow<Boolean> = _isConvertingToText.asStateFlow()
 
+    private val _selectionContainsTextShape = MutableStateFlow(false)
+    val selectionContainsTextShape: StateFlow<Boolean> = _selectionContainsTextShape.asStateFlow()
+
     // Text input state
     private val _textInputPosition = MutableStateFlow<android.graphics.PointF?>(null)
     val textInputPosition: StateFlow<android.graphics.PointF?> = _textInputPosition.asStateFlow()
@@ -143,6 +147,8 @@ class EditorViewModel(
 
     fun notifySelectionChanged() {
         _hasSelection.value = selectionManager.hasSelection
+        _selectionContainsTextShape.value = selectionManager.hasSelection &&
+            shapesManager?.shapes()?.any { it.id in selectionManager.selectedShapeIds && it is TextShape } == true
     }
 
     // Erase stroke grouping
@@ -316,9 +322,18 @@ class EditorViewModel(
     }
 
     fun selectTool(tool: Tool) {
+        val hadSelection = selectionManager.hasSelection
         if (tool != Tool.SELECTOR) selectionManager.clearSelection()
         notifySelectionChanged()
         _uiState.value = _uiState.value.copy(selectedTool = tool)
+        if (hadSelection && tool != Tool.SELECTOR) {
+            val bm = bitmapManager
+            val sm = shapesManager
+            if (bm != null && sm != null) {
+                bm.recreateBitmapFromShapes(sm.shapes())
+            }
+            onScreenRefreshNeeded?.invoke()
+        }
     }
 
     fun selectGeometricShape(shape: GeometricShapeType) {
