@@ -23,8 +23,9 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.pen.PenProfile
+import com.wyldsoft.notes.presentation.viewmodel.DrawTool
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 
 enum class ToolbarTab { DRAW, EDIT, TEXT }
 
@@ -51,12 +52,12 @@ fun Toolbar(
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(ToolbarTab.DRAW) }
 
-    // Sync tab with current tool
-    LaunchedEffect(uiState.selectedTool) {
-        selectedTab = when (uiState.selectedTool) {
-            Tool.SELECTOR -> ToolbarTab.EDIT
-            Tool.TEXT -> ToolbarTab.TEXT
-            else -> ToolbarTab.DRAW
+    // Sync tab with current mode
+    LaunchedEffect(uiState.mode) {
+        selectedTab = when (uiState.mode) {
+            is EditorMode.Select -> ToolbarTab.EDIT
+            is EditorMode.Text -> ToolbarTab.TEXT
+            is EditorMode.Draw -> ToolbarTab.DRAW
         }
     }
 
@@ -91,16 +92,16 @@ fun Toolbar(
     }
 
     fun handleProfileClick(profileIndex: Int) {
-        val currentTool = viewModel.uiState.value.selectedTool
-        if (currentTool == Tool.SELECTOR && viewModel.selectionManager.hasSelection) {
+        val currentMode = viewModel.uiState.value.mode
+        if (currentMode is EditorMode.Select && viewModel.selectionManager.hasSelection) {
             val profile = profiles[profileIndex]
             viewModel.applyPenProfileToSelection(profile)
             selectedProfileIndex = profileIndex
             viewModel.updatePenProfile(profile)
             return
         }
-        if (currentTool == Tool.SELECTOR) viewModel.cancelSelection()
-        else if (currentTool == Tool.GEOMETRY || currentTool == Tool.TEXT) viewModel.selectTool(Tool.PEN)
+        if (currentMode is EditorMode.Select) viewModel.cancelSelection()
+        else if (currentMode !is EditorMode.Draw || currentMode.drawTool != DrawTool.PEN) viewModel.switchMode(EditorMode.Draw())
 
         if (selectedProfileIndex == profileIndex && isStrokeSelectionOpen) {
             closeStrokeOptionsPanel()

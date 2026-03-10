@@ -27,8 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 
 private val fontOptions = listOf(
     "Sans Serif" to "sans-serif",
@@ -53,7 +53,7 @@ fun ToolbarTextButtons(
     onCloseStrokePanel: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isTextActive = uiState.selectedTool == Tool.TEXT
+    val isTextActive = uiState.mode is EditorMode.Text
     val currentFontFamily by viewModel.textFontFamily.collectAsState()
     val currentFontSize by viewModel.textFontSize.collectAsState()
     val currentTextColor by viewModel.textColor.collectAsState()
@@ -65,10 +65,10 @@ fun ToolbarTextButtons(
         IconButton(
             onClick = {
                 if (isTextActive) {
-                    viewModel.selectTool(Tool.PEN)
+                    viewModel.switchMode(EditorMode.Draw())
                 } else {
                     if (isStrokeSelectionOpen) onCloseStrokePanel()
-                    viewModel.selectTool(Tool.TEXT)
+                    viewModel.switchMode(EditorMode.Text)
                 }
             },
             modifier = Modifier.then(if (isTextActive) Modifier.border(2.dp, Color.Black) else Modifier)

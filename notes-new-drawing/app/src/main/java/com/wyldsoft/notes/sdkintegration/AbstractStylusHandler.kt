@@ -8,8 +8,8 @@ import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.DrawManager
 import com.wyldsoft.notes.shapemanagement.EraseManager
@@ -117,7 +117,7 @@ abstract class AbstractStylusHandler(
     }
 
     protected fun handleSelectorStrokeEnd(touchPointList: TouchPointList): Boolean {
-        if (viewModel.uiState.value.selectedTool == Tool.SELECTOR) {
+        if (viewModel.uiState.value.mode is EditorMode.Select) {
             selectionInputHandler.handleEnd(touchPointList)
             onDrawingStateChanged(false)
             return true

@@ -3,8 +3,9 @@ package com.wyldsoft.notes.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.wyldsoft.notes.presentation.viewmodel.DrawTool
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 
 /**
  * Draw tab tool buttons: geometry shape button.
@@ -17,14 +18,15 @@ fun ToolbarToolButtons(
     onCloseStrokePanel: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isGeometryActive = uiState.selectedTool == Tool.GEOMETRY
+    val mode = uiState.mode
+    val isGeometryActive = mode is EditorMode.Draw && mode.drawTool == DrawTool.GEOMETRY
 
     ShapeButton(
         selectedShape = uiState.selectedGeometricShape,
         isGeometryActive = isGeometryActive,
         onActivate = {
             if (isStrokeSelectionOpen) onCloseStrokePanel()
-            viewModel.selectTool(Tool.GEOMETRY)
+            viewModel.switchMode(EditorMode.Draw(DrawTool.GEOMETRY))
         },
         onShapeSelected = { shape -> viewModel.selectGeometricShape(shape) },
         onDropdownOpened = { viewModel.onDropdownOpened() },

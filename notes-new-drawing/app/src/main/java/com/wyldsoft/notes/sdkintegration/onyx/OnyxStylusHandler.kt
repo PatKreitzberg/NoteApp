@@ -7,8 +7,9 @@ import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.RawInputCallback
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
+import com.wyldsoft.notes.presentation.viewmodel.DrawTool
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
@@ -78,42 +79,44 @@ class OnyxStylusHandler(
 
     fun createOnyxCallback(): RawInputCallback = object : RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
-            val tool = viewModel.uiState.value.selectedTool
-            if (tool == Tool.SELECTOR) {
-                beginSelectionStroke(touchPoint)
-                return
-            }
-            if (tool == Tool.GEOMETRY) {
-                onSetRawDrawingRenderEnabled(false) // We handle rendering for geometry
-                touchPoint?.let { beginGeometryDrawing(it) }
-                return
-            }
-            if (tool == Tool.TEXT) {
-                onSetRawDrawingRenderEnabled(false)
-                touchPoint?.let {
-                    val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(it.x, it.y)
-                    val hitShape = findTextShapeAtNotePoint(notePoint.x, notePoint.y)
-                    if (hitShape != null) {
-                        val anchor = hitShape.touchPointList?.points?.firstOrNull()
-                        val anchorX = anchor?.x ?: notePoint.x
-                        val anchorY = anchor?.y ?: notePoint.y
-                        viewModel.beginEditingTextShape(
-                            shapeId = hitShape.id,
-                            anchorNoteX = anchorX,
-                            anchorNoteY = anchorY,
-                            existingText = hitShape.text,
-                            existingFontSize = hitShape.fontSize,
-                            existingFontFamily = hitShape.fontFamily,
-                            existingColor = hitShape.strokeColor
-                        )
-                    } else {
-                        viewModel.beginTextInput(notePoint.x, notePoint.y)
+            when (val mode = viewModel.uiState.value.mode) {
+                is EditorMode.Select -> {
+                    beginSelectionStroke(touchPoint)
+                }
+                is EditorMode.Text -> {
+                    onSetRawDrawingRenderEnabled(false)
+                    touchPoint?.let {
+                        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(it.x, it.y)
+                        val hitShape = findTextShapeAtNotePoint(notePoint.x, notePoint.y)
+                        if (hitShape != null) {
+                            val anchor = hitShape.touchPointList?.points?.firstOrNull()
+                            val anchorX = anchor?.x ?: notePoint.x
+                            val anchorY = anchor?.y ?: notePoint.y
+                            viewModel.beginEditingTextShape(
+                                shapeId = hitShape.id,
+                                anchorNoteX = anchorX,
+                                anchorNoteY = anchorY,
+                                existingText = hitShape.text,
+                                existingFontSize = hitShape.fontSize,
+                                existingFontFamily = hitShape.fontFamily,
+                                existingColor = hitShape.strokeColor
+                            )
+                        } else {
+                            viewModel.beginTextInput(notePoint.x, notePoint.y)
+                        }
                     }
                 }
-                return
+                is EditorMode.Draw -> when (mode.drawTool) {
+                    DrawTool.GEOMETRY -> {
+                        onSetRawDrawingRenderEnabled(false)
+                        touchPoint?.let { beginGeometryDrawing(it) }
+                    }
+                    DrawTool.PEN, DrawTool.ERASER -> {
+                        onSetRawDrawingRenderEnabled(true)
+                        beginDrawing(touchPoint)
+                    }
+                }
             }
-            onSetRawDrawingRenderEnabled(true) // Re-enable in case a prior snap had disabled it
-            beginDrawing(touchPoint)
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
@@ -123,46 +126,49 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            val tool = viewModel.uiState.value.selectedTool
-            if (tool == Tool.TEXT) return
-            if (tool == Tool.GEOMETRY) {
-                touchPoint?.let { updateGeometryPreview(it) }
-                return
-            }
-
-            if (tool == Tool.PEN && touchPoint != null) {
-                if (isLineSnapped) {
-                    updateLineSnapMove(touchPoint)
+            when (val mode = viewModel.uiState.value.mode) {
+                is EditorMode.Text -> return
+                is EditorMode.Draw -> when (mode.drawTool) {
+                    DrawTool.GEOMETRY -> {
+                        touchPoint?.let { updateGeometryPreview(it) }
+                        return
+                    }
+                    DrawTool.PEN -> if (touchPoint != null) {
+                        if (isLineSnapped) { updateLineSnapMove(touchPoint); return }
+                        trackLineSnapMove(touchPoint)
+                    }
+                    DrawTool.ERASER -> { /* handled by onRawErasingTouchPointMoveReceived */ }
+                }
+                is EditorMode.Select -> {
+                    if (refreshCount < REFRESH_COUNT_LIMIT) { refreshCount++; return }
+                    refreshCount = 0
+                    if (touchPoint == null) return
+                    if (!selectionManager.hasSelection) return
+                    handleSelectionMoveUpdate(touchPoint)
                     return
                 }
-                trackLineSnapMove(touchPoint)
             }
-
-            if (refreshCount < REFRESH_COUNT_LIMIT) {
-                refreshCount++
-                return
-            }
-            refreshCount = 0
-
-            if (touchPoint == null) return
-            if (tool != Tool.SELECTOR) return
-            if (!selectionManager.hasSelection) return
-
-            handleSelectionMoveUpdate(touchPoint)
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
-            val tool = viewModel.uiState.value.selectedTool
-            if (tool == Tool.TEXT) return
-            if (tool == Tool.GEOMETRY) {
-                touchPointList?.let { finalizeGeometryShape(it) }
-                return
+            when (val mode = viewModel.uiState.value.mode) {
+                is EditorMode.Text -> return
+                is EditorMode.Draw -> when (mode.drawTool) {
+                    DrawTool.GEOMETRY -> {
+                        touchPointList?.let { finalizeGeometryShape(it) }
+                        return
+                    }
+                    DrawTool.PEN, DrawTool.ERASER -> {
+                        if (handleCancelledStroke()) return
+                        if (touchPointList != null && finalizeWithLineSnap(touchPointList)) return
+                        touchPointList?.let { finalizeStroke(it) }
+                    }
+                }
+                is EditorMode.Select -> {
+                    if (handleCancelledStroke()) return
+                    if (touchPointList != null) handleSelectorStrokeEnd(touchPointList)
+                }
             }
-            if (handleCancelledStroke()) return
-            if (touchPointList != null && handleSelectorStrokeEnd(touchPointList)) return
-            if (touchPointList != null && finalizeWithLineSnap(touchPointList)) return
-
-            touchPointList?.let { finalizeStroke(it) }
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {

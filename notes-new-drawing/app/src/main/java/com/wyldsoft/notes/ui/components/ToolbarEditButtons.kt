@@ -17,8 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 
 /**
  * Edit tab buttons: selection, copy, paste.
@@ -35,7 +35,7 @@ fun ToolbarEditButtons(
     val hasSelection by viewModel.hasSelection.collectAsState()
     val isConvertingToText by viewModel.isConvertingToText.collectAsState()
     val selectionContainsTextShape by viewModel.selectionContainsTextShape.collectAsState()
-    val isSelectionActive = uiState.selectedTool == Tool.SELECTOR
+    val isSelectionActive = uiState.mode is EditorMode.Select
     val hasCopied = copiedShapes.isNotEmpty()
 
     IconButton(
@@ -44,7 +44,7 @@ fun ToolbarEditButtons(
                 viewModel.cancelSelection()
             } else {
                 if (isStrokeSelectionOpen) onCloseStrokePanel()
-                viewModel.selectTool(Tool.SELECTOR)
+                viewModel.switchMode(EditorMode.Select)
             }
         },
         modifier = Modifier.then(if (isSelectionActive) Modifier.border(2.dp, Color.Black) else Modifier)

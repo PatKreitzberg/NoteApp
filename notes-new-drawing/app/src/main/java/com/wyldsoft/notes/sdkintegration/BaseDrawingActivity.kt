@@ -27,7 +27,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.gestures.GestureHandler
-import com.wyldsoft.notes.presentation.viewmodel.Tool
+import com.wyldsoft.notes.presentation.viewmodel.DrawTool
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.shapemanagement.ShapesManager
@@ -267,34 +268,34 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                 }
                 GestureAction.TOGGLE_SELECTION_MODE -> {
                     val vm = editorViewModel
-                    if (vm.uiState.value.selectedTool == Tool.SELECTOR) vm.cancelSelection()
-                    else vm.selectTool(Tool.SELECTOR)
+                    if (vm.uiState.value.mode is EditorMode.Select) vm.cancelSelection()
+                    else vm.switchMode(EditorMode.Select)
                     forceScreenRefresh()
                 }
                 GestureAction.TOGGLE_TEXT_MODE -> {
                     val vm = editorViewModel
-                    if (vm.uiState.value.selectedTool == Tool.TEXT) vm.selectTool(Tool.PEN)
-                    else vm.selectTool(Tool.TEXT)
+                    if (vm.uiState.value.mode is EditorMode.Text) vm.switchMode(EditorMode.Draw())
+                    else vm.switchMode(EditorMode.Text)
                     forceScreenRefresh()
                 }
                 GestureAction.SWITCH_TAB -> {
                     val vm = editorViewModel
-                    val nextTool = when (vm.uiState.value.selectedTool) {
-                        Tool.PEN, Tool.ERASER, Tool.GEOMETRY -> Tool.SELECTOR
-                        Tool.SELECTOR -> Tool.TEXT
-                        Tool.TEXT -> Tool.PEN
+                    val nextMode = when (vm.uiState.value.mode) {
+                        is EditorMode.Draw -> EditorMode.Select
+                        is EditorMode.Select -> EditorMode.Text
+                        is EditorMode.Text -> EditorMode.Draw()
                     }
-                    vm.selectTool(nextTool)
+                    vm.switchMode(nextMode)
                     forceScreenRefresh()
                 }
                 GestureAction.DRAW_GEOMETRIC_SHAPE -> {
                     val vm = editorViewModel
-                    vm.selectTool(Tool.GEOMETRY)
+                    vm.switchMode(EditorMode.Draw(DrawTool.GEOMETRY))
                     forceScreenRefresh()
                 }
                 GestureAction.COPY_SELECTION -> {
                     val vm = editorViewModel
-                    if (vm.uiState.value.selectedTool == Tool.SELECTOR) vm.copySelection()
+                    if (vm.uiState.value.mode is EditorMode.Select) vm.copySelection()
                 }
                 GestureAction.PASTE_SELECTION -> {
                     val vm = editorViewModel

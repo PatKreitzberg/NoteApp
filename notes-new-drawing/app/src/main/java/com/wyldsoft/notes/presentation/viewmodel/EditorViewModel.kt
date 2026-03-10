@@ -325,19 +325,54 @@ class EditorViewModel(
         }
     }
 
-    fun selectTool(tool: Tool) {
-        val hadSelection = selectionManager.hasSelection
-        if (tool != Tool.SELECTOR) selectionManager.clearSelection()
-        notifySelectionChanged()
-        _uiState.value = _uiState.value.copy(selectedTool = tool)
-        if (hadSelection && tool != Tool.SELECTOR) {
-            val bm = bitmapManager
-            val sm = shapesManager
-            if (bm != null && sm != null) {
-                bm.recreateBitmapFromShapes(sm.shapes())
-            }
-            onScreenRefreshNeeded?.invoke()
+    /**
+     * Switch to a new editor mode. Calls exitMode/enterMode hooks to handle
+     * cleanup and setup. Switching within Draw mode (e.g. PEN→GEOMETRY) skips
+     * the hooks since no mode-level transition occurs.
+     */
+    fun switchMode(newMode: EditorMode) {
+        val oldMode = _uiState.value.mode
+        if (oldMode == newMode) return
+
+        // Changing draw tool within Draw mode — no enter/exit needed
+        if (oldMode is EditorMode.Draw && newMode is EditorMode.Draw) {
+            _uiState.value = _uiState.value.copy(mode = newMode)
+            return
         }
+
+        exitMode(oldMode)
+        _uiState.value = _uiState.value.copy(mode = newMode)
+        enterMode(newMode)
+    }
+
+    private fun exitMode(mode: EditorMode) {
+        when (mode) {
+            is EditorMode.Select -> {
+                val hadSelection = selectionManager.hasSelection
+                selectionManager.clearSelection()
+                notifySelectionChanged()
+                if (hadSelection) {
+                    val bm = bitmapManager
+                    val sm = shapesManager
+                    if (bm != null && sm != null) {
+                        bm.recreateBitmapFromShapes(sm.shapes())
+                    }
+                }
+            }
+            is EditorMode.Text -> {
+                if (_textInputPosition.value != null) commitLiveTextInput()
+            }
+            is EditorMode.Draw -> { /* no cleanup needed */ }
+        }
+    }
+
+    private fun enterMode(mode: EditorMode) {
+        when (mode) {
+            is EditorMode.Select -> { /* ready for lasso */ }
+            is EditorMode.Text -> { /* ready for tap-to-place */ }
+            is EditorMode.Draw -> { /* no setup needed */ }
+        }
+        onScreenRefreshNeeded?.invoke()
     }
 
     fun selectGeometricShape(shape: GeometricShapeType) {
@@ -493,7 +528,7 @@ class EditorViewModel(
     fun cancelSelection() {
         selectionManager.clearSelection()
         notifySelectionChanged()
-        _uiState.value = _uiState.value.copy(selectedTool = Tool.PEN)
+        _uiState.value = _uiState.value.copy(mode = EditorMode.Draw())
     }
 
     fun convertSelectionToText() {
@@ -593,7 +628,7 @@ class EditorViewModel(
             bm.recreateBitmapFromShapes(sm.shapes())
             onScreenRefreshNeeded?.invoke()
             updateContentBounds()
-            _uiState.value = _uiState.value.copy(selectedTool = Tool.SELECTOR)
+            _uiState.value = _uiState.value.copy(mode = EditorMode.Select)
         }
     }
 
@@ -690,14 +725,6 @@ class EditorViewModel(
 
 data class EditorUiState(
     val isStrokeOptionsOpen: Boolean = false,
-    val selectedTool: Tool = Tool.PEN,
+    val mode: EditorMode = EditorMode.Draw(),
     val selectedGeometricShape: GeometricShapeType = GeometricShapeType.LINE
 )
-
-enum class Tool {
-    PEN,
-    ERASER,
-    SELECTOR,
-    GEOMETRY,
-    TEXT
-}

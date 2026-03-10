@@ -6,8 +6,9 @@ import android.view.MotionEvent
 import android.view.SurfaceView
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
+import com.wyldsoft.notes.presentation.viewmodel.DrawTool
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.TransformMode
@@ -79,85 +80,97 @@ class GenericStylusHandler(
             viewModel.closeAllDropdowns()
             return
         }
-        val tool = viewModel.uiState.value.selectedTool
-        if (tool == Tool.SELECTOR) {
-            val tp = motionEventToTouchPoint(event, 0)
-            beginSelectionStroke(tp)
-            return
+        when (val mode = viewModel.uiState.value.mode) {
+            is EditorMode.Select -> {
+                val tp = motionEventToTouchPoint(event, 0)
+                beginSelectionStroke(tp)
+            }
+            is EditorMode.Text -> {
+                val tp = motionEventToTouchPoint(event, 0)
+                val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(tp.x, tp.y)
+                viewModel.beginTextInput(notePoint.x, notePoint.y)
+            }
+            is EditorMode.Draw -> when (mode.drawTool) {
+                DrawTool.GEOMETRY -> {
+                    val tp = motionEventToTouchPoint(event, 0)
+                    beginGeometryDrawing(tp)
+                    currentPoints.clear()
+                    currentPoints.add(tp)
+                }
+                DrawTool.PEN, DrawTool.ERASER -> {
+                    beginDrawing()
+                    currentPoints.clear()
+                    lastRenderedPointIndex = 0
+                    addPointsFromEvent(event)
+                }
+            }
         }
-        if (tool == Tool.GEOMETRY) {
-            val tp = motionEventToTouchPoint(event, 0)
-            beginGeometryDrawing(tp)
-            currentPoints.clear()
-            currentPoints.add(tp)
-            return
-        }
-        if (tool == Tool.TEXT) {
-            val tp = motionEventToTouchPoint(event, 0)
-            val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(tp.x, tp.y)
-            viewModel.beginTextInput(notePoint.x, notePoint.y)
-            return
-        }
-        beginDrawing()
-        currentPoints.clear()
-        lastRenderedPointIndex = 0
-        addPointsFromEvent(event)
     }
 
     private fun handleDrawMove(event: MotionEvent) {
-        val tool = viewModel.uiState.value.selectedTool
-        if (tool == Tool.TEXT) return
-        if (tool == Tool.GEOMETRY) {
-            val tp = motionEventToTouchPoint(event, 0)
-            currentPoints.add(tp)
-            updateGeometryPreview(tp)
-            return
-        }
-        if (tool == Tool.SELECTOR && selectionManager.hasSelection) {
-            val isTransforming = selectionManager.isDragging ||
-                selectionManager.transformMode == TransformMode.SCALE ||
-                selectionManager.transformMode == TransformMode.ROTATE
-
-            if (!isTransforming) {
-                refreshCount++
-                if (refreshCount < REFRESH_COUNT_LIMIT) return
-                refreshCount = 0
+        when (val mode = viewModel.uiState.value.mode) {
+            is EditorMode.Text -> return
+            is EditorMode.Draw -> when (mode.drawTool) {
+                DrawTool.GEOMETRY -> {
+                    val tp = motionEventToTouchPoint(event, 0)
+                    currentPoints.add(tp)
+                    updateGeometryPreview(tp)
+                    return
+                }
+                DrawTool.PEN, DrawTool.ERASER -> {
+                    addPointsFromEvent(event)
+                    drawIncrementalSegments()
+                }
             }
+            is EditorMode.Select -> {
+                if (selectionManager.hasSelection) {
+                    val isTransforming = selectionManager.isDragging ||
+                        selectionManager.transformMode == TransformMode.SCALE ||
+                        selectionManager.transformMode == TransformMode.ROTATE
 
-            val tp = motionEventToTouchPoint(event, event.pointerCount - 1)
-            handleSelectionMoveUpdate(tp)
-            return
+                    if (!isTransforming) {
+                        refreshCount++
+                        if (refreshCount < REFRESH_COUNT_LIMIT) return
+                        refreshCount = 0
+                    }
+
+                    val tp = motionEventToTouchPoint(event, event.pointerCount - 1)
+                    handleSelectionMoveUpdate(tp)
+                }
+            }
         }
-        addPointsFromEvent(event)
-        drawIncrementalSegments()
     }
 
     private fun handleDrawEnd() {
-        val tool = viewModel.uiState.value.selectedTool
-        if (tool == Tool.TEXT) return
-        if (tool == Tool.GEOMETRY) {
-            val touchPointList = buildTouchPointList()
-            finalizeGeometryShape(touchPointList)
-            currentPoints.clear()
-            return
+        when (val mode = viewModel.uiState.value.mode) {
+            is EditorMode.Text -> return
+            is EditorMode.Draw -> when (mode.drawTool) {
+                DrawTool.GEOMETRY -> {
+                    val touchPointList = buildTouchPointList()
+                    finalizeGeometryShape(touchPointList)
+                    currentPoints.clear()
+                    return
+                }
+                DrawTool.PEN, DrawTool.ERASER -> {
+                    if (handleCancelledStroke()) { currentPoints.clear(); return }
+                    val touchPointList = buildTouchPointList()
+                    if (currentPoints.isNotEmpty()) {
+                        finalizeStroke(touchPointList)
+                    } else {
+                        isDrawingInProgress = false
+                        onDrawingStateChanged(false)
+                        viewModel.endDrawing()
+                    }
+                    currentPoints.clear()
+                }
+            }
+            is EditorMode.Select -> {
+                if (handleCancelledStroke()) { currentPoints.clear(); return }
+                val touchPointList = buildTouchPointList()
+                handleSelectorStrokeEnd(touchPointList)
+                currentPoints.clear()
+            }
         }
-        if (handleCancelledStroke()) {
-            currentPoints.clear()
-            return
-        }
-        val touchPointList = buildTouchPointList()
-        if (handleSelectorStrokeEnd(touchPointList)) {
-            currentPoints.clear()
-            return
-        }
-        if (currentPoints.isNotEmpty()) {
-            finalizeStroke(touchPointList)
-        } else {
-            isDrawingInProgress = false
-            onDrawingStateChanged(false)
-            viewModel.endDrawing()
-        }
-        currentPoints.clear()
     }
 
     // --- Erasing ---

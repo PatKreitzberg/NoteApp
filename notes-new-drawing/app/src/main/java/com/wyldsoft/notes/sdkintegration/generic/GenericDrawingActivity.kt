@@ -8,8 +8,9 @@ import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceView
+import com.wyldsoft.notes.presentation.viewmodel.DrawTool
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
@@ -79,8 +80,8 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
                 stylusHandler.onTouchEvent(event)
             } else {
                 // Finger: check if drawing tool is selected (finger draws on non-Onyx)
-                val tool = editorViewModel.uiState.value.selectedTool
-                if (tool == Tool.PEN || tool == Tool.SELECTOR) {
+                val mode = editorViewModel.uiState.value.mode
+                if (mode is EditorMode.Draw && mode.drawTool == DrawTool.PEN || mode is EditorMode.Select) {
                     stylusHandler.onTouchEvent(event)
                 } else {
                     gestureHandler.onTouchEvent(event)

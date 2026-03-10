@@ -16,8 +16,8 @@ import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import android.view.MotionEvent
 import com.wyldsoft.notes.rendering.RenderingUtils
+import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
-import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import androidx.lifecycle.lifecycleScope
@@ -114,7 +114,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             onyxTouchHelper?.setRawDrawingEnabled(false)
         } else {
             val state = editorViewModel.uiState.value
-            if (state.selectedTool == Tool.SELECTOR) {
+            if (state.mode is EditorMode.Select) {
                 reconfigureTouchHelperForSelection()
             } else {
                 reconfigureTouchHelper(editorViewModel.excludeRects.value, applyColor = true)
