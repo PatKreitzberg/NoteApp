@@ -271,6 +271,36 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     else vm.selectTool(Tool.SELECTOR)
                     forceScreenRefresh()
                 }
+                GestureAction.TOGGLE_TEXT_MODE -> {
+                    val vm = editorViewModel
+                    if (vm.uiState.value.selectedTool == Tool.TEXT) vm.selectTool(Tool.PEN)
+                    else vm.selectTool(Tool.TEXT)
+                    forceScreenRefresh()
+                }
+                GestureAction.SWITCH_TAB -> {
+                    val vm = editorViewModel
+                    val nextTool = when (vm.uiState.value.selectedTool) {
+                        Tool.PEN, Tool.ERASER, Tool.GEOMETRY -> Tool.SELECTOR
+                        Tool.SELECTOR -> Tool.TEXT
+                        Tool.TEXT -> Tool.PEN
+                    }
+                    vm.selectTool(nextTool)
+                    forceScreenRefresh()
+                }
+                GestureAction.DRAW_GEOMETRIC_SHAPE -> {
+                    val vm = editorViewModel
+                    vm.selectTool(Tool.GEOMETRY)
+                    forceScreenRefresh()
+                }
+                GestureAction.COPY_SELECTION -> {
+                    val vm = editorViewModel
+                    if (vm.uiState.value.selectedTool == Tool.SELECTOR) vm.copySelection()
+                }
+                GestureAction.PASTE_SELECTION -> {
+                    val vm = editorViewModel
+                    vm.pasteSelection()
+                    forceScreenRefresh()
+                }
                 else -> Log.d(TAG, "Gesture action $action handled inline")
             }
         }

@@ -32,7 +32,12 @@ enum class GestureAction(val displayName: String) {
     SCROLL("Scroll viewport"),
     ZOOM("Zoom viewport"),
     RESET_ZOOM_AND_CENTER("Reset zoom & center"),
-    TOGGLE_SELECTION_MODE("Toggle selection mode");
+    TOGGLE_SELECTION_MODE("Toggle selection mode"),
+    TOGGLE_TEXT_MODE("Toggle text mode"),
+    SWITCH_TAB("Switch tab (Draw→Edit→Text)"),
+    DRAW_GEOMETRIC_SHAPE("Draw geometric shape"),
+    COPY_SELECTION("Copy selection"),
+    PASTE_SELECTION("Paste selection");
 
     companion object {
         fun fromString(value: String): GestureAction? {
