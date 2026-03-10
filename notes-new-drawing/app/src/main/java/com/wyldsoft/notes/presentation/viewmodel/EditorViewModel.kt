@@ -7,8 +7,11 @@ import androidx.lifecycle.viewModelScope
 import android.graphics.RectF
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.ActionUtils
+import com.wyldsoft.notes.actions.ConvertToTextAction
 import com.wyldsoft.notes.actions.DrawAction
+import com.wyldsoft.notes.actions.EditTextAction
 import com.wyldsoft.notes.actions.EraseAction
+import com.wyldsoft.notes.actions.SnapToLineAction
 import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.repository.NoteRepository
@@ -353,6 +356,24 @@ class EditorViewModel(
         }
     }
 
+    /**
+     * Records a snap-to-line conversion as two undo steps:
+     * 1. DrawAction(originalShape) — second undo removes the restored stroke
+     * 2. SnapToLineAction          — first undo reverts line → original stroke
+     * The line's SDK shape must already be in shapesManager before calling this.
+     */
+    fun addSnapToLineAction(originalShape: Shape, lineShape: Shape) {
+        viewModelScope.launch {
+            val noteId = currentNote.value.id
+            noteRepository.addShape(noteId, lineShape)
+            val sm = shapesManager ?: return@launch
+            val bm = bitmapManager ?: return@launch
+            actionManager.recordAction(DrawAction(noteId, originalShape, noteRepository, sm, bm))
+            actionManager.recordAction(SnapToLineAction(noteId, originalShape, lineShape, noteRepository, sm, bm))
+            updateContentBounds()
+        }
+    }
+
     fun beginTextInput(noteX: Float, noteY: Float) {
         if (_textInputPosition.value != null) return // already editing, ignore subsequent taps
         editingShapeId = null
@@ -409,18 +430,25 @@ class EditorViewModel(
         editingShapeId = null
 
         viewModelScope.launch {
+            val noteId = currentNote.value.id
+            // Capture old shape before removing from DB
+            val oldShape = if (editId != null) currentNote.value.shapes.find { it.id == editId } else null
+
             // Delete the original shape from DB when editing
             if (editId != null) {
-                noteRepository.removeShape(currentNote.value.id, editId)
+                noteRepository.removeShape(noteId, editId)
             }
 
             if (text.isBlank()) {
                 // Empty text: old shape already removed from memory; refresh to show deletion
                 val bm = bitmapManager
                 val sm = shapesManager
-                if (bm != null && sm != null && editId != null) {
+                if (bm != null && sm != null) {
                     bm.recreateBitmapFromShapes(sm.shapes())
                     onScreenRefreshNeeded?.invoke()
+                    if (oldShape != null) {
+                        actionManager.recordAction(EditTextAction(noteId, oldShape, null, noteRepository, sm, bm))
+                    }
                 }
                 return@launch
             }
@@ -434,14 +462,14 @@ class EditorViewModel(
                 fontSize = _textFontSize.value,
                 fontFamily = _textFontFamily.value
             )
-            noteRepository.addShape(currentNote.value.id, shape)
+            noteRepository.addShape(noteId, shape)
             val sm = shapesManager
             val bm = bitmapManager
             if (sm != null && bm != null) {
                 val sdkShape = sm.convertDomainShapeToSdkShape(shape)
                 sm.addShape(sdkShape)
                 bm.recreateBitmapFromShapes(sm.shapes())
-                actionManager.recordAction(DrawAction(currentNote.value.id, shape, noteRepository, sm, bm))
+                actionManager.recordAction(EditTextAction(noteId, oldShape, shape, noteRepository, sm, bm))
                 onScreenRefreshNeeded?.invoke()
             }
             updateContentBounds()
@@ -498,6 +526,7 @@ class EditorViewModel(
                     fontFamily = "sans-serif"
                 )
                 ActionUtils.addShapeToNoteAndMemory(note.id, textShape, noteRepository, sm)
+                actionManager.recordAction(ConvertToTextAction(note.id, selectedShapes, textShape, noteRepository, sm, bm))
                 bm.recreateBitmapFromShapes(sm.shapes())
                 selectionManager.clearSelection()
                 notifySelectionChanged()

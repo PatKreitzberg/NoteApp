@@ -5,6 +5,7 @@ import android.os.Looper
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.domain.models.Shape
+import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.geometry.GeometricShapeType
 import com.wyldsoft.notes.geometry.GeometryShapeCalculator
 import com.wyldsoft.notes.pen.PenProfile
@@ -94,7 +95,7 @@ class LineSnapHandler(
     fun onStrokeEnd(touchPointList: TouchPointList): Boolean {
         handler.removeCallbacks(snapRunnable)
         if (!isSnapped) return false
-        finalizeAsLine()
+        finalizeAsLine(touchPointList)
         return true
     }
 
@@ -117,7 +118,7 @@ class LineSnapHandler(
         bitmapManager.drawGeometryPreview(linePoints, getCurrentPenProfile())
     }
 
-    private fun finalizeAsLine() {
+    private fun finalizeAsLine(originalTouchPointList: TouchPointList) {
         val penProfile = getCurrentPenProfile()
         val linePoints = GeometryShapeCalculator.calculate(
             GeometricShapeType.LINE, startNoteX, startNoteY, lastNoteEndX, lastNoteEndY
@@ -145,7 +146,23 @@ class LineSnapHandler(
             strokeColor = penProfile.getColorAsInt(),
             penType = penProfile.penType
         )
-        viewModel.addGeometricShape(domainShape)
+
+        // Reconstruct the original freehand stroke from the raw touch points (surface→note coords)
+        val notePoints = originalTouchPointList.points?.map { tp ->
+            viewModel.viewportManager.surfaceToNoteCoordinates(tp.x, tp.y)
+        } ?: emptyList()
+        val pressures = originalTouchPointList.points?.map { it.pressure } ?: emptyList()
+        val originalShape = Shape(
+            type = ShapeType.STROKE,
+            points = notePoints,
+            strokeWidth = penProfile.strokeWidth,
+            strokeColor = penProfile.getColorAsInt(),
+            penType = penProfile.penType,
+            pressure = pressures
+        )
+
+        // Record as two undo steps: DrawAction(original) then SnapToLineAction(original→line)
+        viewModel.addSnapToLineAction(originalShape, domainShape)
 
         val noteBounds = baseShape.boundingRect
         if (noteBounds != null) bitmapManager.partialRefresh(noteBounds, shapesManager.shapes(), null)

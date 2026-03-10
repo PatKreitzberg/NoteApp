@@ -37,7 +37,9 @@ enum class GestureAction(val displayName: String) {
     SWITCH_TAB("Switch tab (Draw→Edit→Text)"),
     DRAW_GEOMETRIC_SHAPE("Draw geometric shape"),
     COPY_SELECTION("Copy selection"),
-    PASTE_SELECTION("Paste selection");
+    PASTE_SELECTION("Paste selection"),
+    UNDO("Undo"),
+    REDO("Redo");
 
     companion object {
         fun fromString(value: String): GestureAction? {

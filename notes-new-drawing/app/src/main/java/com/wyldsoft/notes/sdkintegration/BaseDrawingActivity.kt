@@ -301,6 +301,12 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     vm.pasteSelection()
                     forceScreenRefresh()
                 }
+                GestureAction.UNDO -> {
+                    editorViewModel.undo()
+                }
+                GestureAction.REDO -> {
+                    editorViewModel.redo()
+                }
                 else -> Log.d(TAG, "Gesture action $action handled inline")
             }
         }

@@ -3,6 +3,7 @@ package com.wyldsoft.notes.presentation.viewmodel
 import android.graphics.PointF
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.MoveAction
+import com.wyldsoft.notes.actions.TextFormattingAction
 import com.wyldsoft.notes.actions.TransformAction
 import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.data.repository.NoteRepository
@@ -77,6 +78,10 @@ class SelectionTransformHandler(
         val selectedIds = selectionManager.selectedShapeIds
         if (selectedIds.isEmpty()) return
 
+        // Capture before state for undo
+        val note = getCurrentNote()
+        val beforeShapes = note.shapes.filter { it.id in selectedIds && it.type == ShapeType.TEXT }
+
         for (shape in sm.shapes()) {
             if (shape.id in selectedIds && shape is TextShape) {
                 shape.setFontSize(fontSize)
@@ -98,8 +103,12 @@ class SelectionTransformHandler(
             onScreenRefreshNeeded()
         }
 
+        if (beforeShapes.isNotEmpty()) {
+            val afterShapes = beforeShapes.map { it.copy(fontSize = fontSize, fontFamily = fontFamily, strokeColor = color) }
+            actionManager.recordAction(TextFormattingAction(note.id, beforeShapes, afterShapes, noteRepository, sm, bm))
+        }
+
         scope.launch {
-            val note = getCurrentNote()
             for (shape in note.shapes) {
                 if (shape.id in selectedIds && shape.type == ShapeType.TEXT) {
                     noteRepository.updateShape(
