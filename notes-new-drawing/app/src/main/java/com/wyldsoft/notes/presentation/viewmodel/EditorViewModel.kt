@@ -87,6 +87,9 @@ class EditorViewModel(
     private val _textInputPosition = MutableStateFlow<android.graphics.PointF?>(null)
     val textInputPosition: StateFlow<android.graphics.PointF?> = _textInputPosition.asStateFlow()
 
+    private val _liveTextContent = MutableStateFlow("")
+    val liveTextContent: StateFlow<String> = _liveTextContent.asStateFlow()
+
     // Text formatting settings
     private val _textFontSize = MutableStateFlow(32f)
     val textFontSize: StateFlow<Float> = _textFontSize.asStateFlow()
@@ -332,8 +335,18 @@ class EditorViewModel(
     }
 
     fun beginTextInput(noteX: Float, noteY: Float) {
-        if (_textInputPosition.value != null) return // dialog already open, ignore subsequent taps
+        if (_textInputPosition.value != null) return // already editing, ignore subsequent taps
+        _liveTextContent.value = ""
         _textInputPosition.value = android.graphics.PointF(noteX, noteY)
+    }
+
+    fun updateLiveTextContent(text: String) {
+        _liveTextContent.value = text
+    }
+
+    fun commitLiveTextInput() {
+        commitTextInput(_liveTextContent.value)
+        _liveTextContent.value = ""
     }
 
     fun commitTextInput(text: String) {
@@ -367,6 +380,7 @@ class EditorViewModel(
 
     fun cancelTextInput() {
         _textInputPosition.value = null
+        _liveTextContent.value = ""
     }
 
     fun cancelSelection() {

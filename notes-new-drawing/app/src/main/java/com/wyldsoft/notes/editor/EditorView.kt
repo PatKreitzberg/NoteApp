@@ -1,18 +1,14 @@
 package com.wyldsoft.notes.editor
 
-import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import com.wyldsoft.notes.DrawingCanvas
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.ui.components.LiveTextInput
 import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.ViewportInfo
 import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
@@ -36,7 +32,6 @@ fun EditorView(
     val canGoForward by viewModel.canGoForward.collectAsState()
     val hasNotebook = viewModel.notebookId != null
     val textInputPosition by viewModel.textInputPosition.collectAsState()
-    var textInputValue by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -59,10 +54,19 @@ fun EditorView(
                 )
             }
 
-            DrawingCanvas(
-                viewModel = viewModel,
-                onSurfaceViewCreated = onSurfaceViewCreated
-            )
+            Box(modifier = Modifier.weight(1f)) {
+                DrawingCanvas(
+                    viewModel = viewModel,
+                    onSurfaceViewCreated = onSurfaceViewCreated
+                )
+                textInputPosition?.let { position ->
+                    LiveTextInput(
+                        notePosition = position,
+                        viewModel = viewModel,
+                        onCommit = { viewModel.commitLiveTextInput() }
+                    )
+                }
+            }
         }
         
         // Viewport info overlay at the bottom
@@ -96,36 +100,4 @@ fun EditorView(
         )
     }
 
-    if (textInputPosition != null) {
-        AlertDialog(
-            onDismissRequest = {
-                textInputValue = ""
-                viewModel.cancelTextInput()
-            },
-            title = { Text("Enter Text") },
-            text = {
-                TextField(
-                    value = textInputValue,
-                    onValueChange = { textInputValue = it },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.commitTextInput(textInputValue)
-                    textInputValue = ""
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    textInputValue = ""
-                    viewModel.cancelTextInput()
-                }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 }

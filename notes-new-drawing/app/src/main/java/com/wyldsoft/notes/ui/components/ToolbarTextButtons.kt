@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -56,6 +57,8 @@ fun ToolbarTextButtons(
     val currentFontFamily by viewModel.textFontFamily.collectAsState()
     val currentFontSize by viewModel.textFontSize.collectAsState()
     val currentTextColor by viewModel.textColor.collectAsState()
+    val textInputPosition by viewModel.textInputPosition.collectAsState()
+    val isEditingText = textInputPosition != null
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         // Text tool toggle button
@@ -106,6 +109,16 @@ fun ToolbarTextButtons(
             viewModel = viewModel,
             onItemSelected = { index -> viewModel.setTextColor(colorOptions[index].second) }
         )
+
+        if (isEditingText) {
+            Spacer(modifier = Modifier.width(12.dp))
+            Button(
+                onClick = { viewModel.commitLiveTextInput() },
+                modifier = Modifier.height(36.dp)
+            ) {
+                Text("Done", fontSize = 13.sp)
+            }
+        }
     }
 }
 
