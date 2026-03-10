@@ -368,10 +368,17 @@
   │
   ├── EditorUiState (data class)
   │   ├── isStrokeOptionsOpen: Boolean
-  │   ├── selectedTool: Tool
+  │   ├── mode: EditorMode
   │   └── selectedGeometricShape: GeometricShapeType
   │
-  ├── Tool (enum): PEN | ERASER | SELECTOR | GEOMETRY | TEXT
+  ├── EditorMode (sealed class):
+  │   ├── Draw(drawTool: DrawTool)  ← DrawTool: PEN | ERASER | GEOMETRY
+  │   ├── Select
+  │   └── Text
+  │
+  ├── switchMode(EditorMode)       ← centralized enter/exit hooks
+  │   ├── exitMode(): clears selection (Select), commits text (Text)
+  │   └── enterMode(): triggers screen refresh
   ├── selectGeometricShape()
   ├── addGeometricShape(Shape)
   ├── updateContentBounds()              ← syncs contentMaxY to ViewportManager
@@ -693,7 +700,7 @@
   7. Selection cleared, isConvertingToText=false
 
   Text Drawing Flow:
-  1. User taps Text tab → activates Tool.TEXT
+  1. User taps Text tab → activates EditorMode.Text
   2. Stylus tap on canvas → OnyxStylusHandler converts to note coords
      → EditorViewModel.beginTextInput(noteX, noteY)
   3. AlertDialog shown with TextField for text entry
@@ -726,7 +733,7 @@
   - Dropdowns collect closeAllDropdownsEvent via LaunchedEffect to close themselves
 
   Geometry Drawing Flow:
-  1. User activates ShapeButton in toolbar → Tool.GEOMETRY
+  1. User activates ShapeButton in toolbar → EditorMode.Draw(DrawTool.GEOMETRY)
   2. Stylus down → AbstractStylusHandler.beginGeometryDrawing()
      → snapshots bitmap via BitmapManager.beginGeometryDrawing()
   3. Stylus move → AbstractStylusHandler.updateGeometryPreview()
