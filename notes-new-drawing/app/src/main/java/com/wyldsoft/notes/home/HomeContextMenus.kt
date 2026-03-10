@@ -13,9 +13,9 @@ fun NotebookContextMenu(
     onDismiss: () -> Unit
 ) {
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-        DropdownMenuItem(text = { Text("Move") }, onClick = { onDismiss(); onMove() })
-        DropdownMenuItem(text = { Text("Rename") }, onClick = { onDismiss(); onRename() })
-        DropdownMenuItem(text = { Text("Delete") }, onClick = { onDismiss(); onDelete() })
+        DropdownMenuItem(text = { Text("Move") }, onClick = onMove)
+        DropdownMenuItem(text = { Text("Rename") }, onClick = onRename)
+        DropdownMenuItem(text = { Text("Delete") }, onClick = onDelete)
     }
 }
 
@@ -27,9 +27,9 @@ fun FolderContextMenu(
     onDismiss: () -> Unit
 ) {
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-        DropdownMenuItem(text = { Text("Move") }, onClick = { onDismiss(); onMove() })
-        DropdownMenuItem(text = { Text("Rename") }, onClick = { onDismiss(); onRename() })
-        DropdownMenuItem(text = { Text("Delete") }, onClick = { onDismiss(); onDelete() })
+        DropdownMenuItem(text = { Text("Move") }, onClick = onMove)
+        DropdownMenuItem(text = { Text("Rename") }, onClick = onRename)
+        DropdownMenuItem(text = { Text("Delete") }, onClick = onDelete)
     }
 }
 
@@ -42,9 +42,9 @@ fun NoteContextMenu(
     onDismiss: () -> Unit
 ) {
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-        DropdownMenuItem(text = { Text("Move") }, onClick = { onDismiss(); onMove() })
-        DropdownMenuItem(text = { Text("Rename") }, onClick = { onDismiss(); onRename() })
-        DropdownMenuItem(text = { Text("Manage Notebooks") }, onClick = { onDismiss(); onManage() })
-        DropdownMenuItem(text = { Text("Delete") }, onClick = { onDismiss(); onDelete() })
+        DropdownMenuItem(text = { Text("Move") }, onClick = onMove)
+        DropdownMenuItem(text = { Text("Rename") }, onClick = onRename)
+        DropdownMenuItem(text = { Text("Manage Notebooks") }, onClick = onManage)
+        DropdownMenuItem(text = { Text("Delete") }, onClick = onDelete)
     }
 }
