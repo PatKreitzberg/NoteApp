@@ -11,6 +11,7 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.presentation.viewmodel.Tool
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import com.wyldsoft.notes.sdkintegration.AbstractStylusHandler
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 
@@ -62,6 +63,17 @@ class OnyxStylusHandler(
         onSetRawDrawingRenderEnabled(false)
     }
 
+    // --- Text shape hit testing ---
+
+    private fun findTextShapeAtNotePoint(noteX: Float, noteY: Float): TextShape? {
+        return shapesManager.shapes()
+            .filterIsInstance<TextShape>()
+            .firstOrNull { shape ->
+                shape.updateShapeRect()
+                shape.boundingRect?.contains(noteX, noteY) == true
+            }
+    }
+
     // --- Onyx SDK callback ---
 
     fun createOnyxCallback(): RawInputCallback = object : RawInputCallback() {
@@ -80,7 +92,23 @@ class OnyxStylusHandler(
                 onSetRawDrawingRenderEnabled(false)
                 touchPoint?.let {
                     val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(it.x, it.y)
-                    viewModel.beginTextInput(notePoint.x, notePoint.y)
+                    val hitShape = findTextShapeAtNotePoint(notePoint.x, notePoint.y)
+                    if (hitShape != null) {
+                        val anchor = hitShape.touchPointList?.points?.firstOrNull()
+                        val anchorX = anchor?.x ?: notePoint.x
+                        val anchorY = anchor?.y ?: notePoint.y
+                        viewModel.beginEditingTextShape(
+                            shapeId = hitShape.id,
+                            anchorNoteX = anchorX,
+                            anchorNoteY = anchorY,
+                            existingText = hitShape.text,
+                            existingFontSize = hitShape.fontSize,
+                            existingFontFamily = hitShape.fontFamily,
+                            existingColor = hitShape.strokeColor
+                        )
+                    } else {
+                        viewModel.beginTextInput(notePoint.x, notePoint.y)
+                    }
                 }
                 return
             }

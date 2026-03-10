@@ -90,6 +90,9 @@ class EditorViewModel(
     private val _liveTextContent = MutableStateFlow("")
     val liveTextContent: StateFlow<String> = _liveTextContent.asStateFlow()
 
+    // ID of an existing TextShape being edited (null when creating a new one)
+    private var editingShapeId: String? = null
+
     // Text formatting settings
     private val _textFontSize = MutableStateFlow(32f)
     val textFontSize: StateFlow<Float> = _textFontSize.asStateFlow()
@@ -336,8 +339,42 @@ class EditorViewModel(
 
     fun beginTextInput(noteX: Float, noteY: Float) {
         if (_textInputPosition.value != null) return // already editing, ignore subsequent taps
+        editingShapeId = null
         _liveTextContent.value = ""
         _textInputPosition.value = android.graphics.PointF(noteX, noteY)
+    }
+
+    fun beginEditingTextShape(
+        shapeId: String,
+        anchorNoteX: Float,
+        anchorNoteY: Float,
+        existingText: String,
+        existingFontSize: Float,
+        existingFontFamily: String,
+        existingColor: Int
+    ) {
+        if (_textInputPosition.value != null) return
+        editingShapeId = shapeId
+
+        // Update toolbar settings to match the shape being edited
+        _textFontSize.value = existingFontSize
+        _textFontFamily.value = existingFontFamily
+        _textColor.value = existingColor
+
+        _liveTextContent.value = existingText
+        _textInputPosition.value = android.graphics.PointF(anchorNoteX, anchorNoteY)
+
+        // Remove from visual display so the LiveTextInput overlay takes over
+        val sm = shapesManager
+        val bm = bitmapManager
+        if (sm != null && bm != null) {
+            val sdkShape = sm.findShapeById(shapeId)
+            if (sdkShape != null) {
+                sm.removeShape(sdkShape)
+                bm.recreateBitmapFromShapes(sm.shapes())
+            }
+        }
+        onScreenRefreshNeeded?.invoke()
     }
 
     fun updateLiveTextContent(text: String) {
@@ -351,19 +388,36 @@ class EditorViewModel(
 
     fun commitTextInput(text: String) {
         val position = _textInputPosition.value ?: return
+        val editId = editingShapeId
         _textInputPosition.value = null
-        if (text.isBlank()) return
+        editingShapeId = null
 
-        val shape = Shape(
-            type = ShapeType.TEXT,
-            points = listOf(position),
-            strokeWidth = 2f,
-            strokeColor = _textColor.value,
-            text = text,
-            fontSize = _textFontSize.value,
-            fontFamily = _textFontFamily.value
-        )
         viewModelScope.launch {
+            // Delete the original shape from DB when editing
+            if (editId != null) {
+                noteRepository.removeShape(currentNote.value.id, editId)
+            }
+
+            if (text.isBlank()) {
+                // Empty text: old shape already removed from memory; refresh to show deletion
+                val bm = bitmapManager
+                val sm = shapesManager
+                if (bm != null && sm != null && editId != null) {
+                    bm.recreateBitmapFromShapes(sm.shapes())
+                    onScreenRefreshNeeded?.invoke()
+                }
+                return@launch
+            }
+
+            val shape = Shape(
+                type = ShapeType.TEXT,
+                points = listOf(position),
+                strokeWidth = 2f,
+                strokeColor = _textColor.value,
+                text = text,
+                fontSize = _textFontSize.value,
+                fontFamily = _textFontFamily.value
+            )
             noteRepository.addShape(currentNote.value.id, shape)
             val sm = shapesManager
             val bm = bitmapManager
@@ -379,8 +433,17 @@ class EditorViewModel(
     }
 
     fun cancelTextInput() {
+        val editId = editingShapeId
         _textInputPosition.value = null
         _liveTextContent.value = ""
+        editingShapeId = null
+
+        // When editing is cancelled, old shape was already removed from memory; delete from DB
+        if (editId != null) {
+            viewModelScope.launch {
+                noteRepository.removeShape(currentNote.value.id, editId)
+            }
+        }
     }
 
     fun cancelSelection() {

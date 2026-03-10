@@ -26,6 +26,7 @@ public class RendererHelper {
         public EraseArgs eraseArgs;
         public RectF clipRect;
         public Point viewPoint;
+        public float viewportScale = 1.0f;
 
         public void recycleBitmap() {
             if (bitmap != null && !bitmap.isRecycled()) {

@@ -30,8 +30,16 @@ public class TextShape extends BaseShape {
         this.fontSize = fontSize;
     }
 
+    public float getFontSize() {
+        return fontSize;
+    }
+
     public void setFontFamily(String fontFamily) {
         this.fontFamily = fontFamily != null ? fontFamily : "sans-serif";
+    }
+
+    public String getFontFamily() {
+        return fontFamily;
     }
 
     private Typeface resolveTypeface() {
@@ -58,7 +66,7 @@ public class TextShape extends BaseShape {
 
         paint.reset();
         paint.setColor(strokeColor);
-        paint.setTextSize(fontSize);
+        paint.setTextSize(fontSize * renderContext.viewportScale);
         paint.setTypeface(resolveTypeface());
         paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.FILL);

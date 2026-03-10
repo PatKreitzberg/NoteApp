@@ -63,6 +63,7 @@ class BitmapManager(
         val renderContext = rendererHelper.getRenderContext() ?: return
         renderContext.bitmap = bitmap
         val viewportManager = viewModel.viewportManager
+        renderContext.viewportScale = viewportManager.viewportState.value.scale
         val screenWidth = bitmap.width
         val screenHeight = bitmap.height
 
@@ -138,6 +139,7 @@ class BitmapManager(
 
         val renderContext = rendererHelper.getRenderContext() ?: return
         renderContext.bitmap = bitmap
+        renderContext.viewportScale = viewportManager.viewportState.value.scale
 
         canvas.save()
         canvas.clipRect(dirtyRectSurface)
