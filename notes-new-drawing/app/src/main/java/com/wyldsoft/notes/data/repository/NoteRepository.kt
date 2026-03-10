@@ -7,6 +7,7 @@ import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.ShapeEntity
+import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRef
 import com.wyldsoft.notes.domain.models.Note
 import com.wyldsoft.notes.domain.models.PaperTemplate
 import com.wyldsoft.notes.domain.models.Shape
@@ -28,6 +29,13 @@ interface NoteRepository {
     suspend fun updatePaperTemplate(noteId: String, paperTemplate: String)
     suspend fun updateShape(noteId: String, shape: Shape)
     suspend fun getParentNotebookId(noteId: String): String?
+    fun getLooseNotesInFolder(folderId: String): Flow<List<NoteEntity>>
+    suspend fun createLooseNote(folderId: String): NoteEntity
+    suspend fun moveNoteToFolder(noteId: String, folderId: String)
+    suspend fun moveNoteToNotebook(noteId: String, notebookId: String)
+    suspend fun renameNote(noteId: String, newName: String)
+    suspend fun getNotebooksForNote(noteId: String): List<String>
+    suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>)
 }
 
 class NoteRepositoryImpl(
@@ -200,6 +208,67 @@ class NoteRepositoryImpl(
             noteDao.getNote(noteId).parentNotebookId
         } catch (e: Exception) {
             null
+        }
+    }
+
+    override fun getLooseNotesInFolder(folderId: String): Flow<List<NoteEntity>> {
+        return noteDao.getLooseNotesInFolder(folderId)
+    }
+
+    override suspend fun createLooseNote(folderId: String): NoteEntity {
+        val count = noteDao.countLooseNotesInFolder(folderId)
+        val noteEntity = NoteEntity(
+            id = UUID.randomUUID().toString(),
+            title = "Note ${count + 1}",
+            folderId = folderId,
+            parentNotebookId = null
+        )
+        noteDao.insert(noteEntity)
+        return noteEntity
+    }
+
+    override suspend fun moveNoteToFolder(noteId: String, folderId: String) {
+        val note = noteDao.getNote(noteId)
+        noteDao.update(note.copy(
+            folderId = folderId,
+            parentNotebookId = null,
+            modifiedAt = System.currentTimeMillis()
+        ))
+        noteDao.deleteCrossRefsForNote(noteId)
+    }
+
+    override suspend fun moveNoteToNotebook(noteId: String, notebookId: String) {
+        val note = noteDao.getNote(noteId)
+        noteDao.update(note.copy(
+            parentNotebookId = notebookId,
+            folderId = null,
+            modifiedAt = System.currentTimeMillis()
+        ))
+        val existingRefs = noteDao.getCrossRefsForNote(noteId)
+        if (existingRefs.none { it.notebookId == notebookId }) {
+            noteDao.insertNoteNotebookCrossRef(NoteNotebookCrossRef(noteId, notebookId))
+        }
+    }
+
+    override suspend fun renameNote(noteId: String, newName: String) {
+        updateNoteFields(noteId) { it.copy(title = newName) }
+    }
+
+    override suspend fun getNotebooksForNote(noteId: String): List<String> {
+        return noteDao.getNotebooksForNote(noteId)
+    }
+
+    override suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>) {
+        noteDao.deleteCrossRefsForNote(noteId)
+        for (nbId in notebookIds) {
+            noteDao.insertNoteNotebookCrossRef(NoteNotebookCrossRef(noteId, nbId))
+        }
+        val note = noteDao.getNote(noteId)
+        if (note.parentNotebookId != null && note.parentNotebookId !in notebookIds) {
+            noteDao.update(note.copy(
+                parentNotebookId = notebookIds.firstOrNull(),
+                modifiedAt = System.currentTimeMillis()
+            ))
         }
     }
 

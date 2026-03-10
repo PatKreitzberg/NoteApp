@@ -1,13 +1,16 @@
 package com.wyldsoft.notes.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Folder
@@ -22,9 +25,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import com.wyldsoft.notes.data.database.entities.FolderEntity
+import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
@@ -72,27 +74,32 @@ fun SectionHeader(title: String, onAddClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FolderRow(folders: List<FolderEntity>, onFolderClick: (FolderEntity) -> Unit) {
+fun FolderRow(
+    folders: List<FolderEntity>,
+    onFolderClick: (FolderEntity) -> Unit,
+    onFolderLongClick: (FolderEntity) -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         folders.forEach { folder ->
-            FolderItem(folder = folder, onClick = { onFolderClick(folder) })
+            Box {
+                ItemCard(
+                    name = folder.name,
+                    icon = Icons.Default.Folder,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.combinedClickable(
+                        onClick = { onFolderClick(folder) },
+                        onLongClick = { onFolderLongClick(folder) }
+                    )
+                )
+            }
         }
     }
-}
-
-@Composable
-fun FolderItem(folder: FolderEntity, onClick: () -> Unit) {
-    ItemCard(
-        name = folder.name,
-        icon = Icons.Default.Folder,
-        iconTint = MaterialTheme.colorScheme.primary,
-        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.clickable { onClick() }
-    )
 }
 
 @Composable
@@ -126,21 +133,51 @@ fun NotebookItem(
     onLongClick: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    ItemCard(
-        name = notebook.name,
-        icon = Icons.Default.Book,
-        iconTint = MaterialTheme.colorScheme.secondary,
-        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.combinedClickable(
-            onClick = {
-                coroutineScope.launch {
-                    val noteId = viewModel.getFirstNoteInNotebook(notebook.id)
-                    noteId?.let { onNotebookSelected(notebook.id, it) }
-                }
-            },
-            onLongClick = onLongClick
+    Box {
+        ItemCard(
+            name = notebook.name,
+            icon = Icons.Default.Book,
+            iconTint = MaterialTheme.colorScheme.secondary,
+            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.combinedClickable(
+                onClick = {
+                    coroutineScope.launch {
+                        val noteId = viewModel.getFirstNoteInNotebook(notebook.id)
+                        noteId?.let { onNotebookSelected(notebook.id, it) }
+                    }
+                },
+                onLongClick = onLongClick
+            )
         )
-    )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun NoteRow(
+    notes: List<NoteEntity>,
+    onNoteClick: (NoteEntity) -> Unit,
+    onNoteLongClick: (NoteEntity) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        notes.forEach { note ->
+            Box {
+                ItemCard(
+                    name = note.title,
+                    icon = Icons.Default.Article,
+                    iconTint = MaterialTheme.colorScheme.tertiary,
+                    backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.combinedClickable(
+                        onClick = { onNoteClick(note) },
+                        onLongClick = { onNoteLongClick(note) }
+                    )
+                )
+            }
+        }
+    }
 }
 
 @Composable

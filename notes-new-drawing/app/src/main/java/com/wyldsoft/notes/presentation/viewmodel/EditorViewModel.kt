@@ -10,6 +10,7 @@ import com.wyldsoft.notes.actions.ActionUtils
 import com.wyldsoft.notes.actions.DrawAction
 import com.wyldsoft.notes.actions.EraseAction
 import com.wyldsoft.notes.actions.TransformType
+import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.htr.HTRRunManager
@@ -627,6 +628,34 @@ class EditorViewModel(
 
     fun forceRefresh() {
         _refreshUi.value = System.currentTimeMillis()
+    }
+
+    // --- Note management ---
+
+    private val _allNotebooks = MutableStateFlow<List<NotebookEntity>>(emptyList())
+    val allNotebooks: StateFlow<List<NotebookEntity>> = _allNotebooks.asStateFlow()
+
+    private val _noteNotebooks = MutableStateFlow<List<String>>(emptyList())
+    val noteNotebooks: StateFlow<List<String>> = _noteNotebooks.asStateFlow()
+
+    fun loadNoteManagementData() {
+        viewModelScope.launch {
+            _allNotebooks.value = notebookRepository.getAllNotebooks()
+            _noteNotebooks.value = noteRepository.getNotebooksForNote(currentNote.value.id)
+        }
+    }
+
+    fun renameNote(newTitle: String) {
+        viewModelScope.launch {
+            noteRepository.renameNote(currentNote.value.id, newTitle)
+        }
+    }
+
+    fun updateNoteNotebooks(notebookIds: List<String>) {
+        viewModelScope.launch {
+            noteRepository.updateNoteNotebooks(currentNote.value.id, notebookIds)
+            _noteNotebooks.value = notebookIds
+        }
     }
 }
 

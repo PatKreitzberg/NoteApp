@@ -3,6 +3,7 @@ package com.wyldsoft.notes.data.repository
 import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.NotebookDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
+import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
@@ -20,11 +21,14 @@ interface NotebookRepository {
     suspend fun getFirstNoteInNotebook(notebookId: String): NoteEntity?
     suspend fun getNotesInNotebookOnce(notebookId: String): List<NoteEntity>
     suspend fun createNoteInNotebook(notebookId: String): NoteEntity
+    suspend fun moveNotebook(notebookId: String, targetFolderId: String)
+    suspend fun getAllNotebooks(): List<NotebookEntity>
 }
 
 class NotebookRepositoryImpl(
     private val notebookDao: NotebookDao,
     private val noteDao: NoteDao,
+    private val shapeDao: ShapeDao,
     private val deletedItemDao: DeletedItemDao? = null
 ) : NotebookRepository {
     
@@ -43,23 +47,16 @@ class NotebookRepositoryImpl(
             folderId = folderId
         )
         notebookDao.insert(notebook)
-        
-        // Create first note automatically
+
         val firstNote = NoteEntity(
             id = UUID.randomUUID().toString(),
-            title = "Page 1",
+            title = "$name-Page 1",
             parentNotebookId = notebook.id
         )
         noteDao.insert(firstNote)
-        
-        // Create cross-reference
         noteDao.insertNoteNotebookCrossRef(
-            NoteNotebookCrossRef(
-                noteId = firstNote.id,
-                notebookId = notebook.id
-            )
+            NoteNotebookCrossRef(noteId = firstNote.id, notebookId = notebook.id)
         )
-        
         return notebook
     }
     
@@ -74,6 +71,20 @@ class NotebookRepositoryImpl(
     }
     
     override suspend fun deleteNotebook(notebookId: String) {
+        val notesInNotebook = notebookDao.getNotesInNotebookOnce(notebookId)
+        for (note in notesInNotebook) {
+            val otherNotebooks = noteDao.getNotebooksForNote(note.id).filter { it != notebookId }
+            if (otherNotebooks.isEmpty() && note.folderId == null) {
+                shapeDao.deleteAllForNote(note.id)
+                deletedItemDao?.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+                noteDao.deleteById(note.id)
+            } else if (note.parentNotebookId == notebookId && otherNotebooks.isNotEmpty()) {
+                noteDao.update(note.copy(
+                    parentNotebookId = otherNotebooks.first(),
+                    modifiedAt = System.currentTimeMillis()
+                ))
+            }
+        }
         deletedItemDao?.insert(DeletedItemEntity(entityId = notebookId, entityType = "notebook"))
         notebookDao.deleteById(notebookId)
     }
@@ -91,23 +102,32 @@ class NotebookRepositoryImpl(
     }
 
     override suspend fun createNoteInNotebook(notebookId: String): NoteEntity {
+        val notebook = notebookDao.getNotebook(notebookId)
         val existingNotes = notebookDao.getNotesInNotebookOnce(notebookId)
         val pageNumber = existingNotes.size + 1
+        val notebookName = notebook?.name ?: "Notebook"
 
         val newNote = NoteEntity(
             id = UUID.randomUUID().toString(),
-            title = "Page $pageNumber",
+            title = "$notebookName-Page $pageNumber",
             parentNotebookId = notebookId
         )
         noteDao.insert(newNote)
-
         noteDao.insertNoteNotebookCrossRef(
-            NoteNotebookCrossRef(
-                noteId = newNote.id,
-                notebookId = notebookId
-            )
+            NoteNotebookCrossRef(noteId = newNote.id, notebookId = notebookId)
         )
-
         return newNote
+    }
+
+    override suspend fun moveNotebook(notebookId: String, targetFolderId: String) {
+        val notebook = notebookDao.getNotebook(notebookId) ?: return
+        notebookDao.update(notebook.copy(
+            folderId = targetFolderId,
+            modifiedAt = System.currentTimeMillis()
+        ))
+    }
+
+    override suspend fun getAllNotebooks(): List<NotebookEntity> {
+        return notebookDao.getAllNotebookEntities()
     }
 }

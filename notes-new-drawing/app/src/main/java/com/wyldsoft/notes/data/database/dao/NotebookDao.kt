@@ -62,4 +62,7 @@ interface NotebookDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertNotebook(notebook: NotebookEntity)
+
+    @Query("SELECT * FROM notebooks WHERE folderId = :folderId")
+    suspend fun getNotebooksInFolderOnce(folderId: String): List<NotebookEntity>
 }

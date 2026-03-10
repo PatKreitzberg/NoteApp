@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
                                         GenericDrawingActivity::class.java
                                     }
                                     val intent = Intent(context, activityClass).apply {
-                                        putExtra("notebookId", notebookId)
+                                        if (notebookId.isNotEmpty()) putExtra("notebookId", notebookId)
                                         putExtra("noteId", noteId)
                                     }
                                     context.startActivity(intent)

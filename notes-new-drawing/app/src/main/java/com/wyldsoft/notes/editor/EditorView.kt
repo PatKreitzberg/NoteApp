@@ -11,6 +11,7 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.ui.components.LiveTextInput
 import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.ViewportInfo
+import com.wyldsoft.notes.ui.components.dialogs.ManageNoteDialog
 import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
 
 @Composable
@@ -25,7 +26,11 @@ fun EditorView(
     val paperSize by viewModel.paperSize.collectAsState()
     val paperTemplate by viewModel.paperTemplate.collectAsState()
     val currentPageNumber by viewModel.currentPageNumber.collectAsState()
+    val currentNote by viewModel.currentNote.collectAsState()
+    val allNotebooks by viewModel.allNotebooks.collectAsState()
+    val noteNotebooks by viewModel.noteNotebooks.collectAsState()
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
+    var showManageNotebooksDialog by remember { mutableStateOf(false) }
     var isToolbarCollapsed by remember { mutableStateOf(false) }
 
     val canGoBack by viewModel.canGoBack.collectAsState()
@@ -33,19 +38,17 @@ fun EditorView(
     val hasNotebook = viewModel.notebookId != null
     val textInputPosition by viewModel.textInputPosition.collectAsState()
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Toolbar has its own horizontal padding; canvas gets full width
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(horizontal = if (isToolbarCollapsed) 0.dp else 8.dp)) {
                 Toolbar(
                     viewModel = viewModel,
                     currentPenProfile = currentPenProfile,
                     isStrokeOptionsOpen = uiState.isStrokeOptionsOpen,
-                    onSettingsClick = { showNoteSettingsDialog = true },
+                    onSettingsClick = {
+                        viewModel.loadNoteManagementData()
+                        showNoteSettingsDialog = true
+                    },
                     onCollapsedChanged = { collapsed -> isToolbarCollapsed = collapsed },
                     onNavigateBack = if (hasNotebook) {{ viewModel.navigateBackward() }} else null,
                     onNavigateForward = if (hasNotebook) {{ viewModel.navigateForward() }} else null,
@@ -68,8 +71,7 @@ fun EditorView(
                 }
             }
         }
-        
-        // Viewport info overlay at the bottom
+
         ViewportInfo(
             viewportState = viewportState,
             isPaginationEnabled = isPaginationEnabled,
@@ -77,21 +79,20 @@ fun EditorView(
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
-    
-    // Note settings dialog
+
     if (showNoteSettingsDialog) {
         NoteSettingsDialog(
+            noteName = currentNote.title,
             isPaginationEnabled = isPaginationEnabled,
             currentPaperSize = paperSize,
             currentPaperTemplate = paperTemplate,
-            onPaginationToggle = { enabled ->
-                viewModel.updatePaginationEnabled(enabled)
-            },
-            onPaperSizeChange = { newPaperSize ->
-                viewModel.updatePaperSize(newPaperSize)
-            },
-            onPaperTemplateChange = { newTemplate ->
-                viewModel.updatePaperTemplate(newTemplate)
+            onRenameNote = { newName -> viewModel.renameNote(newName) },
+            onPaginationToggle = { enabled -> viewModel.updatePaginationEnabled(enabled) },
+            onPaperSizeChange = { newPaperSize -> viewModel.updatePaperSize(newPaperSize) },
+            onPaperTemplateChange = { newTemplate -> viewModel.updatePaperTemplate(newTemplate) },
+            onManageNotebooks = {
+                showNoteSettingsDialog = false
+                showManageNotebooksDialog = true
             },
             onDismiss = {
                 showNoteSettingsDialog = false
@@ -100,4 +101,12 @@ fun EditorView(
         )
     }
 
+    if (showManageNotebooksDialog) {
+        ManageNoteDialog(
+            notebooks = allNotebooks,
+            checkedNotebookIds = noteNotebooks,
+            onSave = { notebookIds -> viewModel.updateNoteNotebooks(notebookIds) },
+            onDismiss = { showManageNotebooksDialog = false }
+        )
+    }
 }

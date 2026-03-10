@@ -31,6 +31,9 @@ class ScrotesApp : Application() {
     val folderRepository: FolderRepository by lazy {
         FolderRepositoryImpl(
             folderDao = database.folderDao(),
+            notebookDao = database.notebookDao(),
+            noteDao = database.noteDao(),
+            shapeDao = database.shapeDao(),
             deletedItemDao = database.deletedItemDao()
         )
     }
@@ -39,6 +42,7 @@ class ScrotesApp : Application() {
         NotebookRepositoryImpl(
             notebookDao = database.notebookDao(),
             noteDao = database.noteDao(),
+            shapeDao = database.shapeDao(),
             deletedItemDao = database.deletedItemDao()
         )
     }

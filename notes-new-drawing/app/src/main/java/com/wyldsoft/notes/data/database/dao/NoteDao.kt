@@ -19,6 +19,12 @@ interface NoteDao {
     
     @Query("SELECT * FROM notes WHERE folderId = :folderId AND parentNotebookId IS NULL")
     fun getLooseNotesInFolder(folderId: String): Flow<List<NoteEntity>>
+
+    @Query("SELECT * FROM notes WHERE folderId = :folderId AND parentNotebookId IS NULL")
+    suspend fun getLooseNotesInFolderOnce(folderId: String): List<NoteEntity>
+
+    @Query("SELECT COUNT(*) FROM notes WHERE folderId = :folderId AND parentNotebookId IS NULL")
+    suspend fun countLooseNotesInFolder(folderId: String): Int
     
     @Insert
     suspend fun insert(note: NoteEntity)

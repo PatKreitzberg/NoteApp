@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wyldsoft.notes.data.database.entities.FolderEntity
+import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.repository.FolderRepository
 import com.wyldsoft.notes.data.repository.NoteRepository
@@ -27,49 +28,47 @@ class HomeViewModel(
 ) : ViewModel() {
     private val _currentFolderId = MutableStateFlow<String?>(null)
     val currentFolderId: StateFlow<String?> = _currentFolderId.asStateFlow()
-    
+
     private val _currentFolder = MutableStateFlow<FolderEntity?>(null)
     val currentFolder: StateFlow<FolderEntity?> = _currentFolder.asStateFlow()
-    
+
     private val _folderPath = MutableStateFlow<List<FolderEntity>>(emptyList())
     val folderPath: StateFlow<List<FolderEntity>> = _folderPath.asStateFlow()
-    
+
     val subfolders: StateFlow<List<FolderEntity>> = _currentFolderId
         .filterNotNull()
-        .flatMapLatest { folderId ->
-            folderRepository.getSubfolders(folderId)
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-    
+        .flatMapLatest { folderId -> folderRepository.getSubfolders(folderId) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val notebooks: StateFlow<List<NotebookEntity>> = _currentFolderId
         .filterNotNull()
-        .flatMapLatest { folderId ->
-            notebookRepository.getNotebooksInFolder(folderId)
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-    
+        .flatMapLatest { folderId -> notebookRepository.getNotebooksInFolder(folderId) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val looseNotes: StateFlow<List<NoteEntity>> = _currentFolderId
+        .filterNotNull()
+        .flatMapLatest { folderId -> noteRepository.getLooseNotesInFolder(folderId) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _allFolders = MutableStateFlow<List<FolderEntity>>(emptyList())
+    val allFolders: StateFlow<List<FolderEntity>> = _allFolders.asStateFlow()
+
+    private val _allNotebooks = MutableStateFlow<List<NotebookEntity>>(emptyList())
+    val allNotebooks: StateFlow<List<NotebookEntity>> = _allNotebooks.asStateFlow()
+
     private val _showCreateFolderDialog = MutableStateFlow(false)
     val showCreateFolderDialog: StateFlow<Boolean> = _showCreateFolderDialog.asStateFlow()
-    
+
     private val _showCreateNotebookDialog = MutableStateFlow(false)
     val showCreateNotebookDialog: StateFlow<Boolean> = _showCreateNotebookDialog.asStateFlow()
-    
+
     init {
-        // Load root folder on initialization
         viewModelScope.launch {
             val rootFolder = folderRepository.getRootFolder()
             navigateToFolder(rootFolder.id)
         }
     }
-    
+
     fun navigateToFolder(folderId: String) {
         viewModelScope.launch {
             _currentFolderId.value = folderId
@@ -77,7 +76,7 @@ class HomeViewModel(
             _folderPath.value = folderRepository.getFolderPath(folderId)
         }
     }
-    
+
     fun createFolder(name: String) {
         viewModelScope.launch {
             val currentId = _currentFolderId.value ?: return@launch
@@ -85,7 +84,7 @@ class HomeViewModel(
             _showCreateFolderDialog.value = false
         }
     }
-    
+
     fun createNotebook(name: String) {
         Log.d("HomeViewModel", "Creating notebook with name: $name")
         viewModelScope.launch {
@@ -94,32 +93,85 @@ class HomeViewModel(
             _showCreateNotebookDialog.value = false
         }
     }
-    
-    fun showCreateFolderDialog() {
-        _showCreateFolderDialog.value = true
-    }
-    
-    fun hideCreateFolderDialog() {
-        _showCreateFolderDialog.value = false
-    }
-    
-    fun showCreateNotebookDialog() {
-        Log.d("HomeViewModel", "Showing create notebook dialog")
-        _showCreateNotebookDialog.value = true
-    }
-    
-    fun hideCreateNotebookDialog() {
-        Log.d("HomeViewModel", "Hiding create notebook dialog")
-        _showCreateNotebookDialog.value = false
-    }
-    
+
+    fun showCreateFolderDialog() { _showCreateFolderDialog.value = true }
+    fun hideCreateFolderDialog() { _showCreateFolderDialog.value = false }
+    fun showCreateNotebookDialog() { _showCreateNotebookDialog.value = true }
+    fun hideCreateNotebookDialog() { _showCreateNotebookDialog.value = false }
+
     suspend fun getFirstNoteInNotebook(notebookId: String): String? {
         return notebookRepository.getFirstNoteInNotebook(notebookId)?.id
     }
-    
+
+    // Notebook operations
     fun renameNotebook(notebookId: String, newName: String) {
+        viewModelScope.launch { notebookRepository.renameNotebook(notebookId, newName) }
+    }
+
+    fun deleteNotebook(notebookId: String) {
+        viewModelScope.launch { notebookRepository.deleteNotebook(notebookId) }
+    }
+
+    fun moveNotebook(notebookId: String, targetFolderId: String) {
+        viewModelScope.launch { notebookRepository.moveNotebook(notebookId, targetFolderId) }
+    }
+
+    // Folder operations
+    fun renameFolder(folderId: String, newName: String) {
+        viewModelScope.launch { folderRepository.renameFolder(folderId, newName) }
+    }
+
+    fun deleteFolder(folderId: String) {
         viewModelScope.launch {
-            notebookRepository.renameNotebook(notebookId, newName)
+            folderRepository.deleteFolder(folderId)
+            // Navigate to parent if current folder was deleted
+            if (_currentFolderId.value == folderId) {
+                val rootFolder = folderRepository.getRootFolder()
+                navigateToFolder(rootFolder.id)
+            }
+        }
+    }
+
+    fun moveFolder(folderId: String, targetParentFolderId: String) {
+        viewModelScope.launch { folderRepository.moveFolder(folderId, targetParentFolderId) }
+    }
+
+    // Note operations
+    fun createLooseNote() {
+        viewModelScope.launch {
+            val currentId = _currentFolderId.value ?: return@launch
+            noteRepository.createLooseNote(currentId)
+        }
+    }
+
+    fun renameNote(noteId: String, newName: String) {
+        viewModelScope.launch { noteRepository.renameNote(noteId, newName) }
+    }
+
+    fun deleteNote(noteId: String) {
+        viewModelScope.launch { noteRepository.deleteNote(noteId) }
+    }
+
+    fun moveNoteToFolder(noteId: String, folderId: String) {
+        viewModelScope.launch { noteRepository.moveNoteToFolder(noteId, folderId) }
+    }
+
+    fun moveNoteToNotebook(noteId: String, notebookId: String) {
+        viewModelScope.launch { noteRepository.moveNoteToNotebook(noteId, notebookId) }
+    }
+
+    fun updateNoteNotebooks(noteId: String, notebookIds: List<String>) {
+        viewModelScope.launch { noteRepository.updateNoteNotebooks(noteId, notebookIds) }
+    }
+
+    suspend fun getNotebooksForNote(noteId: String): List<String> {
+        return noteRepository.getNotebooksForNote(noteId)
+    }
+
+    fun loadAllFoldersAndNotebooks() {
+        viewModelScope.launch {
+            _allFolders.value = folderRepository.getAllFolders()
+            _allNotebooks.value = notebookRepository.getAllNotebooks()
         }
     }
 

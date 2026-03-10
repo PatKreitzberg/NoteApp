@@ -13,6 +13,9 @@ import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.State
+import kotlinx.coroutines.launch
+import com.wyldsoft.notes.data.database.entities.FolderEntity
+import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
@@ -20,7 +23,7 @@ import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.GoogleDriveDialog
-import com.wyldsoft.notes.ui.components.dialogs.NotebookSettingsDialog
+import com.wyldsoft.notes.ui.components.dialogs.ManageNoteDialog
 
 @Composable
 fun HomeView(
@@ -36,14 +39,38 @@ fun HomeView(
     val folderPath by viewModel.folderPath.collectAsState()
     val subfolders by viewModel.subfolders.collectAsState()
     val notebooks by viewModel.notebooks.collectAsState()
+    val looseNotes by viewModel.looseNotes.collectAsState()
+    val allFolders by viewModel.allFolders.collectAsState()
+    val allNotebooks by viewModel.allNotebooks.collectAsState()
     val showCreateFolderDialog by viewModel.showCreateFolderDialog.collectAsState()
     val showCreateNotebookDialog by viewModel.showCreateNotebookDialog.collectAsState()
     var showAppSettingsDialog by remember { mutableStateOf(false) }
     var showGoogleDriveDialog by remember { mutableStateOf(false) }
-    var selectedNotebook by remember { mutableStateOf<NotebookEntity?>(null) }
     var showSearchDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
+
+    // Context menu targets
+    var contextMenuNotebook by remember { mutableStateOf<NotebookEntity?>(null) }
+    var contextMenuFolder by remember { mutableStateOf<FolderEntity?>(null) }
+    var contextMenuNote by remember { mutableStateOf<NoteEntity?>(null) }
+
+    // Active dialog state
+    var showMoveNotebookDialog by remember { mutableStateOf(false) }
+    var showMoveFolderDialog by remember { mutableStateOf(false) }
+    var showMoveNoteDialog by remember { mutableStateOf(false) }
+    var showDeleteNotebookDialog by remember { mutableStateOf(false) }
+    var showDeleteFolderDialog by remember { mutableStateOf(false) }
+    var showDeleteNoteDialog by remember { mutableStateOf(false) }
+    var showRenameNotebookDialog by remember { mutableStateOf(false) }
+    var showRenameFolderDialog by remember { mutableStateOf(false) }
+    var showRenameNoteDialog by remember { mutableStateOf(false) }
+    var showManageNoteDialog by remember { mutableStateOf(false) }
+    var manageNoteCurrentNotebooks by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // Load folders/notebooks when a context menu action needs them
+    fun ensureFoldersLoaded() { viewModel.loadAllFoldersAndNotebooks() }
 
     if (showCreateNotebookDialog) {
         Log.d("HomeView", "Show create notebook dialog if statement")
@@ -78,7 +105,24 @@ fun HomeView(
         Spacer(modifier = Modifier.height(16.dp))
 
         SectionHeader(title = "Folders", onAddClick = { viewModel.showCreateFolderDialog() })
-        FolderRow(folders = subfolders, onFolderClick = { viewModel.navigateToFolder(it.id) })
+        FolderRow(
+            folders = subfolders,
+            onFolderClick = { viewModel.navigateToFolder(it.id) },
+            onFolderLongClick = { folder ->
+                contextMenuFolder = folder
+                ensureFoldersLoaded()
+            }
+        )
+
+        // Folder context menu
+        contextMenuFolder?.let { folder ->
+            FolderContextMenu(
+                onMove = { showMoveFolderDialog = true },
+                onRename = { showRenameFolderDialog = true },
+                onDelete = { showDeleteFolderDialog = true },
+                onDismiss = { contextMenuFolder = null }
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -93,8 +137,52 @@ fun HomeView(
             notebooks = notebooks,
             viewModel = viewModel,
             onNotebookSelected = onNotebookSelected,
-            onNotebookLongClick = { selectedNotebook = it }
+            onNotebookLongClick = { notebook ->
+                contextMenuNotebook = notebook
+                ensureFoldersLoaded()
+            }
         )
+
+        // Notebook context menu
+        contextMenuNotebook?.let { notebook ->
+            NotebookContextMenu(
+                onMove = { showMoveNotebookDialog = true },
+                onRename = { showRenameNotebookDialog = true },
+                onDelete = { showDeleteNotebookDialog = true },
+                onDismiss = { contextMenuNotebook = null }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionHeader(title = "Notes", onAddClick = { viewModel.createLooseNote() })
+        NoteRow(
+            notes = looseNotes,
+            onNoteClick = { note ->
+                // Open loose note: navigate to it without a notebook context
+                onNotebookSelected("", note.id)
+            },
+            onNoteLongClick = { note ->
+                contextMenuNote = note
+                ensureFoldersLoaded()
+            }
+        )
+
+        // Note context menu
+        contextMenuNote?.let { note ->
+            NoteContextMenu(
+                onMove = { showMoveNoteDialog = true },
+                onRename = { showRenameNoteDialog = true },
+                onDelete = { showDeleteNoteDialog = true },
+                onManage = {
+                    coroutineScope.launch {
+                        manageNoteCurrentNotebooks = viewModel.getNotebooksForNote(note.id)
+                        showManageNoteDialog = true
+                    }
+                },
+                onDismiss = { contextMenuNote = null }
+            )
+        }
     }
 
     if (showCreateFolderDialog) {
@@ -124,12 +212,120 @@ fun HomeView(
         )
     }
 
-    selectedNotebook?.let { notebook ->
-        NotebookSettingsDialog(
-            notebookName = notebook.name,
-            onRename = { newName -> viewModel.renameNotebook(notebook.id, newName); selectedNotebook = null },
-            onDismiss = { selectedNotebook = null }
-        )
+    // Notebook dialogs
+    if (showRenameNotebookDialog) {
+        contextMenuNotebook?.let { notebook ->
+            RenameDialog(
+                title = "Rename Notebook",
+                currentName = notebook.name,
+                onConfirm = { viewModel.renameNotebook(notebook.id, it) },
+                onDismiss = { showRenameNotebookDialog = false; contextMenuNotebook = null }
+            )
+        }
+    }
+
+    if (showDeleteNotebookDialog) {
+        contextMenuNotebook?.let { notebook ->
+            ConfirmDeleteDialog(
+                title = "Delete Notebook",
+                message = "Delete \"${notebook.name}\"? Notes only in this notebook will also be deleted.",
+                onConfirm = { viewModel.deleteNotebook(notebook.id) },
+                onDismiss = { showDeleteNotebookDialog = false; contextMenuNotebook = null }
+            )
+        }
+    }
+
+    if (showMoveNotebookDialog) {
+        contextMenuNotebook?.let { notebook ->
+            MoveToFolderDialog(
+                folders = allFolders,
+                excludeFolderId = null,
+                title = "Move Notebook to Folder",
+                onMove = { folder -> viewModel.moveNotebook(notebook.id, folder.id) },
+                onDismiss = { showMoveNotebookDialog = false; contextMenuNotebook = null }
+            )
+        }
+    }
+
+    // Folder dialogs
+    if (showRenameFolderDialog) {
+        contextMenuFolder?.let { folder ->
+            RenameDialog(
+                title = "Rename Folder",
+                currentName = folder.name,
+                onConfirm = { viewModel.renameFolder(folder.id, it) },
+                onDismiss = { showRenameFolderDialog = false; contextMenuFolder = null }
+            )
+        }
+    }
+
+    if (showDeleteFolderDialog) {
+        contextMenuFolder?.let { folder ->
+            ConfirmDeleteDialog(
+                title = "Delete Folder",
+                message = "Delete \"${folder.name}\" and all its contents? This cannot be undone.",
+                onConfirm = { viewModel.deleteFolder(folder.id) },
+                onDismiss = { showDeleteFolderDialog = false; contextMenuFolder = null }
+            )
+        }
+    }
+
+    if (showMoveFolderDialog) {
+        contextMenuFolder?.let { folder ->
+            MoveToFolderDialog(
+                folders = allFolders,
+                excludeFolderId = folder.id,
+                title = "Move Folder into Folder",
+                onMove = { target -> viewModel.moveFolder(folder.id, target.id) },
+                onDismiss = { showMoveFolderDialog = false; contextMenuFolder = null }
+            )
+        }
+    }
+
+    // Note dialogs
+    if (showRenameNoteDialog) {
+        contextMenuNote?.let { note ->
+            RenameDialog(
+                title = "Rename Note",
+                currentName = note.title,
+                onConfirm = { viewModel.renameNote(note.id, it) },
+                onDismiss = { showRenameNoteDialog = false; contextMenuNote = null }
+            )
+        }
+    }
+
+    if (showDeleteNoteDialog) {
+        contextMenuNote?.let { note ->
+            ConfirmDeleteDialog(
+                title = "Delete Note",
+                message = "Delete \"${note.title}\"? This cannot be undone.",
+                onConfirm = { viewModel.deleteNote(note.id) },
+                onDismiss = { showDeleteNoteDialog = false; contextMenuNote = null }
+            )
+        }
+    }
+
+    if (showMoveNoteDialog) {
+        contextMenuNote?.let { note ->
+            MoveNoteDialog(
+                notebooks = allNotebooks,
+                folders = allFolders,
+                onMoveToNotebook = { notebook -> viewModel.moveNoteToNotebook(note.id, notebook.id) },
+                onMoveToFolder = { folder -> viewModel.moveNoteToFolder(note.id, folder.id) },
+                onDismiss = { showMoveNoteDialog = false; contextMenuNote = null }
+            )
+        }
+    }
+
+    if (showManageNoteDialog) {
+        contextMenuNote?.let { note ->
+            ManageNoteDialog(
+                notebooks = allNotebooks,
+                checkedNotebookIds = manageNoteCurrentNotebooks,
+                onSave = { notebookIds -> viewModel.updateNoteNotebooks(note.id, notebookIds) },
+                onDismiss = { showManageNoteDialog = false; contextMenuNote = null }
+            )
+        }
     }
 
     if (showSearchDialog) {

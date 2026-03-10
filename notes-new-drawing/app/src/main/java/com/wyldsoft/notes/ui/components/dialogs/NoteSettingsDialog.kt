@@ -11,19 +11,49 @@ import com.wyldsoft.notes.domain.models.PaperTemplate
 
 @Composable
 fun NoteSettingsDialog(
+    noteName: String,
     isPaginationEnabled: Boolean,
     currentPaperSize: PaperSize,
     currentPaperTemplate: PaperTemplate,
+    onRenameNote: (String) -> Unit,
     onPaginationToggle: (Boolean) -> Unit,
     onPaperSizeChange: (PaperSize) -> Unit,
     onPaperTemplateChange: (PaperTemplate) -> Unit,
+    onManageNotebooks: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    var nameField by remember { mutableStateOf(noteName) }
     var paginationEnabled by remember { mutableStateOf(isPaginationEnabled) }
     var selectedPaperSize by remember { mutableStateOf(currentPaperSize) }
     var selectedTemplate by remember { mutableStateOf(currentPaperTemplate) }
-    
+
     SettingsDialogShell(title = "Note Settings", onDismiss = onDismiss) {
+        // Note name
+        OutlinedTextField(
+            value = nameField,
+            onValueChange = { nameField = it },
+            label = { Text("Note Name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            trailingIcon = {
+                if (nameField != noteName && nameField.isNotBlank()) {
+                    TextButton(onClick = { onRenameNote(nameField) }) { Text("Save") }
+                }
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Manage notebooks button
+        OutlinedButton(
+            onClick = onManageNotebooks,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Manage Notebooks")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Pagination toggle
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -40,10 +70,8 @@ fun NoteSettingsDialog(
             )
         }
 
-        // Paper size dropdown (only visible when pagination is enabled)
         if (paginationEnabled) {
             Spacer(modifier = Modifier.height(8.dp))
-
             SettingsDropdown(
                 label = "Paper Size",
                 items = PaperSize.entries,
@@ -56,7 +84,6 @@ fun NoteSettingsDialog(
             )
         }
 
-        // Paper template dropdown
         SettingsDropdown(
             label = "Paper Template",
             items = PaperTemplate.entries,

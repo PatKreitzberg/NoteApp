@@ -49,4 +49,10 @@ interface FolderDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertFolder(folder: FolderEntity)
+
+    @Query("SELECT * FROM folders WHERE parentFolderId = :parentId")
+    suspend fun getSubfoldersOnce(parentId: String): List<FolderEntity>
+
+    @Query("SELECT * FROM folders")
+    suspend fun getAllFoldersOnce(): List<FolderEntity>
 }
