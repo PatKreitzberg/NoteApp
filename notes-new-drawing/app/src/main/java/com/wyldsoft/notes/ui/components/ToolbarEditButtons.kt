@@ -2,10 +2,13 @@ package com.wyldsoft.notes.ui.components
 
 import android.util.Log
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -30,6 +33,7 @@ fun ToolbarEditButtons(
     val uiState by viewModel.uiState.collectAsState()
     val copiedShapes by viewModel.copiedShapes.collectAsState()
     val hasSelection by viewModel.hasSelection.collectAsState()
+    val isConvertingToText by viewModel.isConvertingToText.collectAsState()
     val isSelectionActive = uiState.selectedTool == Tool.SELECTOR
     val hasCopied = copiedShapes.isNotEmpty()
 
@@ -74,5 +78,24 @@ fun ToolbarEditButtons(
             contentDescription = "Paste",
             tint = if (hasCopied) Color.Black else Color.LightGray
         )
+    }
+
+    IconButton(
+        onClick = { viewModel.convertSelectionToText() },
+        enabled = hasSelection && !isConvertingToText
+    ) {
+        if (isConvertingToText) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = Color.Black,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.TextFields,
+                contentDescription = "Convert to Text",
+                tint = if (hasSelection) Color.Black else Color.LightGray
+            )
+        }
     }
 }

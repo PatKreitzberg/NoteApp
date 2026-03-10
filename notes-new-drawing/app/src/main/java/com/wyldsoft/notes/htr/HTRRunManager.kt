@@ -74,6 +74,17 @@ class HTRRunManager(
         }
     }
 
+    suspend fun recognizeShapesDirectly(noteId: String, shapes: List<Shape>): String? {
+        if (!htrManager.isReady()) {
+            Log.w(TAG, "HTR model not ready for direct recognition")
+            return null
+        }
+        val map = mutableMapOf(noteId to shapes.toMutableList())
+        val results = htrManager.basicRecognize(map)
+        val merged = results.joinToString(" ") { it.text }.trim()
+        return merged.takeIf { it.isNotBlank() }
+    }
+
     fun onShapesDeleted(noteId: String, deletedShapeIds: Set<String>) {
         synchronized(pendingShapes) {
             pendingShapes[noteId]?.removeAll { it.id in deletedShapeIds }

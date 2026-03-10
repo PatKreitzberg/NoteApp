@@ -411,6 +411,8 @@
   │   ├── ProfileButton (x5) → delegates to PenButton
   │   ├── ShapeButton → dropdown for GeometricShapeType selection
   │   ├── ToolbarTextButtons → text tool toggle + font/size/color dropdowns
+  │   ├── ToolbarEditButtons → EDIT tab: Selection, Copy, Paste, Convert-to-Text
+  │   │   └── Convert-to-Text: enabled when hasSelection; spinner while isConvertingToText
   │   └── StrokeOptionsPanel
   │       ├── PenTypeButton   → delegates to PenButton
   │       └── adjusts PenProfile properties
@@ -664,15 +666,31 @@
   └── isReady()
 
   HTRRunManager
-  ├── addShapesForRecognition() ← debounced (2s), batches shapes per note
-  ├── basicRecognition()        ← runs HTR and saves to RecognizedSegmentRepository
-  ├── onShapesDeleted()         ← cleans up segments for deleted shapes
+  ├── addShapesForRecognition()    ← debounced (2s), batches shapes per note
+  ├── basicRecognition()           ← runs HTR and saves to RecognizedSegmentRepository
+  ├── recognizeShapesDirectly()    ← immediate recognition, returns merged text string
+  ├── onShapesDeleted()            ← cleans up segments for deleted shapes
   └── uses: HTRManager, RecognizedSegmentRepository
 
   RecognizedSegmentRepository
   ├── searchText(query)        ← used by HomeViewModel search
   ├── saveSegments()
   └── deleteByIds()
+
+  Convert Selection to Text Flow:
+  1. User selects strokes with SELECTOR tool (lasso)
+  2. User presses "Convert to Text" button (TextFields icon) in EDIT tab
+  3. EditorViewModel.convertSelectionToText() called
+     → sets isConvertingToText=true (button shows spinner)
+  4. HTRRunManager.recognizeShapesDirectly(noteId, selectedShapes) called
+     → calls HTRManager.basicRecognize() immediately (no debounce)
+     → returns merged recognized text string
+  5. Original selected shapes removed from DB + SDK memory via ActionUtils
+  6. New Shape(type=TEXT, points=[selectionBox.topLeft], fontSize=24f,
+        fontFamily="sans-serif", strokeColor=BLACK, text=recognizedText) created
+     → persisted via ActionUtils.addShapeToNoteAndMemory()
+     → bitmap re-rendered, screen refreshed
+  7. Selection cleared, isConvertingToText=false
 
   Text Drawing Flow:
   1. User taps Text tab → activates Tool.TEXT

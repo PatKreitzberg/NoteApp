@@ -80,6 +80,9 @@ class EditorViewModel(
     private val _hasSelection = MutableStateFlow(false)
     val hasSelection: StateFlow<Boolean> = _hasSelection.asStateFlow()
 
+    private val _isConvertingToText = MutableStateFlow(false)
+    val isConvertingToText: StateFlow<Boolean> = _isConvertingToText.asStateFlow()
+
     // Text input state
     private val _textInputPosition = MutableStateFlow<android.graphics.PointF?>(null)
     val textInputPosition: StateFlow<android.graphics.PointF?> = _textInputPosition.asStateFlow()
@@ -370,6 +373,47 @@ class EditorViewModel(
         selectionManager.clearSelection()
         notifySelectionChanged()
         _uiState.value = _uiState.value.copy(selectedTool = Tool.PEN)
+    }
+
+    fun convertSelectionToText() {
+        val selectedIds = selectionManager.selectedShapeIds
+        if (selectedIds.isEmpty()) return
+        val boundingBox = selectionManager.selectionBoundingBox ?: return
+        val note = currentNote.value
+        val selectedShapes = note.shapes.filter { it.id in selectedIds }
+        if (selectedShapes.isEmpty()) return
+        val htr = htrRunManager ?: return
+
+        _isConvertingToText.value = true
+        viewModelScope.launch {
+            try {
+                val text = htr.recognizeShapesDirectly(note.id, selectedShapes) ?: return@launch
+                val sm = shapesManager ?: return@launch
+                val bm = bitmapManager ?: return@launch
+
+                for (shape in selectedShapes) {
+                    ActionUtils.removeShapeFromNoteAndMemory(note.id, shape, noteRepository, sm)
+                }
+
+                val textShape = Shape(
+                    type = ShapeType.TEXT,
+                    points = listOf(android.graphics.PointF(boundingBox.left, boundingBox.top)),
+                    strokeWidth = 2f,
+                    strokeColor = android.graphics.Color.BLACK,
+                    text = text,
+                    fontSize = 24f,
+                    fontFamily = "sans-serif"
+                )
+                ActionUtils.addShapeToNoteAndMemory(note.id, textShape, noteRepository, sm)
+                bm.recreateBitmapFromShapes(sm.shapes())
+                selectionManager.clearSelection()
+                notifySelectionChanged()
+                onScreenRefreshNeeded?.invoke()
+                updateContentBounds()
+            } finally {
+                _isConvertingToText.value = false
+            }
+        }
     }
 
     fun copySelection() {
