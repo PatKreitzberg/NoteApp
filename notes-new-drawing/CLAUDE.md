@@ -8,11 +8,14 @@
 5. After writing new code check that no duplicate code was created.
 6. If a class is larger than 300 lines, recomend refactoring it to the human user.
 7. Update ~/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/architecture-diagram.org to reflect changes made by you or the human.
+8. Anything that adds or removes or modifies any shape should be programmed as an action and thus can be undone and redone
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
-This is an Android note-taking application with advanced drawing capabilities, built specifically for Onyx e-ink devices. The app uses Jetpack Compose for UI and integrates with the Onyx SDK for stylus and drawing support.
+## Project Overview This is an Android note-taking application with
+advanced drawing capabilities, built specifically for Onyx e-ink
+devices. The app uses Jetpack Compose for UI and integrates with the
+Onyx SDK for stylus and drawing support.
 
 ## Build Commands
 
