@@ -227,16 +227,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     private fun observeUiState() {
         lifecycleScope.launch {
-            editorViewModel.uiState.collect { state ->
-                if (state.isStrokeOptionsOpen || editorViewModel.isDialogOpen.value
-                    || editorViewModel.openDropdownCount.value > 0) {
-                    setDrawingEnabled(false)
-                } else {
-                    // Always call setDrawingEnabled(true) so touch helper is reconfigured
-                    // for the current mode (e.g. lasso pen profile for selection mode)
-                    setDrawingEnabled(true)
-                }
-            }
+            editorViewModel.uiState.collect { state -> setDrawingEnabled(!state.isStrokeOptionsOpen) }
         }
     }
 
@@ -294,12 +285,14 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     val vm = editorViewModel
                     if (vm.uiState.value.mode is EditorMode.Select) vm.cancelSelection()
                     else vm.switchMode(EditorMode.Select)
+                    setDrawingEnabled(true)
                     forceScreenRefresh()
                 }
                 GestureAction.TOGGLE_TEXT_MODE -> {
                     val vm = editorViewModel
                     if (vm.uiState.value.mode is EditorMode.Text) vm.switchMode(EditorMode.Draw())
                     else vm.switchMode(EditorMode.Text)
+                    setDrawingEnabled(true)
                     forceScreenRefresh()
                 }
                 GestureAction.SWITCH_TAB -> {
@@ -310,11 +303,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                         is EditorMode.Text -> EditorMode.Draw()
                     }
                     vm.switchMode(nextMode)
+                    setDrawingEnabled(true)
                     forceScreenRefresh()
                 }
                 GestureAction.DRAW_GEOMETRIC_SHAPE -> {
                     val vm = editorViewModel
                     vm.switchMode(EditorMode.Draw(DrawTool.GEOMETRY))
+                    setDrawingEnabled(true)
                     forceScreenRefresh()
                 }
                 GestureAction.COPY_SELECTION -> {
