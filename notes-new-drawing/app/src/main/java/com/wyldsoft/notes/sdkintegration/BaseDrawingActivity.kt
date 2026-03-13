@@ -227,7 +227,16 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     private fun observeUiState() {
         lifecycleScope.launch {
-            editorViewModel.uiState.collect { state -> setDrawingEnabled(!state.isStrokeOptionsOpen) }
+            editorViewModel.uiState.collect { state ->
+                if (state.isStrokeOptionsOpen || editorViewModel.isDialogOpen.value
+                    || editorViewModel.openDropdownCount.value > 0) {
+                    setDrawingEnabled(false)
+                } else {
+                    // Always call setDrawingEnabled(true) so touch helper is reconfigured
+                    // for the current mode (e.g. lasso pen profile for selection mode)
+                    setDrawingEnabled(true)
+                }
+            }
         }
     }
 

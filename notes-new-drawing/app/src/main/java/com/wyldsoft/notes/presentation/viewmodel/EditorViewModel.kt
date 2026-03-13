@@ -188,7 +188,7 @@ class EditorViewModel(
         onScreenRefreshNeeded = { onScreenRefreshNeeded?.invoke() },
         onUpdateContentBounds = { updateContentBounds() },
         onNotifySelectionChanged = { notifySelectionChanged() },
-        onSwitchToSelectMode = { _uiState.value = _uiState.value.copy(mode = EditorMode.Select) },
+        onSwitchToSelectMode = { switchMode(EditorMode.Select) },
         htrRunManager = htrRunManager
     )
 
@@ -305,9 +305,7 @@ class EditorViewModel(
     }
 
     fun cancelSelection() {
-        selectionManager.clearSelection()
-        notifySelectionChanged()
-        _uiState.value = _uiState.value.copy(mode = EditorMode.Draw())
+        switchMode(EditorMode.Draw())
     }
 
     // --- Delegation to DrawingOperationsHandler ---
