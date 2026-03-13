@@ -190,7 +190,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun updateTouchHelperWithProfile() {
         Log.d(TAG, "updateTouchHelperWithProfile")
         stylusHandler.updatePenProfile(currentPenProfile)
-        reconfigureTouchHelper(editorViewModel.excludeRects.value, applyColor = true)
+        if (editorViewModel.uiState.value.mode is EditorMode.Select) {
+            reconfigureTouchHelperForSelection()
+        } else {
+            reconfigureTouchHelper(editorViewModel.excludeRects.value, applyColor = true)
+        }
         // Re-render bitmap after closeRawDrawing()/openRawDrawing() to prevent recent strokes
         // from disappearing: the Onyx display refresh from openRawDrawing() can race with the
         // async RendererToScreenRequest queued by renderBitmapToScreen().
