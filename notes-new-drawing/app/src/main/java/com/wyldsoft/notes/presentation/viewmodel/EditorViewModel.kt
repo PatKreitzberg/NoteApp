@@ -1,27 +1,20 @@
 package com.wyldsoft.notes.presentation.viewmodel
 
+import android.graphics.PointF
 import android.graphics.Rect
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.graphics.RectF
 import com.wyldsoft.notes.actions.ActionManager
-import com.wyldsoft.notes.actions.ActionUtils
-import com.wyldsoft.notes.actions.ConvertToTextAction
-import com.wyldsoft.notes.actions.DrawAction
-import com.wyldsoft.notes.actions.EditTextAction
-import com.wyldsoft.notes.actions.EraseAction
-import com.wyldsoft.notes.actions.SnapToLineAction
 import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
-import com.wyldsoft.notes.htr.HTRRunManager
-import com.wyldsoft.notes.domain.models.Shape
-import com.wyldsoft.notes.domain.models.ShapeType
-import com.wyldsoft.notes.geometry.GeometricShapeType
 import com.wyldsoft.notes.domain.models.PaperSize
 import com.wyldsoft.notes.domain.models.PaperTemplate
+import com.wyldsoft.notes.domain.models.Shape
+import com.wyldsoft.notes.geometry.GeometricShapeType
+import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.SelectionManager
@@ -52,9 +45,6 @@ class EditorViewModel(
 
     val currentNote = noteRepository.getCurrentNote()
 
-    private val _isDrawing = MutableStateFlow(false)
-    val isDrawing: StateFlow<Boolean> = _isDrawing.asStateFlow()
-
     private val _currentPenProfile = MutableStateFlow(PenProfile.defaultProfiles[0])
     val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
 
@@ -67,7 +57,6 @@ class EditorViewModel(
     val viewportManager = ViewportManager()
     val viewportState = viewportManager.viewportState
 
-    // Undo/redo
     val actionManager = ActionManager()
     val canUndo: StateFlow<Boolean> = actionManager.canUndo
     val canRedo: StateFlow<Boolean> = actionManager.canRedo
@@ -79,37 +68,11 @@ class EditorViewModel(
 
     val selectionManager = SelectionManager()
 
-    private val _copiedShapes = MutableStateFlow<List<Shape>>(emptyList())
-    val copiedShapes: StateFlow<List<Shape>> = _copiedShapes.asStateFlow()
-
     private val _hasSelection = MutableStateFlow(false)
     val hasSelection: StateFlow<Boolean> = _hasSelection.asStateFlow()
 
-    private val _isConvertingToText = MutableStateFlow(false)
-    val isConvertingToText: StateFlow<Boolean> = _isConvertingToText.asStateFlow()
-
     private val _selectionContainsTextShape = MutableStateFlow(false)
     val selectionContainsTextShape: StateFlow<Boolean> = _selectionContainsTextShape.asStateFlow()
-
-    // Text input state
-    private val _textInputPosition = MutableStateFlow<android.graphics.PointF?>(null)
-    val textInputPosition: StateFlow<android.graphics.PointF?> = _textInputPosition.asStateFlow()
-
-    private val _liveTextContent = MutableStateFlow("")
-    val liveTextContent: StateFlow<String> = _liveTextContent.asStateFlow()
-
-    // ID of an existing TextShape being edited (null when creating a new one)
-    private var editingShapeId: String? = null
-
-    // Text formatting settings
-    private val _textFontSize = MutableStateFlow(32f)
-    val textFontSize: StateFlow<Float> = _textFontSize.asStateFlow()
-
-    private val _textFontFamily = MutableStateFlow("sans-serif")
-    val textFontFamily: StateFlow<String> = _textFontFamily.asStateFlow()
-
-    private val _textColor = MutableStateFlow(android.graphics.Color.BLACK)
-    val textColor: StateFlow<Int> = _textColor.asStateFlow()
 
     // Dropdown open/close tracking
     private val _openDropdownCount = MutableStateFlow(0)
@@ -128,38 +91,7 @@ class EditorViewModel(
         _closeAllDropdownsEvent.tryEmit(Unit)
     }
 
-    fun setTextFontSize(size: Float) {
-        _textFontSize.value = size
-        if (selectionManager.hasSelection) {
-            selectionTransformHandler.applyTextFormattingToSelection(size, _textFontFamily.value, _textColor.value)
-        }
-    }
-
-    fun setTextFontFamily(family: String) {
-        _textFontFamily.value = family
-        if (selectionManager.hasSelection) {
-            selectionTransformHandler.applyTextFormattingToSelection(_textFontSize.value, family, _textColor.value)
-        }
-    }
-
-    fun setTextColor(color: Int) {
-        _textColor.value = color
-        if (selectionManager.hasSelection) {
-            selectionTransformHandler.applyTextFormattingToSelection(_textFontSize.value, _textFontFamily.value, color)
-        }
-    }
-
-    fun notifySelectionChanged() {
-        _hasSelection.value = selectionManager.hasSelection
-        _selectionContainsTextShape.value = selectionManager.hasSelection &&
-            shapesManager?.shapes()?.any { it.id in selectionManager.selectedShapeIds && it is TextShape } == true
-    }
-
-    // Erase stroke grouping
-    private val pendingErasedShapes = mutableListOf<Shape>()
-    private var isErasingInProgress = false
-
-    // --- Delegated handlers (paginationHandler first — navigationHandler's lambda references it) ---
+    // --- Delegated handlers ---
 
     val paginationHandler = PaginationHandler(
         noteRepository = noteRepository,
@@ -203,6 +135,60 @@ class EditorViewModel(
         onScreenRefreshNeeded = { onScreenRefreshNeeded?.invoke() }
     )
 
+    val drawingOperationsHandler = DrawingOperationsHandler(
+        noteRepository = noteRepository,
+        scope = viewModelScope,
+        actionManager = actionManager,
+        getCurrentNote = { currentNote.value },
+        getCurrentPenProfile = { _currentPenProfile.value },
+        getShapesManager = { shapesManager },
+        getBitmapManager = { bitmapManager },
+        onUpdateContentBounds = { updateContentBounds() },
+        htrRunManager = htrRunManager
+    )
+
+    val isDrawing: StateFlow<Boolean> = drawingOperationsHandler.isDrawing
+
+    val textInputHandler = TextInputHandler(
+        noteRepository = noteRepository,
+        scope = viewModelScope,
+        actionManager = actionManager,
+        getCurrentNote = { currentNote.value },
+        getShapesManager = { shapesManager },
+        getBitmapManager = { bitmapManager },
+        onScreenRefreshNeeded = { onScreenRefreshNeeded?.invoke() },
+        onUpdateContentBounds = { updateContentBounds() },
+        applyFormattingToSelection = { size, family, color ->
+            if (selectionManager.hasSelection)
+                selectionTransformHandler.applyTextFormattingToSelection(size, family, color)
+        }
+    )
+
+    val textInputPosition: StateFlow<PointF?> = textInputHandler.textInputPosition
+    val liveTextContent: StateFlow<String> = textInputHandler.liveTextContent
+    val textFontSize: StateFlow<Float> = textInputHandler.textFontSize
+    val textFontFamily: StateFlow<String> = textInputHandler.textFontFamily
+    val textColor: StateFlow<Int> = textInputHandler.textColor
+
+    private val clipboardSelectionHandler = ClipboardSelectionHandler(
+        noteRepository = noteRepository,
+        scope = viewModelScope,
+        actionManager = actionManager,
+        getCurrentNote = { currentNote.value },
+        getShapesManager = { shapesManager },
+        getBitmapManager = { bitmapManager },
+        selectionManager = selectionManager,
+        viewportManager = viewportManager,
+        onScreenRefreshNeeded = { onScreenRefreshNeeded?.invoke() },
+        onUpdateContentBounds = { updateContentBounds() },
+        onNotifySelectionChanged = { notifySelectionChanged() },
+        onSwitchToSelectMode = { _uiState.value = _uiState.value.copy(mode = EditorMode.Select) },
+        htrRunManager = htrRunManager
+    )
+
+    val copiedShapes: StateFlow<List<Shape>> = clipboardSelectionHandler.copiedShapes
+    val isConvertingToText: StateFlow<Boolean> = clipboardSelectionHandler.isConvertingToText
+
     init {
         viewportManager.isPaginationEnabled = currentNote.value.isPaginationEnabled
 
@@ -244,69 +230,10 @@ class EditorViewModel(
         viewportManager.contentMaxY = shapesManager?.getContentMaxY() ?: return
     }
 
-    fun startDrawing() {
-        Log.d("DebugMarch6", "Starting drawing on note: ${currentNote.value.id}")
-        _isDrawing.value = true
-    }
-
-    fun endDrawing() {
-        Log.d("DebugMarch6", "Ending drawing on note: ${currentNote.value.id}")
-        _isDrawing.value = false
-    }
-
-    fun addShape(id: String, points: List<android.graphics.PointF>, pressures: List<Float> = emptyList(), timestamps: List<Long> = emptyList()) {
-        viewModelScope.launch {
-            val shape = Shape(
-                id = id,
-                type = ShapeType.STROKE,
-                points = points,
-                strokeWidth = _currentPenProfile.value.strokeWidth,
-                strokeColor = _currentPenProfile.value.getColorAsInt(),
-                penType = _currentPenProfile.value.penType,
-                pressure = pressures,
-                pointTimestamps = timestamps
-            )
-            noteRepository.addShape(currentNote.value.id, shape)
-
-            val sm = shapesManager
-            val bm = bitmapManager
-            if (sm != null && bm != null) {
-                actionManager.recordAction(DrawAction(currentNote.value.id, shape, noteRepository, sm, bm))
-            }
-
-            htrRunManager?.addShapesForRecognition(currentNote.value.id, listOf(shape))
-            updateContentBounds()
-        }
-    }
-
-    fun removeShape(shapeId: String) {
-        viewModelScope.launch {
-            val note = currentNote.value
-            val shape = note.shapes.find { it.id == shapeId }
-            if (shape != null && isErasingInProgress) pendingErasedShapes.add(shape)
-            noteRepository.removeShape(note.id, shapeId)
-        }
-    }
-
-    fun startErasing() {
-        isErasingInProgress = true
-        pendingErasedShapes.clear()
-    }
-
-    fun endErasing() {
-        isErasingInProgress = false
-        updateContentBounds()
-        if (pendingErasedShapes.isNotEmpty()) {
-            val sm = shapesManager
-            val bm = bitmapManager
-            if (sm != null && bm != null) {
-                actionManager.recordAction(
-                    EraseAction(currentNote.value.id, pendingErasedShapes.toList(), noteRepository, sm, bm)
-                )
-            }
-            htrRunManager?.onShapesDeleted(currentNote.value.id, pendingErasedShapes.map { it.id }.toSet())
-            pendingErasedShapes.clear()
-        }
+    fun notifySelectionChanged() {
+        _hasSelection.value = selectionManager.hasSelection
+        _selectionContainsTextShape.value = selectionManager.hasSelection &&
+            shapesManager?.shapes()?.any { it.id in selectionManager.selectedShapeIds && it is TextShape } == true
     }
 
     fun undo() {
@@ -325,16 +252,10 @@ class EditorViewModel(
         }
     }
 
-    /**
-     * Switch to a new editor mode. Calls exitMode/enterMode hooks to handle
-     * cleanup and setup. Switching within Draw mode (e.g. PEN→GEOMETRY) skips
-     * the hooks since no mode-level transition occurs.
-     */
     fun switchMode(newMode: EditorMode) {
         val oldMode = _uiState.value.mode
         if (oldMode == newMode) return
 
-        // Changing draw tool within Draw mode — no enter/exit needed
         if (oldMode is EditorMode.Draw && newMode is EditorMode.Draw) {
             _uiState.value = _uiState.value.copy(mode = newMode)
             return
@@ -354,13 +275,11 @@ class EditorViewModel(
                 if (hadSelection) {
                     val bm = bitmapManager
                     val sm = shapesManager
-                    if (bm != null && sm != null) {
-                        bm.recreateBitmapFromShapes(sm.shapes())
-                    }
+                    if (bm != null && sm != null) bm.recreateBitmapFromShapes(sm.shapes())
                 }
             }
             is EditorMode.Text -> {
-                if (_textInputPosition.value != null) commitLiveTextInput()
+                if (textInputHandler.textInputPosition.value != null) textInputHandler.commitLiveTextInput()
             }
             is EditorMode.Draw -> { /* no cleanup needed */ }
         }
@@ -379,279 +298,58 @@ class EditorViewModel(
         _uiState.value = _uiState.value.copy(selectedGeometricShape = shape)
     }
 
-    fun addGeometricShape(shape: Shape) {
-        viewModelScope.launch {
-            noteRepository.addShape(currentNote.value.id, shape)
-            val sm = shapesManager
-            val bm = bitmapManager
-            if (sm != null && bm != null) {
-                actionManager.recordAction(DrawAction(currentNote.value.id, shape, noteRepository, sm, bm))
-            }
-            updateContentBounds()
-        }
-    }
-
-    /**
-     * Records a snap-to-line conversion as two undo steps:
-     * 1. DrawAction(originalShape) — second undo removes the restored stroke
-     * 2. SnapToLineAction          — first undo reverts line → original stroke
-     * The line's SDK shape must already be in shapesManager before calling this.
-     */
-    fun addSnapToLineAction(originalShape: Shape, lineShape: Shape) {
-        viewModelScope.launch {
-            val noteId = currentNote.value.id
-            noteRepository.addShape(noteId, lineShape)
-            val sm = shapesManager ?: return@launch
-            val bm = bitmapManager ?: return@launch
-            actionManager.recordAction(DrawAction(noteId, originalShape, noteRepository, sm, bm))
-            actionManager.recordAction(SnapToLineAction(noteId, originalShape, lineShape, noteRepository, sm, bm))
-            updateContentBounds()
-        }
-    }
-
-    fun beginTextInput(noteX: Float, noteY: Float) {
-        if (_textInputPosition.value != null) return // already editing, ignore subsequent taps
-        editingShapeId = null
-        _liveTextContent.value = ""
-        _textInputPosition.value = android.graphics.PointF(noteX, noteY)
-    }
-
-    fun beginEditingTextShape(
-        shapeId: String,
-        anchorNoteX: Float,
-        anchorNoteY: Float,
-        existingText: String,
-        existingFontSize: Float,
-        existingFontFamily: String,
-        existingColor: Int
-    ) {
-        if (_textInputPosition.value != null) return
-        editingShapeId = shapeId
-
-        // Update toolbar settings to match the shape being edited
-        _textFontSize.value = existingFontSize
-        _textFontFamily.value = existingFontFamily
-        _textColor.value = existingColor
-
-        _liveTextContent.value = existingText
-        _textInputPosition.value = android.graphics.PointF(anchorNoteX, anchorNoteY)
-
-        // Remove from visual display so the LiveTextInput overlay takes over
-        val sm = shapesManager
-        val bm = bitmapManager
-        if (sm != null && bm != null) {
-            val sdkShape = sm.findShapeById(shapeId)
-            if (sdkShape != null) {
-                sm.removeShape(sdkShape)
-                bm.recreateBitmapFromShapes(sm.shapes())
-            }
-        }
-        onScreenRefreshNeeded?.invoke()
-    }
-
-    fun updateLiveTextContent(text: String) {
-        _liveTextContent.value = text
-    }
-
-    fun commitLiveTextInput() {
-        commitTextInput(_liveTextContent.value)
-        _liveTextContent.value = ""
-    }
-
-    fun commitTextInput(text: String) {
-        val position = _textInputPosition.value ?: return
-        val editId = editingShapeId
-        _textInputPosition.value = null
-        editingShapeId = null
-
-        viewModelScope.launch {
-            val noteId = currentNote.value.id
-            // Capture old shape before removing from DB
-            val oldShape = if (editId != null) currentNote.value.shapes.find { it.id == editId } else null
-
-            // Delete the original shape from DB when editing
-            if (editId != null) {
-                noteRepository.removeShape(noteId, editId)
-            }
-
-            if (text.isBlank()) {
-                // Empty text: old shape already removed from memory; refresh to show deletion
-                val bm = bitmapManager
-                val sm = shapesManager
-                if (bm != null && sm != null) {
-                    bm.recreateBitmapFromShapes(sm.shapes())
-                    onScreenRefreshNeeded?.invoke()
-                    if (oldShape != null) {
-                        actionManager.recordAction(EditTextAction(noteId, oldShape, null, noteRepository, sm, bm))
-                    }
-                }
-                return@launch
-            }
-
-            val shape = Shape(
-                type = ShapeType.TEXT,
-                points = listOf(position),
-                strokeWidth = 2f,
-                strokeColor = _textColor.value,
-                text = text,
-                fontSize = _textFontSize.value,
-                fontFamily = _textFontFamily.value
-            )
-            noteRepository.addShape(noteId, shape)
-            val sm = shapesManager
-            val bm = bitmapManager
-            if (sm != null && bm != null) {
-                val sdkShape = sm.convertDomainShapeToSdkShape(shape)
-                sm.addShape(sdkShape)
-                bm.recreateBitmapFromShapes(sm.shapes())
-                actionManager.recordAction(EditTextAction(noteId, oldShape, shape, noteRepository, sm, bm))
-                onScreenRefreshNeeded?.invoke()
-            }
-            updateContentBounds()
-        }
-    }
-
-    fun cancelTextInput() {
-        val editId = editingShapeId
-        _textInputPosition.value = null
-        _liveTextContent.value = ""
-        editingShapeId = null
-
-        // When editing is cancelled, old shape was already removed from memory; delete from DB
-        if (editId != null) {
-            viewModelScope.launch {
-                noteRepository.removeShape(currentNote.value.id, editId)
-            }
-        }
-    }
-
     fun cancelSelection() {
         selectionManager.clearSelection()
         notifySelectionChanged()
         _uiState.value = _uiState.value.copy(mode = EditorMode.Draw())
     }
 
-    fun convertSelectionToText() {
-        val selectedIds = selectionManager.selectedShapeIds
-        if (selectedIds.isEmpty()) return
-        val boundingBox = selectionManager.selectionBoundingBox ?: return
-        val note = currentNote.value
-        val selectedShapes = note.shapes.filter { it.id in selectedIds }
-        if (selectedShapes.isEmpty()) return
-        val htr = htrRunManager ?: return
+    // --- Delegation to DrawingOperationsHandler ---
 
-        _isConvertingToText.value = true
-        viewModelScope.launch {
-            try {
-                val text = htr.recognizeShapesDirectly(note.id, selectedShapes) ?: return@launch
-                val sm = shapesManager ?: return@launch
-                val bm = bitmapManager ?: return@launch
+    fun startDrawing() = drawingOperationsHandler.startDrawing()
+    fun endDrawing() = drawingOperationsHandler.endDrawing()
+    fun addShape(id: String, points: List<android.graphics.PointF>, pressures: List<Float> = emptyList(), timestamps: List<Long> = emptyList()) =
+        drawingOperationsHandler.addShape(id, points, pressures, timestamps)
+    fun removeShape(shapeId: String) = drawingOperationsHandler.removeShape(shapeId)
+    fun startErasing() = drawingOperationsHandler.startErasing()
+    fun endErasing() = drawingOperationsHandler.endErasing()
+    fun addGeometricShape(shape: Shape) = drawingOperationsHandler.addGeometricShape(shape)
+    fun addSnapToLineAction(originalShape: Shape, lineShape: Shape) =
+        drawingOperationsHandler.addSnapToLineAction(originalShape, lineShape)
 
-                for (shape in selectedShapes) {
-                    ActionUtils.removeShapeFromNoteAndMemory(note.id, shape, noteRepository, sm)
-                }
+    // --- Delegation to TextInputHandler ---
 
-                val textShape = Shape(
-                    type = ShapeType.TEXT,
-                    points = listOf(android.graphics.PointF(boundingBox.left, boundingBox.top)),
-                    strokeWidth = 2f,
-                    strokeColor = android.graphics.Color.BLACK,
-                    text = text,
-                    fontSize = 24f,
-                    fontFamily = "sans-serif"
-                )
-                ActionUtils.addShapeToNoteAndMemory(note.id, textShape, noteRepository, sm)
-                actionManager.recordAction(ConvertToTextAction(note.id, selectedShapes, textShape, noteRepository, sm, bm))
-                bm.recreateBitmapFromShapes(sm.shapes())
-                selectionManager.clearSelection()
-                notifySelectionChanged()
-                onScreenRefreshNeeded?.invoke()
-                updateContentBounds()
-            } finally {
-                _isConvertingToText.value = false
-            }
-        }
-    }
+    fun setTextFontSize(size: Float) = textInputHandler.setTextFontSize(size)
+    fun setTextFontFamily(family: String) = textInputHandler.setTextFontFamily(family)
+    fun setTextColor(color: Int) = textInputHandler.setTextColor(color)
+    fun beginTextInput(noteX: Float, noteY: Float) = textInputHandler.beginTextInput(noteX, noteY)
+    fun beginEditingTextShape(shapeId: String, anchorNoteX: Float, anchorNoteY: Float, existingText: String, existingFontSize: Float, existingFontFamily: String, existingColor: Int) =
+        textInputHandler.beginEditingTextShape(shapeId, anchorNoteX, anchorNoteY, existingText, existingFontSize, existingFontFamily, existingColor)
+    fun updateLiveTextContent(text: String) = textInputHandler.updateLiveTextContent(text)
+    fun commitLiveTextInput() = textInputHandler.commitLiveTextInput()
+    fun commitTextInput(text: String) = textInputHandler.commitTextInput(text)
+    fun cancelTextInput() = textInputHandler.cancelTextInput()
 
-    fun copySelection() {
-        val selectedIds = selectionManager.selectedShapeIds
-        if (selectedIds.isEmpty()) return
-        _copiedShapes.value = currentNote.value.shapes.filter { it.id in selectedIds }
-    }
+    // --- Delegation to ClipboardSelectionHandler ---
 
-    fun pasteSelection() {
-        val shapes = _copiedShapes.value
-        if (shapes.isEmpty()) return
-
-        viewModelScope.launch {
-            val sm = shapesManager ?: return@launch
-            val bm = bitmapManager ?: return@launch
-            val note = currentNote.value
-
-            val allPoints = shapes.flatMap { it.points }
-            if (allPoints.isEmpty()) return@launch
-
-            // Build tight bounding box from first point to avoid including origin
-            val copyBox = RectF(allPoints[0].x, allPoints[0].y, allPoints[0].x, allPoints[0].y)
-            allPoints.drop(1).forEach { copyBox.union(it.x, it.y) }
-            val copyCenterX = copyBox.centerX()
-            val copyCenterY = copyBox.centerY()
-
-            // Convert screen center to note coordinates using the viewport matrix
-            val screenCenter = viewportManager.surfaceToNoteCoordinates(
-                viewportManager.viewWidth / 2f, viewportManager.viewHeight / 2f
-            )
-            val dx = screenCenter.x - copyCenterX
-            val dy = screenCenter.y - copyCenterY
-
-            val newShapes = shapes.map { shape ->
-                shape.copy(
-                    id = java.util.UUID.randomUUID().toString(),
-                    points = shape.points.map { pt -> android.graphics.PointF(pt.x + dx, pt.y + dy) }
-                )
-            }
-
-            for (newShape in newShapes) {
-                ActionUtils.addShapeToNoteAndMemory(note.id, newShape, noteRepository, sm)
-                actionManager.recordAction(DrawAction(note.id, newShape, noteRepository, sm, bm))
-            }
-
-            // Build tight bounding box for pasted shapes
-            val newPoints = newShapes.flatMap { it.points }
-            val newBox = RectF(newPoints[0].x, newPoints[0].y, newPoints[0].x, newPoints[0].y)
-            newPoints.drop(1).forEach { newBox.union(it.x, it.y) }
-
-            selectionManager.clearSelection()
-            selectionManager.setSelection(newShapes.map { it.id }.toSet(), newBox)
-            notifySelectionChanged()
-
-            bm.recreateBitmapFromShapes(sm.shapes())
-            onScreenRefreshNeeded?.invoke()
-            updateContentBounds()
-            _uiState.value = _uiState.value.copy(mode = EditorMode.Select)
-        }
-    }
+    fun copySelection() = clipboardSelectionHandler.copySelection()
+    fun pasteSelection() = clipboardSelectionHandler.pasteSelection()
+    fun convertSelectionToText() = clipboardSelectionHandler.convertSelectionToText()
 
     // --- Delegation to SelectionTransformHandler ---
 
     fun applyPenProfileToSelection(profile: PenProfile) =
         selectionTransformHandler.applyPenProfileToSelection(profile)
-
     fun applyTextFormattingToSelection(fontSize: Float, fontFamily: String, color: Int) =
         selectionTransformHandler.applyTextFormattingToSelection(fontSize, fontFamily, color)
-
     fun recordMoveAction(originalShapes: List<Shape>, dx: Float, dy: Float) =
         selectionTransformHandler.recordMoveAction(originalShapes, dx, dy)
-
     fun persistMovedShapes(shapeIds: Set<String>, dx: Float, dy: Float) =
         selectionTransformHandler.persistMovedShapes(shapeIds, dx, dy)
-
     fun recordTransformAction(originalShapes: List<Shape>, transformType: TransformType, param: Float, centerX: Float, centerY: Float) =
         selectionTransformHandler.recordTransformAction(originalShapes, transformType, param, centerX, centerY)
-
     fun persistScaledShapes(shapeIds: Set<String>, scaleFactor: Float, centerX: Float, centerY: Float) =
         selectionTransformHandler.persistScaledShapes(shapeIds, scaleFactor, centerX, centerY)
-
     fun persistRotatedShapes(shapeIds: Set<String>, angleRad: Float, centerX: Float, centerY: Float) =
         selectionTransformHandler.persistRotatedShapes(shapeIds, angleRad, centerX, centerY)
 
