@@ -218,11 +218,12 @@ public class BaseShape {
 
     private boolean hitTest(final float x1, final float y1, final float x2,
                                   final float y2, final float x, final float y, float limit) {
-        float value = distance(x1, y1, x2, y2, x, y);
-        return value <= limit;
+        // Compare squared distances to avoid Math.sqrt() on every segment
+        float value = distanceSquared(x1, y1, x2, y2, x, y);
+        return value <= limit * limit;
     }
 
-    private float distance(float x1, float y1, float x2, float y2, float x, float y) {
+    private float distanceSquared(float x1, float y1, float x2, float y2, float x, float y) {
         float A = x - x1;
         float B = y - y1;
         float C = x2 - x1;
@@ -231,7 +232,7 @@ public class BaseShape {
         float dot = A * C + B * D;
         float lenSq = C * C + D * D;
         float param = -1.0f;
-        if (lenSq!= 0) {
+        if (lenSq != 0) {
             param = dot / lenSq;
         }
 
@@ -250,7 +251,7 @@ public class BaseShape {
 
         float dx = x - xx;
         float dy = y - yy;
-        return (float) Math.sqrt(dx * dx + dy * dy);
+        return dx * dx + dy * dy;
     }
 
 }
