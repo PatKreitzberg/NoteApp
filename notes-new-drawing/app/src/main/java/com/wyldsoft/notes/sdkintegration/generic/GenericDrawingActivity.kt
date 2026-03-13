@@ -63,10 +63,12 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
     override fun createTouchHelper() {
         // Set touch listener for both stylus and finger input
         surfaceView.setOnTouchListener { _, event ->
-            // If stroke options panel is open, close it on any canvas touch
-            if (editorViewModel.uiState.value.isStrokeOptionsOpen) {
+            // If drawing is blocked, consume the touch and dismiss any dismissible UI
+            if (editorViewModel.isDrawingBlocked.value) {
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                    editorViewModel.closeStrokeOptions()
+                    if (editorViewModel.uiState.value.isStrokeOptionsOpen) {
+                        editorViewModel.closeStrokeOptions()
+                    }
                 }
                 return@setOnTouchListener true
             }

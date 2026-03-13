@@ -177,9 +177,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         observePaginationState()
         observeViewportChanges()
         observeUndoRedoState()
-        observeUiState()
-        observeDropdownState()
-        observeDialogState()
+        observeDrawingBlocked()
         observeRefreshRequests()
         Log.d("DebugAug12", "DONE Setting observers in BaseDrawingActivity")
     }
@@ -225,35 +223,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         lifecycleScope.launch { editorViewModel.canRedo.collect { refreshUIChrome() } }
     }
 
-    private fun observeUiState() {
+    private fun observeDrawingBlocked() {
         lifecycleScope.launch {
-            editorViewModel.uiState.collect { state -> setDrawingEnabled(!state.isStrokeOptionsOpen) }
-        }
-    }
-
-    private fun observeDropdownState() {
-        lifecycleScope.launch {
-            editorViewModel.openDropdownCount.collect { count ->
-                if (count > 0) {
-                    setDrawingEnabled(false)
-                } else if (!editorViewModel.uiState.value.isStrokeOptionsOpen &&
-                    !editorViewModel.isDialogOpen.value) {
-                    setDrawingEnabled(true)
-                }
-            }
-        }
-    }
-
-    private fun observeDialogState() {
-        lifecycleScope.launch {
-            editorViewModel.isDialogOpen.collect { dialogOpen ->
-                if (dialogOpen) {
-                    setDrawingEnabled(false)
-                } else if (!editorViewModel.uiState.value.isStrokeOptionsOpen &&
-                    editorViewModel.openDropdownCount.value == 0) {
-                    setDrawingEnabled(true)
-                }
-            }
+            editorViewModel.isDrawingBlocked.collect { blocked -> setDrawingEnabled(!blocked) }
         }
     }
 

@@ -25,11 +25,15 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
@@ -82,7 +86,15 @@ class EditorViewModel(
     val isDialogOpen: StateFlow<Boolean> = _isDialogOpen.asStateFlow()
 
     val isAnyDropdownOpen: Boolean
-        get() = _openDropdownCount.value > 0 || _uiState.value.isStrokeOptionsOpen || _isDialogOpen.value
+        get() = isDrawingBlocked.value
+
+    val isDrawingBlocked: StateFlow<Boolean> = combine(
+        _uiState.map { it.isStrokeOptionsOpen },
+        _openDropdownCount,
+        _isDialogOpen
+    ) { strokeOpen, dropdownCount, dialogOpen ->
+        strokeOpen || dropdownCount > 0 || dialogOpen
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _closeAllDropdownsEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val closeAllDropdownsEvent: SharedFlow<Unit> = _closeAllDropdownsEvent.asSharedFlow()
