@@ -49,24 +49,64 @@ class BitmapManager(
 
     private var geometrySnapshotBitmap: Bitmap? = null
 
-    fun recreateBitmapFromShapes(setOfShapes: MutableList<BaseShape>?) {
+    fun recreateBitmapFromShapes(setOfShapes: MutableList<BaseShape>?, dirtyRect: RectF? = null) {
         val bitmap = getBitmap() ?: return
         val canvas = getBitmapCanvas() ?: return
-        canvas.drawColor(Color.WHITE)
+        val viewportManager = viewModel.viewportManager
+        val screenWidth = bitmap.width
+        val screenHeight = bitmap.height
 
+        // Dirty-region path: clip canvas and only redraw shapes intersecting the dirty region.
+        if (dirtyRect != null) {
+            val tl = viewportManager.noteToSurfaceCoordinates(dirtyRect.left, dirtyRect.top)
+            val br = viewportManager.noteToSurfaceCoordinates(dirtyRect.right, dirtyRect.bottom)
+            val surfaceRect = RectF(
+                minOf(tl.x, br.x) - SURFACE_PIXEL_BUFFER, minOf(tl.y, br.y) - SURFACE_PIXEL_BUFFER,
+                maxOf(tl.x, br.x) + SURFACE_PIXEL_BUFFER, maxOf(tl.y, br.y) + SURFACE_PIXEL_BUFFER
+            )
+            surfaceRect.intersect(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat())
+            if (surfaceRect.isEmpty) return
+            canvas.save()
+            canvas.clipRect(surfaceRect)
+            canvas.drawColor(Color.WHITE)
+            val template = viewModel.paperTemplate.value
+            if (template != PaperTemplate.BLANK) {
+                templateRenderer.drawTemplate(canvas, template, viewModel.screenWidth.value,
+                    viewModel.isPaginationEnabled.value, viewModel.pageHeight.value)
+            }
+            val renderContext = rendererHelper.getRenderContext() ?: run { canvas.restore(); return }
+            renderContext.bitmap = bitmap
+            renderContext.viewportScale = viewportManager.viewportState.value.scale
+            setOfShapes?.forEach { shape ->
+                shape.updateShapeRect()
+                val noteBounds = shape.boundingRect ?: return@forEach
+                val sTl = viewportManager.noteToSurfaceCoordinates(noteBounds.left, noteBounds.top)
+                val sBr = viewportManager.noteToSurfaceCoordinates(noteBounds.right, noteBounds.bottom)
+                val shapeSurface = RectF(minOf(sTl.x, sBr.x), minOf(sTl.y, sBr.y), maxOf(sTl.x, sBr.x), maxOf(sTl.y, sBr.y))
+                if (!RectF.intersects(shapeSurface, surfaceRect)) return@forEach
+                canvas.withSave {
+                    val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
+                    val originalTouchPoints = shape.touchPointList
+                    shape.touchPointList = surfaceTouchPoints
+                    shapeRenderer.initRenderContext(renderContext, this)
+                    shape.render(renderContext)
+                    shape.touchPointList = originalTouchPoints
+                }
+            }
+            canvas.restore()
+            return
+        }
+
+        // Full redraw path
+        canvas.drawColor(Color.WHITE)
         val template = viewModel.paperTemplate.value
         if (template != PaperTemplate.BLANK) {
             templateRenderer.drawTemplate(canvas, template, viewModel.screenWidth.value,
                 viewModel.isPaginationEnabled.value, viewModel.pageHeight.value)
         }
-
         val renderContext = rendererHelper.getRenderContext() ?: return
         renderContext.bitmap = bitmap
-        val viewportManager = viewModel.viewportManager
         renderContext.viewportScale = viewportManager.viewportState.value.scale
-        val screenWidth = bitmap.width
-        val screenHeight = bitmap.height
-
         setOfShapes?.forEach { shape ->
             if (!isShapeVisible(shape, viewportManager, screenWidth, screenHeight)) return@forEach
             canvas.withSave {

@@ -60,8 +60,9 @@ class EraseManager(
                 return true
             }
 
-            // Non-Onyx path: update bitmap only; caller does the screen render
-            bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+            // Non-Onyx path: update bitmap only (caller does the screen render).
+            // Pass refreshRect so only the dirty region is redrawn.
+            bitmapManager.recreateBitmapFromShapes(shapesManager.shapes(), refreshRect)
         }
         return false
     }
