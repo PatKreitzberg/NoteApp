@@ -13,6 +13,7 @@ import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.ViewportInfo
 import com.wyldsoft.notes.ui.components.dialogs.ManageNoteDialog
 import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun EditorView(
@@ -32,6 +33,19 @@ fun EditorView(
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
     var showManageNotebooksDialog by remember { mutableStateOf(false) }
     var isToolbarCollapsed by remember { mutableStateOf(false) }
+
+    // Close dialogs when triggered by SurfaceView touch listener via closeAllDropdownsEvent
+    LaunchedEffect(Unit) {
+        viewModel.closeAllDropdownsEvent.collectLatest {
+            showNoteSettingsDialog = false
+            showManageNotebooksDialog = false
+        }
+    }
+
+    // Keep EditorViewModel informed when any dialog is open
+    LaunchedEffect(showNoteSettingsDialog, showManageNotebooksDialog) {
+        viewModel.setDialogOpen(showNoteSettingsDialog || showManageNotebooksDialog)
+    }
 
     val canGoBack by viewModel.canGoBack.collectAsState()
     val canGoForward by viewModel.canGoForward.collectAsState()

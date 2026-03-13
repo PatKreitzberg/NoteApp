@@ -179,6 +179,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         observeUndoRedoState()
         observeUiState()
         observeDropdownState()
+        observeDialogState()
         observeRefreshRequests()
         Log.d("DebugAug12", "DONE Setting observers in BaseDrawingActivity")
     }
@@ -235,7 +236,21 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             editorViewModel.openDropdownCount.collect { count ->
                 if (count > 0) {
                     setDrawingEnabled(false)
-                } else if (!editorViewModel.uiState.value.isStrokeOptionsOpen) {
+                } else if (!editorViewModel.uiState.value.isStrokeOptionsOpen &&
+                    !editorViewModel.isDialogOpen.value) {
+                    setDrawingEnabled(true)
+                }
+            }
+        }
+    }
+
+    private fun observeDialogState() {
+        lifecycleScope.launch {
+            editorViewModel.isDialogOpen.collect { dialogOpen ->
+                if (dialogOpen) {
+                    setDrawingEnabled(false)
+                } else if (!editorViewModel.uiState.value.isStrokeOptionsOpen &&
+                    editorViewModel.openDropdownCount.value == 0) {
                     setDrawingEnabled(true)
                 }
             }

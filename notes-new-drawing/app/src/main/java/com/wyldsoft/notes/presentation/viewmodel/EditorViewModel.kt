@@ -77,17 +77,23 @@ class EditorViewModel(
     // Dropdown open/close tracking
     private val _openDropdownCount = MutableStateFlow(0)
     val openDropdownCount: StateFlow<Int> = _openDropdownCount.asStateFlow()
+
+    private val _isDialogOpen = MutableStateFlow(false)
+    val isDialogOpen: StateFlow<Boolean> = _isDialogOpen.asStateFlow()
+
     val isAnyDropdownOpen: Boolean
-        get() = _openDropdownCount.value > 0 || _uiState.value.isStrokeOptionsOpen
+        get() = _openDropdownCount.value > 0 || _uiState.value.isStrokeOptionsOpen || _isDialogOpen.value
 
     private val _closeAllDropdownsEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val closeAllDropdownsEvent: SharedFlow<Unit> = _closeAllDropdownsEvent.asSharedFlow()
 
     fun onDropdownOpened() { _openDropdownCount.value++ }
     fun onDropdownClosed() { _openDropdownCount.value = maxOf(0, _openDropdownCount.value - 1) }
+    fun setDialogOpen(open: Boolean) { _isDialogOpen.value = open }
     fun closeAllDropdowns() {
         closeStrokeOptions()
         _openDropdownCount.value = 0
+        _isDialogOpen.value = false
         _closeAllDropdownsEvent.tryEmit(Unit)
     }
 
