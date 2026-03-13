@@ -24,6 +24,8 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.drawing.DrawingActivityInterface
 import android.graphics.PointF
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.gestures.GestureHandler
@@ -178,6 +180,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         observeViewportChanges()
         observeUndoRedoState()
         observeDrawingBlocked()
+        observeModeChanges()
         observeRefreshRequests()
         Log.d("DebugAug12", "DONE Setting observers in BaseDrawingActivity")
     }
@@ -226,6 +229,19 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     private fun observeDrawingBlocked() {
         lifecycleScope.launch {
             editorViewModel.isDrawingBlocked.collect { blocked -> setDrawingEnabled(!blocked) }
+        }
+    }
+
+    private fun observeModeChanges() {
+        lifecycleScope.launch {
+            editorViewModel.uiState
+                .map { it.mode }
+                .distinctUntilChanged()
+                .collect { _ ->
+                    if (!editorViewModel.isDrawingBlocked.value) {
+                        setDrawingEnabled(true)
+                    }
+                }
         }
     }
 
