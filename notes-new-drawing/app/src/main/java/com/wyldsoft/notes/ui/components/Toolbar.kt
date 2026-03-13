@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -272,23 +271,12 @@ fun TabButton(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 fun ProfileButton(profile: PenProfile, isSelected: Boolean, isActive: Boolean, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        PenButton(
-            penType = profile.penType,
-            isSelected = isSelected,
-            onClick = onClick,
-            selectedColor = profile.strokeColor,
-            size = 48.dp,
-            iconSize = 24.dp
-        )
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .border(width = 1.dp, color = profile.strokeColor, shape = CircleShape)
-                .then(if (isActive) Modifier.background(profile.strokeColor, CircleShape) else Modifier)
-        )
-    }
+    PenButton(
+        penType = profile.penType,
+        isSelected = isSelected,
+        onClick = onClick,
+        selectedColor = profile.strokeColor,
+        size = 48.dp,
+        iconSize = 24.dp
+    )
 }

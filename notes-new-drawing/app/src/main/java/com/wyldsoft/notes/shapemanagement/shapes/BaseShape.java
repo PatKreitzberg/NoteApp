@@ -162,6 +162,27 @@ public class BaseShape {
     }
 
     public boolean hitTestPoints(TouchPointList pointList, float radius) {
+        // Bounding box pre-check: compute erase path bounds and compare to shape bounds.
+        // Avoids expensive per-segment tests for shapes far from the erase path.
+        if (boundingRect == null) {
+            updateShapeRect();
+        }
+        if (boundingRect != null) {
+            float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
+            float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+            for (TouchPoint tp : pointList.getPoints()) {
+                float px = tp.getX(), py = tp.getY();
+                if (px < minX) minX = px;
+                if (py < minY) minY = py;
+                if (px > maxX) maxX = px;
+                if (py > maxY) maxY = py;
+            }
+            if (minX - radius > boundingRect.right || maxX + radius < boundingRect.left ||
+                    minY - radius > boundingRect.bottom || maxY + radius < boundingRect.top) {
+                return false;
+            }
+        }
+
         for (TouchPoint touchPoint : pointList.getPoints()) {
             if (hitTest(touchPoint.getX(), touchPoint.getY(), radius)) {
                 return true;
