@@ -36,7 +36,7 @@ class FolderRepositoryImpl(
     private val notebookDao: NotebookDao,
     private val noteDao: NoteDao,
     private val shapeDao: ShapeDao,
-    private val deletedItemDao: DeletedItemDao? = null
+    private val deletedItemDao: DeletedItemDao
 ) : FolderRepository {
 
     override suspend fun getFolder(folderId: String): FolderEntity? {
@@ -75,7 +75,7 @@ class FolderRepositoryImpl(
         if (folderId == FolderRepository.TRASH_FOLDER_ID || folderId == FolderRepository.ROOT_FOLDER_ID) return
         val folder = folderDao.getFolder(folderId) ?: return
         ensureTrashFolder()
-        deletedItemDao?.insert(DeletedItemEntity(
+        deletedItemDao.insert(DeletedItemEntity(
             entityId = folderId,
             entityType = "folder",
             originalParentId = folder.parentFolderId
@@ -88,7 +88,7 @@ class FolderRepositoryImpl(
 
     override suspend fun restoreFolder(folderId: String) {
         val folder = folderDao.getFolder(folderId) ?: return
-        val deletedItem = deletedItemDao?.getByEntityId(folderId)
+        val deletedItem = deletedItemDao.getByEntityId(folderId)
         val targetParentId = resolveRestoreParent(deletedItem?.originalParentId)
         folderDao.update(folder.copy(
             parentFolderId = targetParentId,
@@ -134,16 +134,16 @@ class FolderRepositoryImpl(
             val notes = notebookDao.getNotesInNotebookOnce(notebook.id)
             for (note in notes) {
                 shapeDao.deleteAllForNote(note.id)
-                deletedItemDao?.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+                deletedItemDao.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
                 noteDao.deleteById(note.id)
             }
-            deletedItemDao?.insert(DeletedItemEntity(entityId = notebook.id, entityType = "notebook"))
+            deletedItemDao.insert(DeletedItemEntity(entityId = notebook.id, entityType = "notebook"))
             notebookDao.deleteById(notebook.id)
         }
         val looseNotes = noteDao.getLooseNotesInFolderOnce(FolderRepository.TRASH_FOLDER_ID)
         for (note in looseNotes) {
             shapeDao.deleteAllForNote(note.id)
-            deletedItemDao?.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+            deletedItemDao.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
             noteDao.deleteById(note.id)
         }
     }
@@ -162,7 +162,7 @@ class FolderRepositoryImpl(
                 val hasOtherFolder = note.folderId != null
                 if (otherNotebooks.isEmpty() && !hasOtherFolder) {
                     shapeDao.deleteAllForNote(note.id)
-                    deletedItemDao?.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+                    deletedItemDao.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
                     noteDao.deleteById(note.id)
                 } else if (note.parentNotebookId == notebook.id && otherNotebooks.isNotEmpty()) {
                     noteDao.update(note.copy(
@@ -171,17 +171,17 @@ class FolderRepositoryImpl(
                     ))
                 }
             }
-            deletedItemDao?.insert(DeletedItemEntity(entityId = notebook.id, entityType = "notebook"))
+            deletedItemDao.insert(DeletedItemEntity(entityId = notebook.id, entityType = "notebook"))
         }
 
         val looseNotes = noteDao.getLooseNotesInFolderOnce(folderId)
         for (note in looseNotes) {
             shapeDao.deleteAllForNote(note.id)
-            deletedItemDao?.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+            deletedItemDao.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
             noteDao.deleteById(note.id)
         }
 
-        deletedItemDao?.insert(DeletedItemEntity(entityId = folderId, entityType = "folder"))
+        deletedItemDao.insert(DeletedItemEntity(entityId = folderId, entityType = "folder"))
         folderDao.deleteById(folderId)
     }
 

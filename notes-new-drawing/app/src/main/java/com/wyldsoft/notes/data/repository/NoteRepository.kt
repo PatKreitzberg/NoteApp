@@ -45,8 +45,8 @@ interface NoteRepository {
 class NoteRepositoryImpl(
     private val noteDao: NoteDao,
     private val shapeDao: ShapeDao,
-    private val deletedItemDao: DeletedItemDao? = null,
-    private val folderDao: FolderDao? = null
+    private val deletedItemDao: DeletedItemDao,
+    private val folderDao: FolderDao
 ) : NoteRepository {
     private var _currentNote = MutableStateFlow(Note()) // set a default empty note
     override fun getCurrentNote(): StateFlow<Note> = _currentNote.asStateFlow()
@@ -77,7 +77,7 @@ class NoteRepositoryImpl(
     }
     
     override suspend fun deleteNote(id: String) {
-        deletedItemDao?.insert(DeletedItemEntity(entityId = id, entityType = "note"))
+        deletedItemDao.insert(DeletedItemEntity(entityId = id, entityType = "note"))
         noteDao.deleteById(id)
     }
     
@@ -266,7 +266,7 @@ class NoteRepositoryImpl(
     override suspend fun moveNoteToTrash(noteId: String) {
         val note = noteDao.getNote(noteId)
         val originalParentId = note.folderId ?: note.parentNotebookId
-        deletedItemDao?.insert(DeletedItemEntity(
+        deletedItemDao.insert(DeletedItemEntity(
             entityId = noteId,
             entityType = "note",
             originalParentId = originalParentId
@@ -276,13 +276,13 @@ class NoteRepositoryImpl(
 
     override suspend fun restoreNote(noteId: String) {
         val note = noteDao.getNote(noteId)
-        val deletedItem = deletedItemDao?.getByEntityId(noteId)
+        val deletedItem = deletedItemDao.getByEntityId(noteId)
         val originalParentId = deletedItem?.originalParentId
         if (originalParentId == null) {
             moveNoteToFolder(noteId, FolderRepository.ROOT_FOLDER_ID)
             return
         }
-        val folder = folderDao?.getFolder(originalParentId)
+        val folder = folderDao.getFolder(originalParentId)
         if (folder != null && folder.parentFolderId != FolderRepository.TRASH_FOLDER_ID) {
             moveNoteToFolder(noteId, originalParentId)
         } else {
@@ -292,7 +292,7 @@ class NoteRepositoryImpl(
 
     override suspend fun permanentlyDeleteNote(noteId: String) {
         shapeDao.deleteAllForNote(noteId)
-        deletedItemDao?.insert(DeletedItemEntity(entityId = noteId, entityType = "note"))
+        deletedItemDao.insert(DeletedItemEntity(entityId = noteId, entityType = "note"))
         noteDao.deleteById(noteId)
     }
 

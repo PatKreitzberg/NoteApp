@@ -32,8 +32,8 @@ class NotebookRepositoryImpl(
     private val notebookDao: NotebookDao,
     private val noteDao: NoteDao,
     private val shapeDao: ShapeDao,
-    private val deletedItemDao: DeletedItemDao? = null,
-    private val folderRepository: FolderRepository? = null
+    private val deletedItemDao: DeletedItemDao,
+    private val folderRepository: FolderRepository
 ) : NotebookRepository {
     
     override suspend fun getNotebook(notebookId: String): NotebookEntity? {
@@ -80,7 +80,7 @@ class NotebookRepositoryImpl(
             val otherNotebooks = noteDao.getNotebooksForNote(note.id).filter { it != notebookId }
             if (otherNotebooks.isEmpty() && note.folderId == null) {
                 shapeDao.deleteAllForNote(note.id)
-                deletedItemDao?.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+                deletedItemDao.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
                 noteDao.deleteById(note.id)
             } else if (note.parentNotebookId == notebookId && otherNotebooks.isNotEmpty()) {
                 noteDao.update(note.copy(
@@ -89,7 +89,7 @@ class NotebookRepositoryImpl(
                 ))
             }
         }
-        deletedItemDao?.insert(DeletedItemEntity(entityId = notebookId, entityType = "notebook"))
+        deletedItemDao.insert(DeletedItemEntity(entityId = notebookId, entityType = "notebook"))
         notebookDao.deleteById(notebookId)
     }
     
@@ -137,8 +137,8 @@ class NotebookRepositoryImpl(
 
     override suspend fun moveNotebookToTrash(notebookId: String) {
         val notebook = notebookDao.getNotebook(notebookId) ?: return
-        folderRepository?.ensureTrashFolderExists()
-        deletedItemDao?.insert(DeletedItemEntity(
+        folderRepository.ensureTrashFolderExists()
+        deletedItemDao.insert(DeletedItemEntity(
             entityId = notebookId,
             entityType = "notebook",
             originalParentId = notebook.folderId
@@ -151,7 +151,7 @@ class NotebookRepositoryImpl(
 
     override suspend fun restoreNotebook(notebookId: String) {
         val notebook = notebookDao.getNotebook(notebookId) ?: return
-        val deletedItem = deletedItemDao?.getByEntityId(notebookId)
+        val deletedItem = deletedItemDao.getByEntityId(notebookId)
         val targetFolderId = deletedItem?.originalParentId ?: FolderRepository.ROOT_FOLDER_ID
         notebookDao.update(notebook.copy(
             folderId = targetFolderId,
