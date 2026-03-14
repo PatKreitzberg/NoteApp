@@ -52,9 +52,6 @@ class EditorViewModel(
     private val _currentPenProfile = MutableStateFlow(PenProfile.defaultProfiles[0])
     val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
 
-    private val _refreshUi = MutableStateFlow(0L)
-    val refreshUi: StateFlow<Long> = _refreshUi.asStateFlow()
-
     private val _excludeRects = MutableStateFlow<List<Rect>>(emptyList())
     val excludeRects: StateFlow<List<Rect>> = _excludeRects.asStateFlow()
 
@@ -405,7 +402,7 @@ class EditorViewModel(
     }
 
     fun forceRefresh() {
-        _refreshUi.value = System.currentTimeMillis()
+        onScreenRefreshNeeded?.invoke()
     }
 
     // --- Note management ---

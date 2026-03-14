@@ -136,8 +136,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             bitmapCanvas?.drawColor(Color.WHITE)
             initializeShapeMaanager()
             editorViewModel.setDrawingReferences(shapesManager, bitmapManager) { forceScreenRefresh() }
-            recreateBitmapFromShapes()
-            bitmap?.let { renderToScreen(surfaceView, it) }
         }
     }
 
@@ -181,7 +179,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         observeUndoRedoState()
         observeDrawingBlocked()
         observeModeChanges()
-        observeRefreshRequests()
         Log.d("DebugAug12", "DONE Setting observers in BaseDrawingActivity")
     }
 
@@ -242,12 +239,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                         setDrawingEnabled(true)
                     }
                 }
-        }
-    }
-
-    private fun observeRefreshRequests() {
-        lifecycleScope.launch {
-            editorViewModel.refreshUi.collect { timestamp -> if (timestamp > 0L) forceScreenRefresh() }
         }
     }
 
