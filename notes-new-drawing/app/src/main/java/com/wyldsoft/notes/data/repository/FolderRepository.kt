@@ -1,5 +1,7 @@
 package com.wyldsoft.notes.data.repository
 
+import androidx.room.RoomDatabase
+import androidx.room.withTransaction
 import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.FolderDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
@@ -32,6 +34,7 @@ interface FolderRepository {
 }
 
 class FolderRepositoryImpl(
+    private val db: RoomDatabase,
     private val folderDao: FolderDao,
     private val notebookDao: NotebookDao,
     private val noteDao: NoteDao,
@@ -75,15 +78,17 @@ class FolderRepositoryImpl(
         if (folderId == FolderRepository.TRASH_FOLDER_ID || folderId == FolderRepository.ROOT_FOLDER_ID) return
         val folder = folderDao.getFolder(folderId) ?: return
         ensureTrashFolder()
-        deletedItemDao.insert(DeletedItemEntity(
-            entityId = folderId,
-            entityType = "folder",
-            originalParentId = folder.parentFolderId
-        ))
-        folderDao.update(folder.copy(
-            parentFolderId = FolderRepository.TRASH_FOLDER_ID,
-            modifiedAt = System.currentTimeMillis()
-        ))
+        db.withTransaction {
+            deletedItemDao.insert(DeletedItemEntity(
+                entityId = folderId,
+                entityType = "folder",
+                originalParentId = folder.parentFolderId
+            ))
+            folderDao.update(folder.copy(
+                parentFolderId = FolderRepository.TRASH_FOLDER_ID,
+                modifiedAt = System.currentTimeMillis()
+            ))
+        }
     }
 
     override suspend fun restoreFolder(folderId: String) {
@@ -103,7 +108,7 @@ class FolderRepositoryImpl(
 
     override suspend fun permanentlyDeleteFolder(folderId: String) {
         if (folderId == FolderRepository.TRASH_FOLDER_ID || folderId == FolderRepository.ROOT_FOLDER_ID) return
-        deleteFolderRecursive(folderId)
+        db.withTransaction { deleteFolderRecursive(folderId) }
     }
 
     private suspend fun resolveRestoreParent(originalParentId: String?, visited: MutableSet<String>): String {
@@ -130,26 +135,28 @@ class FolderRepositoryImpl(
     }
 
     override suspend fun emptyTrash() {
-        val subfolders = folderDao.getSubfoldersOnce(FolderRepository.TRASH_FOLDER_ID)
-        for (subfolder in subfolders) {
-            deleteFolderRecursive(subfolder.id)
-        }
-        val notebooks = notebookDao.getNotebooksInFolderOnce(FolderRepository.TRASH_FOLDER_ID)
-        for (notebook in notebooks) {
-            val notes = notebookDao.getNotesInNotebookOnce(notebook.id)
-            for (note in notes) {
+        db.withTransaction {
+            val subfolders = folderDao.getSubfoldersOnce(FolderRepository.TRASH_FOLDER_ID)
+            for (subfolder in subfolders) {
+                deleteFolderRecursive(subfolder.id)
+            }
+            val notebooks = notebookDao.getNotebooksInFolderOnce(FolderRepository.TRASH_FOLDER_ID)
+            for (notebook in notebooks) {
+                val notes = notebookDao.getNotesInNotebookOnce(notebook.id)
+                for (note in notes) {
+                    shapeDao.deleteAllForNote(note.id)
+                    deletedItemDao.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+                    noteDao.deleteById(note.id)
+                }
+                deletedItemDao.insert(DeletedItemEntity(entityId = notebook.id, entityType = "notebook"))
+                notebookDao.deleteById(notebook.id)
+            }
+            val looseNotes = noteDao.getLooseNotesInFolderOnce(FolderRepository.TRASH_FOLDER_ID)
+            for (note in looseNotes) {
                 shapeDao.deleteAllForNote(note.id)
                 deletedItemDao.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
                 noteDao.deleteById(note.id)
             }
-            deletedItemDao.insert(DeletedItemEntity(entityId = notebook.id, entityType = "notebook"))
-            notebookDao.deleteById(notebook.id)
-        }
-        val looseNotes = noteDao.getLooseNotesInFolderOnce(FolderRepository.TRASH_FOLDER_ID)
-        for (note in looseNotes) {
-            shapeDao.deleteAllForNote(note.id)
-            deletedItemDao.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
-            noteDao.deleteById(note.id)
         }
     }
 

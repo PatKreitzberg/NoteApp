@@ -1,6 +1,8 @@
 package com.wyldsoft.notes.data.repository
 
 import android.util.Log
+import androidx.room.RoomDatabase
+import androidx.room.withTransaction
 import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.FolderDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
@@ -43,6 +45,7 @@ interface NoteRepository {
 }
 
 class NoteRepositoryImpl(
+    private val db: RoomDatabase,
     private val noteDao: NoteDao,
     private val shapeDao: ShapeDao,
     private val deletedItemDao: DeletedItemDao,
@@ -266,12 +269,14 @@ class NoteRepositoryImpl(
     override suspend fun moveNoteToTrash(noteId: String) {
         val note = noteDao.getNote(noteId)
         val originalParentId = note.folderId ?: note.parentNotebookId
-        deletedItemDao.insert(DeletedItemEntity(
-            entityId = noteId,
-            entityType = "note",
-            originalParentId = originalParentId
-        ))
-        moveNoteToFolder(noteId, FolderRepository.TRASH_FOLDER_ID)
+        db.withTransaction {
+            deletedItemDao.insert(DeletedItemEntity(
+                entityId = noteId,
+                entityType = "note",
+                originalParentId = originalParentId
+            ))
+            moveNoteToFolder(noteId, FolderRepository.TRASH_FOLDER_ID)
+        }
     }
 
     override suspend fun restoreNote(noteId: String) {
@@ -291,9 +296,11 @@ class NoteRepositoryImpl(
     }
 
     override suspend fun permanentlyDeleteNote(noteId: String) {
-        shapeDao.deleteAllForNote(noteId)
-        deletedItemDao.insert(DeletedItemEntity(entityId = noteId, entityType = "note"))
-        noteDao.deleteById(noteId)
+        db.withTransaction {
+            shapeDao.deleteAllForNote(noteId)
+            deletedItemDao.insert(DeletedItemEntity(entityId = noteId, entityType = "note"))
+            noteDao.deleteById(noteId)
+        }
     }
 
     override suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>) {

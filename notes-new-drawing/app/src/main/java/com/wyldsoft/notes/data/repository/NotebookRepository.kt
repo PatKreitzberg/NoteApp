@@ -1,5 +1,7 @@
 package com.wyldsoft.notes.data.repository
 
+import androidx.room.RoomDatabase
+import androidx.room.withTransaction
 import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.NotebookDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
@@ -29,6 +31,7 @@ interface NotebookRepository {
 }
 
 class NotebookRepositoryImpl(
+    private val db: RoomDatabase,
     private val notebookDao: NotebookDao,
     private val noteDao: NoteDao,
     private val shapeDao: ShapeDao,
@@ -138,15 +141,17 @@ class NotebookRepositoryImpl(
     override suspend fun moveNotebookToTrash(notebookId: String) {
         val notebook = notebookDao.getNotebook(notebookId) ?: return
         folderRepository.ensureTrashFolderExists()
-        deletedItemDao.insert(DeletedItemEntity(
-            entityId = notebookId,
-            entityType = "notebook",
-            originalParentId = notebook.folderId
-        ))
-        notebookDao.update(notebook.copy(
-            folderId = FolderRepository.TRASH_FOLDER_ID,
-            modifiedAt = System.currentTimeMillis()
-        ))
+        db.withTransaction {
+            deletedItemDao.insert(DeletedItemEntity(
+                entityId = notebookId,
+                entityType = "notebook",
+                originalParentId = notebook.folderId
+            ))
+            notebookDao.update(notebook.copy(
+                folderId = FolderRepository.TRASH_FOLDER_ID,
+                modifiedAt = System.currentTimeMillis()
+            ))
+        }
     }
 
     override suspend fun restoreNotebook(notebookId: String) {
