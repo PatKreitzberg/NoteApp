@@ -43,7 +43,8 @@ class ScrotesApp : Application() {
             notebookDao = database.notebookDao(),
             noteDao = database.noteDao(),
             shapeDao = database.shapeDao(),
-            deletedItemDao = database.deletedItemDao()
+            deletedItemDao = database.deletedItemDao(),
+            folderRepository = folderRepository
         )
     }
 

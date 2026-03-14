@@ -30,7 +30,8 @@ class NotebookRepositoryImpl(
     private val notebookDao: NotebookDao,
     private val noteDao: NoteDao,
     private val shapeDao: ShapeDao,
-    private val deletedItemDao: DeletedItemDao? = null
+    private val deletedItemDao: DeletedItemDao? = null,
+    private val folderRepository: FolderRepository? = null
 ) : NotebookRepository {
     
     override suspend fun getNotebook(notebookId: String): NotebookEntity? {
@@ -134,6 +135,7 @@ class NotebookRepositoryImpl(
 
     override suspend fun moveNotebookToTrash(notebookId: String) {
         val notebook = notebookDao.getNotebook(notebookId) ?: return
+        folderRepository?.ensureTrashFolderExists()
         notebookDao.update(notebook.copy(
             folderId = FolderRepository.TRASH_FOLDER_ID,
             modifiedAt = System.currentTimeMillis()
