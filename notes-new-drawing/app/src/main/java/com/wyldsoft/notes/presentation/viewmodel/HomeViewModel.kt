@@ -66,6 +66,7 @@ class HomeViewModel(
     init {
         viewModelScope.launch {
             val rootFolder = folderRepository.getRootFolder()
+            folderRepository.ensureTrashFolderExists()
             navigateToFolder(rootFolder.id)
         }
     }

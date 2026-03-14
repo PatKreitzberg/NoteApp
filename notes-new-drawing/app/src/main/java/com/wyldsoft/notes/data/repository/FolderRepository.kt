@@ -82,8 +82,12 @@ class FolderRepositoryImpl(
     override suspend fun ensureTrashFolderExists() = ensureTrashFolder()
 
     private suspend fun ensureTrashFolder() {
-        if (folderDao.getFolder(FolderRepository.TRASH_FOLDER_ID) == null) {
-            folderDao.insert(FolderEntity(id = FolderRepository.TRASH_FOLDER_ID, name = "Trash", parentFolderId = null))
+        val existing = folderDao.getFolder(FolderRepository.TRASH_FOLDER_ID)
+        getRootFolder() // ensure root exists first
+        if (existing == null) {
+            folderDao.insert(FolderEntity(id = FolderRepository.TRASH_FOLDER_ID, name = "Trash", parentFolderId = FolderRepository.ROOT_FOLDER_ID))
+        } else if (existing.parentFolderId != FolderRepository.ROOT_FOLDER_ID) {
+            folderDao.update(existing.copy(parentFolderId = FolderRepository.ROOT_FOLDER_ID))
         }
     }
 
