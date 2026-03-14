@@ -265,14 +265,14 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     if (vm.uiState.value.mode is EditorMode.Select) vm.cancelSelection()
                     else vm.switchMode(EditorMode.Select)
                     setDrawingEnabled(true)
-                    forceScreenRefresh()
+                    bitmapManager.renderBitmapToScreen()
                 }
                 GestureAction.TOGGLE_TEXT_MODE -> {
                     val vm = editorViewModel
                     if (vm.uiState.value.mode is EditorMode.Text) vm.switchMode(EditorMode.Draw())
                     else vm.switchMode(EditorMode.Text)
                     setDrawingEnabled(true)
-                    forceScreenRefresh()
+                    bitmapManager.renderBitmapToScreen()
                 }
                 GestureAction.SWITCH_TAB -> {
                     val vm = editorViewModel
@@ -283,13 +283,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     }
                     vm.switchMode(nextMode)
                     setDrawingEnabled(true)
-                    forceScreenRefresh()
+                    bitmapManager.renderBitmapToScreen()
                 }
                 GestureAction.DRAW_GEOMETRIC_SHAPE -> {
                     val vm = editorViewModel
                     vm.switchMode(EditorMode.Draw(DrawTool.GEOMETRY))
                     setDrawingEnabled(true)
-                    forceScreenRefresh()
+                    bitmapManager.renderBitmapToScreen()
                 }
                 GestureAction.COPY_SELECTION -> {
                     val vm = editorViewModel
