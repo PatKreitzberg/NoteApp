@@ -269,12 +269,10 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     forceScreenRefresh()
                 }
                 GestureAction.TOGGLE_SELECTION_MODE -> switchModeFromGesture {
-                    if (editorViewModel.uiState.value.mode is EditorMode.Select) editorViewModel.cancelSelection()
-                    else editorViewModel.switchMode(EditorMode.Select)
+                    editorViewModel.toggleMode(EditorMode.Select)
                 }
                 GestureAction.TOGGLE_TEXT_MODE -> switchModeFromGesture {
-                    if (editorViewModel.uiState.value.mode is EditorMode.Text) editorViewModel.switchMode(EditorMode.Draw())
-                    else editorViewModel.switchMode(EditorMode.Text)
+                    editorViewModel.toggleMode(EditorMode.Text)
                 }
                 GestureAction.SWITCH_TAB -> switchModeFromGesture {
                     val nextMode = when (editorViewModel.uiState.value.mode) {

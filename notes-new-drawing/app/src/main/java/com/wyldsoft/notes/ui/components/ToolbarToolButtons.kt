@@ -16,12 +16,10 @@ fun ToolbarToolButtons(
     viewModel: EditorViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val mode = uiState.mode
-    val isGeometryActive = mode is EditorMode.Draw && mode.drawTool == DrawTool.GEOMETRY
 
     ShapeButton(
         selectedShape = uiState.selectedGeometricShape,
-        isGeometryActive = isGeometryActive,
+        isGeometryActive = uiState.isGeometryMode,
         onActivate = {
             viewModel.closeStrokeOptions()
             viewModel.switchMode(EditorMode.Draw(DrawTool.GEOMETRY))

@@ -38,12 +38,8 @@ fun ToolbarEditButtons(
 
     IconButton(
         onClick = {
-            if (isSelectionActive) {
-                viewModel.cancelSelection()
-            } else {
-                viewModel.closeStrokeOptions()
-                viewModel.switchMode(EditorMode.Select)
-            }
+            viewModel.closeStrokeOptions()
+            viewModel.toggleMode(EditorMode.Select)
         },
         modifier = Modifier.then(if (isSelectionActive) Modifier.border(2.dp, Color.Black) else Modifier)
     ) {

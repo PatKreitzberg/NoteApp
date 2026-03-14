@@ -63,12 +63,8 @@ fun ToolbarTextButtons(
         // Text tool toggle button
         IconButton(
             onClick = {
-                if (isTextActive) {
-                    viewModel.switchMode(EditorMode.Draw())
-                } else {
-                    viewModel.closeStrokeOptions()
-                    viewModel.switchMode(EditorMode.Text)
-                }
+                viewModel.closeStrokeOptions()
+                viewModel.toggleMode(EditorMode.Text)
             },
             modifier = Modifier.then(if (isTextActive) Modifier.border(2.dp, Color.Black) else Modifier)
         ) {

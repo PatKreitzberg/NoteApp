@@ -317,6 +317,12 @@ class EditorViewModel(
         switchMode(EditorMode.Draw())
     }
 
+    /** Toggle into [target] mode, or exit back to Draw if already in it. */
+    fun toggleMode(target: EditorMode) {
+        if (_uiState.value.mode == target) switchMode(EditorMode.Draw())
+        else switchMode(target)
+    }
+
     // --- Delegation to DrawingOperationsHandler ---
 
     fun startDrawing() = drawingOperationsHandler.startDrawing()
@@ -438,4 +444,10 @@ data class EditorUiState(
     val isStrokeOptionsOpen: Boolean = false,
     val mode: EditorMode = EditorMode.Draw(),
     val selectedGeometricShape: GeometricShapeType = GeometricShapeType.LINE
-)
+) {
+    val isGeometryMode: Boolean
+        get() = mode is EditorMode.Draw && (mode as EditorMode.Draw).drawTool == DrawTool.GEOMETRY
+
+    val isPenMode: Boolean
+        get() = mode is EditorMode.Draw && (mode as EditorMode.Draw).drawTool == DrawTool.PEN
+}

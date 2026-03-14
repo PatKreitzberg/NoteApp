@@ -22,7 +22,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.pen.PenProfile
-import com.wyldsoft.notes.presentation.viewmodel.DrawTool
 import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 
@@ -97,7 +96,7 @@ fun Toolbar(
             return
         }
         if (currentMode is EditorMode.Select) viewModel.cancelSelection()
-        else if (currentMode !is EditorMode.Draw || currentMode.drawTool != DrawTool.PEN) viewModel.switchMode(EditorMode.Draw())
+        else if (!viewModel.uiState.value.isPenMode) viewModel.switchMode(EditorMode.Draw())
 
         val isStrokeOpen = viewModel.uiState.value.isStrokeOptionsOpen
         if (selectedProfileIndex == profileIndex && isStrokeOpen) {
