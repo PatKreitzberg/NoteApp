@@ -157,7 +157,17 @@ class NotebookRepositoryImpl(
     override suspend fun restoreNotebook(notebookId: String) {
         val notebook = notebookDao.getNotebook(notebookId) ?: return
         val deletedItem = deletedItemDao.getByEntityId(notebookId)
-        val targetFolderId = deletedItem?.originalParentId ?: FolderRepository.ROOT_FOLDER_ID
+        val originalParentId = deletedItem?.originalParentId
+        val targetFolderId = if (originalParentId != null) {
+            val folder = folderRepository.getFolder(originalParentId)
+            if (folder != null && folder.parentFolderId != FolderRepository.TRASH_FOLDER_ID) {
+                originalParentId
+            } else {
+                FolderRepository.ROOT_FOLDER_ID
+            }
+        } else {
+            FolderRepository.ROOT_FOLDER_ID
+        }
         notebookDao.update(notebook.copy(
             folderId = targetFolderId,
             modifiedAt = System.currentTimeMillis()
