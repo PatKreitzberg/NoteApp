@@ -58,7 +58,6 @@ fun EditorView(
                 Toolbar(
                     viewModel = viewModel,
                     currentPenProfile = currentPenProfile,
-                    isStrokeOptionsOpen = uiState.isStrokeOptionsOpen,
                     onSettingsClick = {
                         viewModel.loadNoteManagementData()
                         showNoteSettingsDialog = true

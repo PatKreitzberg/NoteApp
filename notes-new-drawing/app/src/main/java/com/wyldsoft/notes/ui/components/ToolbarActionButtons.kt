@@ -27,7 +27,6 @@ fun ToolbarActionButtons(
     onNavigateForward: (() -> Unit)?,
     canGoBack: Boolean,
     canGoForward: Boolean,
-    isStrokeSelectionOpen: Boolean,
     onCollapse: () -> Unit
 ) {
     val canUndo by viewModel.canUndo.collectAsState()

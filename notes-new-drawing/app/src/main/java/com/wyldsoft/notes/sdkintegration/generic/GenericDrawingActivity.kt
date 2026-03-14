@@ -65,9 +65,7 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
             // If drawing is blocked, consume the touch and dismiss any dismissible UI
             if (editorViewModel.isDrawingBlocked.value) {
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                    if (editorViewModel.uiState.value.isStrokeOptionsOpen) {
-                        editorViewModel.closeStrokeOptions()
-                    }
+                    editorViewModel.closeAllDropdowns()
                 }
                 return@setOnTouchListener true
             }

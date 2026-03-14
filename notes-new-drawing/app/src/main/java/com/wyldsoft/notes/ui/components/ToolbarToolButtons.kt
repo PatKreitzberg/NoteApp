@@ -13,9 +13,7 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
  */
 @Composable
 fun ToolbarToolButtons(
-    viewModel: EditorViewModel,
-    isStrokeSelectionOpen: Boolean,
-    onCloseStrokePanel: () -> Unit
+    viewModel: EditorViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val mode = uiState.mode
@@ -25,7 +23,7 @@ fun ToolbarToolButtons(
         selectedShape = uiState.selectedGeometricShape,
         isGeometryActive = isGeometryActive,
         onActivate = {
-            if (isStrokeSelectionOpen) onCloseStrokePanel()
+            viewModel.closeStrokeOptions()
             viewModel.switchMode(EditorMode.Draw(DrawTool.GEOMETRY))
         },
         onShapeSelected = { shape -> viewModel.selectGeometricShape(shape) },

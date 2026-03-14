@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,9 +49,7 @@ private val colorOptions = listOf(
 
 @Composable
 fun ToolbarTextButtons(
-    viewModel: EditorViewModel,
-    isStrokeSelectionOpen: Boolean,
-    onCloseStrokePanel: () -> Unit
+    viewModel: EditorViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isTextActive = uiState.mode is EditorMode.Text
@@ -67,7 +66,7 @@ fun ToolbarTextButtons(
                 if (isTextActive) {
                     viewModel.switchMode(EditorMode.Draw())
                 } else {
-                    if (isStrokeSelectionOpen) onCloseStrokePanel()
+                    viewModel.closeStrokeOptions()
                     viewModel.switchMode(EditorMode.Text)
                 }
             },

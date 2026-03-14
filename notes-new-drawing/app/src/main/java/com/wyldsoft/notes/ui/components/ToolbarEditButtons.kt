@@ -26,9 +26,7 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
  */
 @Composable
 fun ToolbarEditButtons(
-    viewModel: EditorViewModel,
-    isStrokeSelectionOpen: Boolean,
-    onCloseStrokePanel: () -> Unit
+    viewModel: EditorViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val copiedShapes by viewModel.copiedShapes.collectAsState()
@@ -43,7 +41,7 @@ fun ToolbarEditButtons(
             if (isSelectionActive) {
                 viewModel.cancelSelection()
             } else {
-                if (isStrokeSelectionOpen) onCloseStrokePanel()
+                viewModel.closeStrokeOptions()
                 viewModel.switchMode(EditorMode.Select)
             }
         },

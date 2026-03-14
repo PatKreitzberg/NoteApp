@@ -32,7 +32,6 @@ enum class ToolbarTab { DRAW, EDIT, TEXT }
 fun Toolbar(
     viewModel: EditorViewModel,
     currentPenProfile: PenProfile,
-    isStrokeOptionsOpen: Boolean,
     onSettingsClick: () -> Unit = {},
     onCollapsedChanged: (Boolean) -> Unit = {},
     onNavigateBack: (() -> Unit)? = null,
@@ -42,7 +41,6 @@ fun Toolbar(
 ) {
     val scope = rememberCoroutineScope()
     var selectedProfileIndex by remember { mutableStateOf(0) }
-    var isStrokeSelectionOpen by remember { mutableStateOf(isStrokeOptionsOpen) }
     var strokePanelRect by remember { mutableStateOf<Rect?>(null) }
     var isCollapsed by remember { mutableStateOf(false) }
     var toolbarHeightPx by remember { mutableStateOf(0) }
@@ -60,7 +58,6 @@ fun Toolbar(
         }
     }
 
-    LaunchedEffect(isStrokeOptionsOpen) { isStrokeSelectionOpen = isStrokeOptionsOpen }
     LaunchedEffect(Unit) { viewModel.updatePenProfile(profiles[selectedProfileIndex]) }
 
     fun forceUIRefresh() { viewModel.forceRefresh() }
@@ -102,9 +99,10 @@ fun Toolbar(
         if (currentMode is EditorMode.Select) viewModel.cancelSelection()
         else if (currentMode !is EditorMode.Draw || currentMode.drawTool != DrawTool.PEN) viewModel.switchMode(EditorMode.Draw())
 
-        if (selectedProfileIndex == profileIndex && isStrokeSelectionOpen) {
+        val isStrokeOpen = viewModel.uiState.value.isStrokeOptionsOpen
+        if (selectedProfileIndex == profileIndex && isStrokeOpen) {
             closeStrokeOptionsPanel()
-        } else if (selectedProfileIndex == profileIndex && !isStrokeSelectionOpen) {
+        } else if (selectedProfileIndex == profileIndex && !isStrokeOpen) {
             openStrokeOptionsPanel()
         } else {
             selectedProfileIndex = profileIndex
@@ -171,9 +169,8 @@ fun Toolbar(
                         onNavigateForward = onNavigateForward,
                         canGoBack = canGoBack,
                         canGoForward = canGoForward,
-                        isStrokeSelectionOpen = isStrokeSelectionOpen,
                         onCollapse = {
-                            if (isStrokeSelectionOpen) closeStrokeOptionsPanel()
+                            closeStrokeOptionsPanel()
                             isCollapsed = true
                             onCollapsedChanged(true)
                         }
@@ -198,31 +195,19 @@ fun Toolbar(
                                     onClick = { handleProfileClick(index) }
                                 )
                             }
-                            ToolbarToolButtons(
-                                viewModel = viewModel,
-                                isStrokeSelectionOpen = isStrokeSelectionOpen,
-                                onCloseStrokePanel = { closeStrokeOptionsPanel() }
-                            )
+                            ToolbarToolButtons(viewModel = viewModel)
                         }
                         ToolbarTab.EDIT -> {
-                            ToolbarEditButtons(
-                                viewModel = viewModel,
-                                isStrokeSelectionOpen = isStrokeSelectionOpen,
-                                onCloseStrokePanel = { closeStrokeOptionsPanel() }
-                            )
+                            ToolbarEditButtons(viewModel = viewModel)
                         }
                         ToolbarTab.TEXT -> {
-                            ToolbarTextButtons(
-                                viewModel = viewModel,
-                                isStrokeSelectionOpen = isStrokeSelectionOpen,
-                                onCloseStrokePanel = { closeStrokeOptionsPanel() }
-                            )
+                            ToolbarTextButtons(viewModel = viewModel)
                         }
                     }
                 }
             }
 
-            if (isStrokeSelectionOpen) {
+            if (uiState.isStrokeOptionsOpen) {
                 Popup(
                     alignment = Alignment.TopStart,
                     offset = IntOffset(0, toolbarHeightPx),
@@ -242,7 +227,7 @@ fun Toolbar(
                         onPanelPositioned = { rect ->
                             if (rect != strokePanelRect) {
                                 strokePanelRect = rect
-                                if (isStrokeSelectionOpen) {
+                                if (uiState.isStrokeOptionsOpen) {
                                     scope.launch { addStrokeOptionPanelRect() }
                                 }
                             }
