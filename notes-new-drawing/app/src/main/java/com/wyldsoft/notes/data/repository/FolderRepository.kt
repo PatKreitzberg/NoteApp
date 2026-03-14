@@ -22,6 +22,8 @@ interface FolderRepository {
     suspend fun getAllFolders(): List<FolderEntity>
     suspend fun emptyTrash()
     suspend fun ensureTrashFolderExists()
+    suspend fun restoreFolder(folderId: String)
+    suspend fun permanentlyDeleteFolder(folderId: String)
 
     companion object {
         const val TRASH_FOLDER_ID = "trash"
@@ -73,10 +75,41 @@ class FolderRepositoryImpl(
         if (folderId == FolderRepository.TRASH_FOLDER_ID || folderId == FolderRepository.ROOT_FOLDER_ID) return
         val folder = folderDao.getFolder(folderId) ?: return
         ensureTrashFolder()
+        deletedItemDao?.insert(DeletedItemEntity(
+            entityId = folderId,
+            entityType = "folder",
+            originalParentId = folder.parentFolderId
+        ))
         folderDao.update(folder.copy(
             parentFolderId = FolderRepository.TRASH_FOLDER_ID,
             modifiedAt = System.currentTimeMillis()
         ))
+    }
+
+    override suspend fun restoreFolder(folderId: String) {
+        val folder = folderDao.getFolder(folderId) ?: return
+        val deletedItem = deletedItemDao?.getByEntityId(folderId)
+        val targetParentId = resolveRestoreParent(deletedItem?.originalParentId)
+        folderDao.update(folder.copy(
+            parentFolderId = targetParentId,
+            modifiedAt = System.currentTimeMillis()
+        ))
+    }
+
+    override suspend fun permanentlyDeleteFolder(folderId: String) {
+        if (folderId == FolderRepository.TRASH_FOLDER_ID || folderId == FolderRepository.ROOT_FOLDER_ID) return
+        deleteFolderRecursive(folderId)
+    }
+
+    private suspend fun resolveRestoreParent(originalParentId: String?): String {
+        if (originalParentId == null || originalParentId == FolderRepository.ROOT_FOLDER_ID) {
+            return FolderRepository.ROOT_FOLDER_ID
+        }
+        val parent = folderDao.getFolder(originalParentId) ?: return FolderRepository.ROOT_FOLDER_ID
+        if (parent.parentFolderId == FolderRepository.TRASH_FOLDER_ID) {
+            restoreFolder(originalParentId)
+        }
+        return originalParentId
     }
 
     override suspend fun ensureTrashFolderExists() = ensureTrashFolder()

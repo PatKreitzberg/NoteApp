@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
+import com.wyldsoft.notes.data.repository.FolderRepository
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
@@ -63,12 +64,17 @@ fun HomeView(
     var showDeleteNotebookDialog by remember { mutableStateOf(false) }
     var showDeleteFolderDialog by remember { mutableStateOf(false) }
     var showDeleteNoteDialog by remember { mutableStateOf(false) }
+    var showPermanentDeleteNotebookDialog by remember { mutableStateOf(false) }
+    var showPermanentDeleteFolderDialog by remember { mutableStateOf(false) }
+    var showPermanentDeleteNoteDialog by remember { mutableStateOf(false) }
     var showRenameNotebookDialog by remember { mutableStateOf(false) }
     var showRenameFolderDialog by remember { mutableStateOf(false) }
     var showRenameNoteDialog by remember { mutableStateOf(false) }
     var showManageNoteDialog by remember { mutableStateOf(false) }
     var manageNoteCurrentNotebooks by remember { mutableStateOf<List<String>>(emptyList()) }
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
+
+    val isInTrash = currentFolder?.id == FolderRepository.TRASH_FOLDER_ID
 
     // Load folders/notebooks when a context menu action needs them
     fun ensureFoldersLoaded() { viewModel.loadAllFoldersAndNotebooks() }
@@ -122,6 +128,12 @@ fun HomeView(
                     onEmptyTrash = { showEmptyTrashDialog = true; contextMenuFolder = null },
                     onDismiss = { contextMenuFolder = null }
                 )
+            } else if (isInTrash) {
+                TrashItemFolderContextMenu(
+                    onRestore = { viewModel.restoreFolder(folder.id); contextMenuFolder = null },
+                    onDeletePermanently = { showPermanentDeleteFolderDialog = true },
+                    onDismiss = { contextMenuFolder = null }
+                )
             } else {
                 FolderContextMenu(
                     onMove = { showMoveFolderDialog = true },
@@ -153,12 +165,20 @@ fun HomeView(
 
         // Notebook context menu
         contextMenuNotebook?.let { notebook ->
-            NotebookContextMenu(
-                onMove = { showMoveNotebookDialog = true },
-                onRename = { showRenameNotebookDialog = true },
-                onDelete = { showDeleteNotebookDialog = true },
-                onDismiss = { contextMenuNotebook = null }
-            )
+            if (isInTrash) {
+                TrashItemNotebookContextMenu(
+                    onRestore = { viewModel.restoreNotebook(notebook.id); contextMenuNotebook = null },
+                    onDeletePermanently = { showPermanentDeleteNotebookDialog = true },
+                    onDismiss = { contextMenuNotebook = null }
+                )
+            } else {
+                NotebookContextMenu(
+                    onMove = { showMoveNotebookDialog = true },
+                    onRename = { showRenameNotebookDialog = true },
+                    onDelete = { showDeleteNotebookDialog = true },
+                    onDismiss = { contextMenuNotebook = null }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -178,18 +198,26 @@ fun HomeView(
 
         // Note context menu
         contextMenuNote?.let { note ->
-            NoteContextMenu(
-                onMove = { showMoveNoteDialog = true },
-                onRename = { showRenameNoteDialog = true },
-                onDelete = { showDeleteNoteDialog = true },
-                onManage = {
-                    coroutineScope.launch {
-                        manageNoteCurrentNotebooks = viewModel.getNotebooksForNote(note.id)
-                        showManageNoteDialog = true
-                    }
-                },
-                onDismiss = { contextMenuNote = null }
-            )
+            if (isInTrash) {
+                TrashItemNoteContextMenu(
+                    onRestore = { viewModel.restoreNote(note.id); contextMenuNote = null },
+                    onDeletePermanently = { showPermanentDeleteNoteDialog = true },
+                    onDismiss = { contextMenuNote = null }
+                )
+            } else {
+                NoteContextMenu(
+                    onMove = { showMoveNoteDialog = true },
+                    onRename = { showRenameNoteDialog = true },
+                    onDelete = { showDeleteNoteDialog = true },
+                    onManage = {
+                        coroutineScope.launch {
+                            manageNoteCurrentNotebooks = viewModel.getNotebooksForNote(note.id)
+                            showManageNoteDialog = true
+                        }
+                    },
+                    onDismiss = { contextMenuNote = null }
+                )
+            }
         }
     }
 
@@ -332,6 +360,39 @@ fun HomeView(
                 checkedNotebookIds = manageNoteCurrentNotebooks,
                 onSave = { notebookIds -> viewModel.updateNoteNotebooks(note.id, notebookIds) },
                 onDismiss = { showManageNoteDialog = false; contextMenuNote = null }
+            )
+        }
+    }
+
+    if (showPermanentDeleteNotebookDialog) {
+        contextMenuNotebook?.let { notebook ->
+            ConfirmDeleteDialog(
+                title = "Delete Permanently",
+                message = "Permanently delete \"${notebook.name}\" and all its notes? This cannot be undone.",
+                onConfirm = { viewModel.permanentlyDeleteNotebook(notebook.id) },
+                onDismiss = { showPermanentDeleteNotebookDialog = false; contextMenuNotebook = null }
+            )
+        }
+    }
+
+    if (showPermanentDeleteFolderDialog) {
+        contextMenuFolder?.let { folder ->
+            ConfirmDeleteDialog(
+                title = "Delete Permanently",
+                message = "Permanently delete \"${folder.name}\" and all its contents? This cannot be undone.",
+                onConfirm = { viewModel.permanentlyDeleteFolder(folder.id) },
+                onDismiss = { showPermanentDeleteFolderDialog = false; contextMenuFolder = null }
+            )
+        }
+    }
+
+    if (showPermanentDeleteNoteDialog) {
+        contextMenuNote?.let { note ->
+            ConfirmDeleteDialog(
+                title = "Delete Permanently",
+                message = "Permanently delete \"${note.title}\"? This cannot be undone.",
+                onConfirm = { viewModel.permanentlyDeleteNote(note.id) },
+                onDismiss = { showPermanentDeleteNoteDialog = false; contextMenuNote = null }
             )
         }
     }

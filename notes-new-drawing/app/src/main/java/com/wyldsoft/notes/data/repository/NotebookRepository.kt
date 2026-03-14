@@ -24,6 +24,8 @@ interface NotebookRepository {
     suspend fun moveNotebook(notebookId: String, targetFolderId: String)
     suspend fun getAllNotebooks(): List<NotebookEntity>
     suspend fun moveNotebookToTrash(notebookId: String)
+    suspend fun restoreNotebook(notebookId: String)
+    suspend fun permanentlyDeleteNotebook(notebookId: String)
 }
 
 class NotebookRepositoryImpl(
@@ -136,9 +138,28 @@ class NotebookRepositoryImpl(
     override suspend fun moveNotebookToTrash(notebookId: String) {
         val notebook = notebookDao.getNotebook(notebookId) ?: return
         folderRepository?.ensureTrashFolderExists()
+        deletedItemDao?.insert(DeletedItemEntity(
+            entityId = notebookId,
+            entityType = "notebook",
+            originalParentId = notebook.folderId
+        ))
         notebookDao.update(notebook.copy(
             folderId = FolderRepository.TRASH_FOLDER_ID,
             modifiedAt = System.currentTimeMillis()
         ))
+    }
+
+    override suspend fun restoreNotebook(notebookId: String) {
+        val notebook = notebookDao.getNotebook(notebookId) ?: return
+        val deletedItem = deletedItemDao?.getByEntityId(notebookId)
+        val targetFolderId = deletedItem?.originalParentId ?: FolderRepository.ROOT_FOLDER_ID
+        notebookDao.update(notebook.copy(
+            folderId = targetFolderId,
+            modifiedAt = System.currentTimeMillis()
+        ))
+    }
+
+    override suspend fun permanentlyDeleteNotebook(notebookId: String) {
+        deleteNotebook(notebookId)
     }
 }

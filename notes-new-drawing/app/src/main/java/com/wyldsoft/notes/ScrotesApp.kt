@@ -24,7 +24,8 @@ class ScrotesApp : Application() {
         NoteRepositoryImpl(
             noteDao = database.noteDao(),
             shapeDao = database.shapeDao(),
-            deletedItemDao = database.deletedItemDao()
+            deletedItemDao = database.deletedItemDao(),
+            folderDao = database.folderDao()
         )
     }
 

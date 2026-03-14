@@ -172,6 +172,40 @@ class HomeViewModel(
 
     fun isTrashFolder(folderId: String) = folderId == TRASH_FOLDER_ID
 
+    fun isCurrentFolderTrash() = _currentFolderId.value == TRASH_FOLDER_ID
+
+    // Notebook trash operations
+    fun restoreNotebook(notebookId: String) {
+        viewModelScope.launch { notebookRepository.restoreNotebook(notebookId) }
+    }
+
+    fun permanentlyDeleteNotebook(notebookId: String) {
+        viewModelScope.launch { notebookRepository.permanentlyDeleteNotebook(notebookId) }
+    }
+
+    // Folder trash operations
+    fun restoreFolder(folderId: String) {
+        viewModelScope.launch { folderRepository.restoreFolder(folderId) }
+    }
+
+    fun permanentlyDeleteFolder(folderId: String) {
+        viewModelScope.launch {
+            folderRepository.permanentlyDeleteFolder(folderId)
+            if (_currentFolderId.value == folderId) {
+                navigateToFolder(folderRepository.getRootFolder().id)
+            }
+        }
+    }
+
+    // Note trash operations
+    fun restoreNote(noteId: String) {
+        viewModelScope.launch { noteRepository.restoreNote(noteId) }
+    }
+
+    fun permanentlyDeleteNote(noteId: String) {
+        viewModelScope.launch { noteRepository.permanentlyDeleteNote(noteId) }
+    }
+
     fun emptyTrash() {
         viewModelScope.launch { folderRepository.emptyTrash() }
     }

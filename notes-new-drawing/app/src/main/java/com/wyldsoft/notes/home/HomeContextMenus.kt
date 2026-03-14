@@ -15,7 +15,7 @@ fun NotebookContextMenu(
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
         DropdownMenuItem(text = { Text("Move") }, onClick = onMove)
         DropdownMenuItem(text = { Text("Rename") }, onClick = onRename)
-        DropdownMenuItem(text = { Text("Delete") }, onClick = onDelete)
+        DropdownMenuItem(text = { Text("Move to Trash") }, onClick = onDelete)
     }
 }
 
@@ -29,7 +29,7 @@ fun FolderContextMenu(
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
         DropdownMenuItem(text = { Text("Move") }, onClick = onMove)
         DropdownMenuItem(text = { Text("Rename") }, onClick = onRename)
-        DropdownMenuItem(text = { Text("Delete") }, onClick = onDelete)
+        DropdownMenuItem(text = { Text("Move to Trash") }, onClick = onDelete)
     }
 }
 
@@ -55,6 +55,42 @@ fun NoteContextMenu(
         DropdownMenuItem(text = { Text("Move") }, onClick = onMove)
         DropdownMenuItem(text = { Text("Rename") }, onClick = onRename)
         DropdownMenuItem(text = { Text("Manage Notebooks") }, onClick = onManage)
-        DropdownMenuItem(text = { Text("Delete") }, onClick = onDelete)
+        DropdownMenuItem(text = { Text("Move to Trash") }, onClick = onDelete)
+    }
+}
+
+@Composable
+fun TrashItemNotebookContextMenu(
+    onRestore: () -> Unit,
+    onDeletePermanently: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+        DropdownMenuItem(text = { Text("Restore") }, onClick = onRestore)
+        DropdownMenuItem(text = { Text("Delete Permanently") }, onClick = onDeletePermanently)
+    }
+}
+
+@Composable
+fun TrashItemFolderContextMenu(
+    onRestore: () -> Unit,
+    onDeletePermanently: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+        DropdownMenuItem(text = { Text("Restore") }, onClick = onRestore)
+        DropdownMenuItem(text = { Text("Delete Permanently") }, onClick = onDeletePermanently)
+    }
+}
+
+@Composable
+fun TrashItemNoteContextMenu(
+    onRestore: () -> Unit,
+    onDeletePermanently: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+        DropdownMenuItem(text = { Text("Restore") }, onClick = onRestore)
+        DropdownMenuItem(text = { Text("Delete Permanently") }, onClick = onDeletePermanently)
     }
 }

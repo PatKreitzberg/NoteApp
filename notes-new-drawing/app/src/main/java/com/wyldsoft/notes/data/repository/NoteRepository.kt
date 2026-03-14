@@ -2,6 +2,7 @@ package com.wyldsoft.notes.data.repository
 
 import android.util.Log
 import com.wyldsoft.notes.data.database.dao.DeletedItemDao
+import com.wyldsoft.notes.data.database.dao.FolderDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
 import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
@@ -37,12 +38,15 @@ interface NoteRepository {
     suspend fun getNotebooksForNote(noteId: String): List<String>
     suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>)
     suspend fun moveNoteToTrash(noteId: String)
+    suspend fun restoreNote(noteId: String)
+    suspend fun permanentlyDeleteNote(noteId: String)
 }
 
 class NoteRepositoryImpl(
     private val noteDao: NoteDao,
     private val shapeDao: ShapeDao,
-    private val deletedItemDao: DeletedItemDao? = null
+    private val deletedItemDao: DeletedItemDao? = null,
+    private val folderDao: FolderDao? = null
 ) : NoteRepository {
     private var _currentNote = MutableStateFlow(Note()) // set a default empty note
     override fun getCurrentNote(): StateFlow<Note> = _currentNote.asStateFlow()
@@ -260,7 +264,36 @@ class NoteRepositoryImpl(
     }
 
     override suspend fun moveNoteToTrash(noteId: String) {
+        val note = noteDao.getNote(noteId)
+        val originalParentId = note.folderId ?: note.parentNotebookId
+        deletedItemDao?.insert(DeletedItemEntity(
+            entityId = noteId,
+            entityType = "note",
+            originalParentId = originalParentId
+        ))
         moveNoteToFolder(noteId, FolderRepository.TRASH_FOLDER_ID)
+    }
+
+    override suspend fun restoreNote(noteId: String) {
+        val note = noteDao.getNote(noteId)
+        val deletedItem = deletedItemDao?.getByEntityId(noteId)
+        val originalParentId = deletedItem?.originalParentId
+        if (originalParentId == null) {
+            moveNoteToFolder(noteId, FolderRepository.ROOT_FOLDER_ID)
+            return
+        }
+        val folder = folderDao?.getFolder(originalParentId)
+        if (folder != null && folder.parentFolderId != FolderRepository.TRASH_FOLDER_ID) {
+            moveNoteToFolder(noteId, originalParentId)
+        } else {
+            moveNoteToFolder(noteId, FolderRepository.ROOT_FOLDER_ID)
+        }
+    }
+
+    override suspend fun permanentlyDeleteNote(noteId: String) {
+        shapeDao.deleteAllForNote(noteId)
+        deletedItemDao?.insert(DeletedItemEntity(entityId = noteId, entityType = "note"))
+        noteDao.deleteById(noteId)
     }
 
     override suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>) {
