@@ -244,6 +244,12 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         }
     }
 
+    private fun switchModeFromGesture(block: () -> Unit) {
+        block()
+        setDrawingEnabled(true)
+        bitmapManager.renderBitmapToScreen()
+    }
+
     open fun initializeGestureHandler() {
         gestureHandler = GestureHandler(this, surfaceView)
         gestureHandler.setViewportManager(editorViewModel.viewportManager)
@@ -262,52 +268,34 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     vm.viewportManager.resetZoomAndCenter(vm.isPaginationEnabled.value, vm.screenWidth.value.toFloat())
                     forceScreenRefresh()
                 }
-                GestureAction.TOGGLE_SELECTION_MODE -> {
-                    val vm = editorViewModel
-                    if (vm.uiState.value.mode is EditorMode.Select) vm.cancelSelection()
-                    else vm.switchMode(EditorMode.Select)
-                    setDrawingEnabled(true)
-                    bitmapManager.renderBitmapToScreen()
+                GestureAction.TOGGLE_SELECTION_MODE -> switchModeFromGesture {
+                    if (editorViewModel.uiState.value.mode is EditorMode.Select) editorViewModel.cancelSelection()
+                    else editorViewModel.switchMode(EditorMode.Select)
                 }
-                GestureAction.TOGGLE_TEXT_MODE -> {
-                    val vm = editorViewModel
-                    if (vm.uiState.value.mode is EditorMode.Text) vm.switchMode(EditorMode.Draw())
-                    else vm.switchMode(EditorMode.Text)
-                    setDrawingEnabled(true)
-                    bitmapManager.renderBitmapToScreen()
+                GestureAction.TOGGLE_TEXT_MODE -> switchModeFromGesture {
+                    if (editorViewModel.uiState.value.mode is EditorMode.Text) editorViewModel.switchMode(EditorMode.Draw())
+                    else editorViewModel.switchMode(EditorMode.Text)
                 }
-                GestureAction.SWITCH_TAB -> {
-                    val vm = editorViewModel
-                    val nextMode = when (vm.uiState.value.mode) {
+                GestureAction.SWITCH_TAB -> switchModeFromGesture {
+                    val nextMode = when (editorViewModel.uiState.value.mode) {
                         is EditorMode.Draw -> EditorMode.Select
                         is EditorMode.Select -> EditorMode.Text
                         is EditorMode.Text -> EditorMode.Draw()
                     }
-                    vm.switchMode(nextMode)
-                    setDrawingEnabled(true)
-                    bitmapManager.renderBitmapToScreen()
+                    editorViewModel.switchMode(nextMode)
                 }
-                GestureAction.DRAW_GEOMETRIC_SHAPE -> {
-                    val vm = editorViewModel
-                    vm.switchMode(EditorMode.Draw(DrawTool.GEOMETRY))
-                    setDrawingEnabled(true)
-                    bitmapManager.renderBitmapToScreen()
+                GestureAction.DRAW_GEOMETRIC_SHAPE -> switchModeFromGesture {
+                    editorViewModel.switchMode(EditorMode.Draw(DrawTool.GEOMETRY))
                 }
                 GestureAction.COPY_SELECTION -> {
-                    val vm = editorViewModel
-                    if (vm.uiState.value.mode is EditorMode.Select) vm.copySelection()
+                    if (editorViewModel.uiState.value.mode is EditorMode.Select) editorViewModel.copySelection()
                 }
                 GestureAction.PASTE_SELECTION -> {
-                    val vm = editorViewModel
-                    vm.pasteSelection()
+                    editorViewModel.pasteSelection()
                     forceScreenRefresh()
                 }
-                GestureAction.UNDO -> {
-                    editorViewModel.undo()
-                }
-                GestureAction.REDO -> {
-                    editorViewModel.redo()
-                }
+                GestureAction.UNDO -> editorViewModel.undo()
+                GestureAction.REDO -> editorViewModel.redo()
                 else -> Log.d(TAG, "Gesture action $action handled inline")
             }
         }
