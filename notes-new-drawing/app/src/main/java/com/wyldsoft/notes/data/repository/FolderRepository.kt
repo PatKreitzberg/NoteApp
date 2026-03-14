@@ -87,9 +87,14 @@ class FolderRepositoryImpl(
     }
 
     override suspend fun restoreFolder(folderId: String) {
+        restoreFolderInternal(folderId, mutableSetOf())
+    }
+
+    private suspend fun restoreFolderInternal(folderId: String, visited: MutableSet<String>) {
+        if (!visited.add(folderId)) return  // cycle detected — stop recursion
         val folder = folderDao.getFolder(folderId) ?: return
         val deletedItem = deletedItemDao.getByEntityId(folderId)
-        val targetParentId = resolveRestoreParent(deletedItem?.originalParentId)
+        val targetParentId = resolveRestoreParent(deletedItem?.originalParentId, visited)
         folderDao.update(folder.copy(
             parentFolderId = targetParentId,
             modifiedAt = System.currentTimeMillis()
@@ -101,13 +106,13 @@ class FolderRepositoryImpl(
         deleteFolderRecursive(folderId)
     }
 
-    private suspend fun resolveRestoreParent(originalParentId: String?): String {
+    private suspend fun resolveRestoreParent(originalParentId: String?, visited: MutableSet<String>): String {
         if (originalParentId == null || originalParentId == FolderRepository.ROOT_FOLDER_ID) {
             return FolderRepository.ROOT_FOLDER_ID
         }
         val parent = folderDao.getFolder(originalParentId) ?: return FolderRepository.ROOT_FOLDER_ID
         if (parent.parentFolderId == FolderRepository.TRASH_FOLDER_ID) {
-            restoreFolder(originalParentId)
+            restoreFolderInternal(originalParentId, visited)
         }
         return originalParentId
     }
