@@ -36,6 +36,7 @@ interface NoteRepository {
     suspend fun renameNote(noteId: String, newName: String)
     suspend fun getNotebooksForNote(noteId: String): List<String>
     suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>)
+    suspend fun moveNoteToTrash(noteId: String)
 }
 
 class NoteRepositoryImpl(
@@ -256,6 +257,10 @@ class NoteRepositoryImpl(
 
     override suspend fun getNotebooksForNote(noteId: String): List<String> {
         return noteDao.getNotebooksForNote(noteId)
+    }
+
+    override suspend fun moveNoteToTrash(noteId: String) {
+        moveNoteToFolder(noteId, FolderRepository.TRASH_FOLDER_ID)
     }
 
     override suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>) {

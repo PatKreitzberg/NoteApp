@@ -114,6 +114,7 @@ abstract class NotesDatabase : RoomDatabase() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
                         db.execSQL("INSERT OR IGNORE INTO folders (id, name, parentFolderId) VALUES ('root', 'Root', NULL)")
+                        db.execSQL("INSERT OR IGNORE INTO folders (id, name, parentFolderId) VALUES ('trash', 'Trash', 'root')")
                     }
                 })
                 .build()

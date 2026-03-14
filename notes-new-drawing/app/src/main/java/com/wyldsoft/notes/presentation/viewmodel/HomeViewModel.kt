@@ -7,6 +7,7 @@ import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.repository.FolderRepository
+import com.wyldsoft.notes.data.repository.FolderRepository.Companion.TRASH_FOLDER_ID
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.data.repository.RecognizedSegmentRepository
@@ -109,7 +110,7 @@ class HomeViewModel(
     }
 
     fun deleteNotebook(notebookId: String) {
-        viewModelScope.launch { notebookRepository.deleteNotebook(notebookId) }
+        viewModelScope.launch { notebookRepository.moveNotebookToTrash(notebookId) }
     }
 
     fun moveNotebook(notebookId: String, targetFolderId: String) {
@@ -149,7 +150,7 @@ class HomeViewModel(
     }
 
     fun deleteNote(noteId: String) {
-        viewModelScope.launch { noteRepository.deleteNote(noteId) }
+        viewModelScope.launch { noteRepository.moveNoteToTrash(noteId) }
     }
 
     fun moveNoteToFolder(noteId: String, folderId: String) {
@@ -166,6 +167,12 @@ class HomeViewModel(
 
     suspend fun getNotebooksForNote(noteId: String): List<String> {
         return noteRepository.getNotebooksForNote(noteId)
+    }
+
+    fun isTrashFolder(folderId: String) = folderId == TRASH_FOLDER_ID
+
+    fun emptyTrash() {
+        viewModelScope.launch { folderRepository.emptyTrash() }
     }
 
     fun loadAllFoldersAndNotebooks() {

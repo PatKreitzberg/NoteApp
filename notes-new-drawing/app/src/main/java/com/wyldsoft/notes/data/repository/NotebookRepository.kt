@@ -23,6 +23,7 @@ interface NotebookRepository {
     suspend fun createNoteInNotebook(notebookId: String): NoteEntity
     suspend fun moveNotebook(notebookId: String, targetFolderId: String)
     suspend fun getAllNotebooks(): List<NotebookEntity>
+    suspend fun moveNotebookToTrash(notebookId: String)
 }
 
 class NotebookRepositoryImpl(
@@ -129,5 +130,13 @@ class NotebookRepositoryImpl(
 
     override suspend fun getAllNotebooks(): List<NotebookEntity> {
         return notebookDao.getAllNotebookEntities()
+    }
+
+    override suspend fun moveNotebookToTrash(notebookId: String) {
+        val notebook = notebookDao.getNotebook(notebookId) ?: return
+        notebookDao.update(notebook.copy(
+            folderId = FolderRepository.TRASH_FOLDER_ID,
+            modifiedAt = System.currentTimeMillis()
+        ))
     }
 }

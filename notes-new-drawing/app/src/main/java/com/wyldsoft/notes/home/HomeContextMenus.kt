@@ -34,6 +34,16 @@ fun FolderContextMenu(
 }
 
 @Composable
+fun TrashFolderContextMenu(
+    onEmptyTrash: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+        DropdownMenuItem(text = { Text("Empty Trash") }, onClick = onEmptyTrash)
+    }
+}
+
+@Composable
 fun NoteContextMenu(
     onMove: () -> Unit,
     onRename: () -> Unit,

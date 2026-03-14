@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
+import com.wyldsoft.notes.data.repository.FolderRepository
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 
@@ -86,11 +88,12 @@ fun FolderRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         folders.forEach { folder ->
+            val isTrash = folder.id == FolderRepository.TRASH_FOLDER_ID
             Box {
                 ItemCard(
                     name = folder.name,
-                    icon = Icons.Default.Folder,
-                    iconTint = MaterialTheme.colorScheme.primary,
+                    icon = if (isTrash) Icons.Default.Delete else Icons.Default.Folder,
+                    iconTint = if (isTrash) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier.combinedClickable(
                         onClick = { onFolderClick(folder) },

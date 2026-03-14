@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
+import com.wyldsoft.notes.data.repository.FolderRepository
 
 @Composable
 fun MoveToFolderDialog(
@@ -23,7 +24,7 @@ fun MoveToFolderDialog(
     onMove: (FolderEntity) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val available = folders.filter { it.id != excludeFolderId }
+    val available = folders.filter { it.id != excludeFolderId && it.id != FolderRepository.TRASH_FOLDER_ID }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -92,10 +93,11 @@ fun MoveNoteDialog(
                             }
                         }
                     } else {
-                        if (folders.isEmpty()) {
+                        val movableFolders = folders.filter { it.id != FolderRepository.TRASH_FOLDER_ID }
+                        if (movableFolders.isEmpty()) {
                             item { Text("No folders available.", modifier = Modifier.padding(8.dp)) }
                         } else {
-                            items(folders) { folder ->
+                            items(movableFolders) { folder ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()

@@ -20,6 +20,12 @@ interface FolderRepository {
     suspend fun getFolderPath(folderId: String): List<FolderEntity>
     suspend fun moveFolder(folderId: String, targetParentFolderId: String)
     suspend fun getAllFolders(): List<FolderEntity>
+    suspend fun emptyTrash()
+
+    companion object {
+        const val TRASH_FOLDER_ID = "trash"
+        const val ROOT_FOLDER_ID = "root"
+    }
 }
 
 class FolderRepositoryImpl(
@@ -57,12 +63,42 @@ class FolderRepositoryImpl(
     }
 
     override suspend fun renameFolder(folderId: String, newName: String) {
+        if (folderId == FolderRepository.TRASH_FOLDER_ID || folderId == FolderRepository.ROOT_FOLDER_ID) return
         val folder = folderDao.getFolder(folderId) ?: return
         folderDao.update(folder.copy(name = newName, modifiedAt = System.currentTimeMillis()))
     }
 
     override suspend fun deleteFolder(folderId: String) {
-        deleteFolderRecursive(folderId)
+        if (folderId == FolderRepository.TRASH_FOLDER_ID || folderId == FolderRepository.ROOT_FOLDER_ID) return
+        val folder = folderDao.getFolder(folderId) ?: return
+        folderDao.update(folder.copy(
+            parentFolderId = FolderRepository.TRASH_FOLDER_ID,
+            modifiedAt = System.currentTimeMillis()
+        ))
+    }
+
+    override suspend fun emptyTrash() {
+        val subfolders = folderDao.getSubfoldersOnce(FolderRepository.TRASH_FOLDER_ID)
+        for (subfolder in subfolders) {
+            deleteFolderRecursive(subfolder.id)
+        }
+        val notebooks = notebookDao.getNotebooksInFolderOnce(FolderRepository.TRASH_FOLDER_ID)
+        for (notebook in notebooks) {
+            val notes = notebookDao.getNotesInNotebookOnce(notebook.id)
+            for (note in notes) {
+                shapeDao.deleteAllForNote(note.id)
+                deletedItemDao?.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+                noteDao.deleteById(note.id)
+            }
+            deletedItemDao?.insert(DeletedItemEntity(entityId = notebook.id, entityType = "notebook"))
+            notebookDao.deleteById(notebook.id)
+        }
+        val looseNotes = noteDao.getLooseNotesInFolderOnce(FolderRepository.TRASH_FOLDER_ID)
+        for (note in looseNotes) {
+            shapeDao.deleteAllForNote(note.id)
+            deletedItemDao?.insert(DeletedItemEntity(entityId = note.id, entityType = "note"))
+            noteDao.deleteById(note.id)
+        }
     }
 
     private suspend fun deleteFolderRecursive(folderId: String) {
@@ -107,6 +143,7 @@ class FolderRepositoryImpl(
     }
 
     override suspend fun moveFolder(folderId: String, targetParentFolderId: String) {
+        if (folderId == FolderRepository.TRASH_FOLDER_ID || folderId == FolderRepository.ROOT_FOLDER_ID) return
         if (folderId == targetParentFolderId) return
         val targetPath = folderDao.getFolderPath(targetParentFolderId)
         if (targetPath.any { it.id == folderId }) return

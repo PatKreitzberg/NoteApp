@@ -68,6 +68,7 @@ fun HomeView(
     var showRenameNoteDialog by remember { mutableStateOf(false) }
     var showManageNoteDialog by remember { mutableStateOf(false) }
     var manageNoteCurrentNotebooks by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showEmptyTrashDialog by remember { mutableStateOf(false) }
 
     // Load folders/notebooks when a context menu action needs them
     fun ensureFoldersLoaded() { viewModel.loadAllFoldersAndNotebooks() }
@@ -116,12 +117,19 @@ fun HomeView(
 
         // Folder context menu
         contextMenuFolder?.let { folder ->
-            FolderContextMenu(
-                onMove = { showMoveFolderDialog = true },
-                onRename = { showRenameFolderDialog = true },
-                onDelete = { showDeleteFolderDialog = true },
-                onDismiss = { contextMenuFolder = null }
-            )
+            if (viewModel.isTrashFolder(folder.id)) {
+                TrashFolderContextMenu(
+                    onEmptyTrash = { showEmptyTrashDialog = true; contextMenuFolder = null },
+                    onDismiss = { contextMenuFolder = null }
+                )
+            } else {
+                FolderContextMenu(
+                    onMove = { showMoveFolderDialog = true },
+                    onRename = { showRenameFolderDialog = true },
+                    onDelete = { showDeleteFolderDialog = true },
+                    onDismiss = { contextMenuFolder = null }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -227,8 +235,8 @@ fun HomeView(
     if (showDeleteNotebookDialog) {
         contextMenuNotebook?.let { notebook ->
             ConfirmDeleteDialog(
-                title = "Delete Notebook",
-                message = "Delete \"${notebook.name}\"? Notes only in this notebook will also be deleted.",
+                title = "Move to Trash",
+                message = "Move \"${notebook.name}\" to Trash?",
                 onConfirm = { viewModel.deleteNotebook(notebook.id) },
                 onDismiss = { showDeleteNotebookDialog = false; contextMenuNotebook = null }
             )
@@ -262,8 +270,8 @@ fun HomeView(
     if (showDeleteFolderDialog) {
         contextMenuFolder?.let { folder ->
             ConfirmDeleteDialog(
-                title = "Delete Folder",
-                message = "Delete \"${folder.name}\" and all its contents? This cannot be undone.",
+                title = "Move to Trash",
+                message = "Move \"${folder.name}\" and all its contents to Trash?",
                 onConfirm = { viewModel.deleteFolder(folder.id) },
                 onDismiss = { showDeleteFolderDialog = false; contextMenuFolder = null }
             )
@@ -297,8 +305,8 @@ fun HomeView(
     if (showDeleteNoteDialog) {
         contextMenuNote?.let { note ->
             ConfirmDeleteDialog(
-                title = "Delete Note",
-                message = "Delete \"${note.title}\"? This cannot be undone.",
+                title = "Move to Trash",
+                message = "Move \"${note.title}\" to Trash?",
                 onConfirm = { viewModel.deleteNote(note.id) },
                 onDismiss = { showDeleteNoteDialog = false; contextMenuNote = null }
             )
@@ -326,6 +334,15 @@ fun HomeView(
                 onDismiss = { showManageNoteDialog = false; contextMenuNote = null }
             )
         }
+    }
+
+    if (showEmptyTrashDialog) {
+        ConfirmDeleteDialog(
+            title = "Empty Trash",
+            message = "Permanently delete all items in Trash? This cannot be undone.",
+            onConfirm = { viewModel.emptyTrash() },
+            onDismiss = { showEmptyTrashDialog = false }
+        )
     }
 
     if (showSearchDialog) {
