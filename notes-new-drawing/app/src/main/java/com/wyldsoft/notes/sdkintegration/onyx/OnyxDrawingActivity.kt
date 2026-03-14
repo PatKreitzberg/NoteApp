@@ -129,7 +129,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun initializeShapeMaanager() {
         shapesManager = ShapesManager(editorViewModel)
-        forceScreenRefresh()
     }
 
     override fun createDeviceReceiver(): BaseDeviceReceiver {

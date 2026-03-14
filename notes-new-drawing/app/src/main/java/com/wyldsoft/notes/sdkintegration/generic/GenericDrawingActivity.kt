@@ -56,7 +56,6 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
 
     override fun initializeShapeMaanager() {
         shapesManager = ShapesManager(editorViewModel)
-        forceScreenRefresh()
     }
 
     @SuppressLint("ClickableViewAccessibility")

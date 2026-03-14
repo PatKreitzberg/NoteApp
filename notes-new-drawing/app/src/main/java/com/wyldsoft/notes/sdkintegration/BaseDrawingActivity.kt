@@ -126,6 +126,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         initializeSurfaceCallback()
         createTouchHelper()
         setObservers()
+        forceScreenRefresh()
         editorViewModel.initNavigationState()
         editorViewModel.onNoteSwitched = { onNoteSwitched() }
     }
@@ -136,6 +137,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             bitmapCanvas?.drawColor(Color.WHITE)
             initializeShapeMaanager()
             editorViewModel.setDrawingReferences(shapesManager, bitmapManager) { forceScreenRefresh() }
+            forceScreenRefresh()
         }
     }
 
