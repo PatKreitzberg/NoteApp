@@ -2,6 +2,7 @@ package com.wyldsoft.notes.ui.components
 
 import android.graphics.Rect
 import android.util.Log
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -14,7 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.layout.boundsInWindow
@@ -78,26 +84,43 @@ fun StrokeOptionsPanel(
                 onPanelPositioned(panelRect)
             }
     ) {
-        // Header with profile info and preview
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 16.dp)
-        ) {
-            Text(
-                text = "Profile ${currentProfile.profileId + 1} Type ${currentProfile.penType}",
-                fontSize = 18.sp,
-                modifier = Modifier.padding(end = 16.dp)
-            )
+        // Header with profile info
+        Text(
+            text = "Profile ${currentProfile.profileId + 1} Type ${currentProfile.penType}",
+            fontSize = 18.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
 
-            // Stroke preview
-            Box(
-                modifier = Modifier
-                    .size(strokeSize.dp.coerceAtLeast(8.dp))
-                    .clip(CircleShape)
-                    .background(selectedColor)
-                    .border(1.dp, Color.Gray, CircleShape)
-            )
+        // Stroke preview - draws a sample curved stroke
+        val previewColor = selectedColor.copy(alpha = strokeAlpha)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .border(1.dp, Color.LightGray, RoundedCornerShape(4.dp))
+                .padding(4.dp)
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                val path = Path().apply {
+                    moveTo(w * 0.05f, h * 0.7f)
+                    cubicTo(w * 0.25f, h * 0.2f, w * 0.4f, h * 0.8f, w * 0.55f, h * 0.3f)
+                    cubicTo(w * 0.7f, h * 0.1f, w * 0.8f, h * 0.6f, w * 0.95f, h * 0.4f)
+                }
+                drawPath(
+                    path = path,
+                    color = previewColor,
+                    style = Stroke(
+                        width = strokeSize,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+            }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Pen type selection
         Text(text = "Pen Type:", fontSize = 14.sp, color = Color.Black)
