@@ -15,6 +15,9 @@ class DisplaySettingsRepository(context: Context) {
     private val _smoothMotion = MutableStateFlow(prefs.getBoolean(KEY_SMOOTH_MOTION, DEFAULT_SMOOTH_MOTION))
     val smoothMotion: StateFlow<Boolean> = _smoothMotion
 
+    private val _scrollBarVisible = MutableStateFlow(prefs.getBoolean(KEY_SCROLL_BAR_VISIBLE, DEFAULT_SCROLL_BAR_VISIBLE))
+    val scrollBarVisible: StateFlow<Boolean> = _scrollBarVisible
+
     /** Minimum interval between screen refreshes in milliseconds */
     val minRefreshIntervalMs: Long
         get() = if (_maxRefreshRate.value > 0) 1000L / _maxRefreshRate.value else 0L
@@ -29,10 +32,17 @@ class DisplaySettingsRepository(context: Context) {
         _smoothMotion.value = enabled
     }
 
+    fun setScrollBarVisible(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SCROLL_BAR_VISIBLE, enabled).apply()
+        _scrollBarVisible.value = enabled
+    }
+
     companion object {
         private const val KEY_MAX_REFRESH_RATE = "max_refresh_rate"
         private const val KEY_SMOOTH_MOTION = "smooth_motion"
+        private const val KEY_SCROLL_BAR_VISIBLE = "scroll_bar_visible"
         const val DEFAULT_MAX_REFRESH_RATE = 5
         const val DEFAULT_SMOOTH_MOTION = true
+        const val DEFAULT_SCROLL_BAR_VISIBLE = true
     }
 }

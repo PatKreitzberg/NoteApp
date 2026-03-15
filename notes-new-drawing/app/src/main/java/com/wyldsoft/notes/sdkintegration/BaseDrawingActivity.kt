@@ -86,7 +86,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         setContent {
             MinimaleditorTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    EditorView(editorViewModel, onSurfaceViewCreated = { sv, vm ->
+                    EditorView(editorViewModel, displaySettingsRepository = displaySettingsRepository, onSurfaceViewCreated = { sv, vm ->
                         Log.d(TAG, "SurfaceView created in EditorView")
                         handleSurfaceViewCreated(sv, vm)
                     })

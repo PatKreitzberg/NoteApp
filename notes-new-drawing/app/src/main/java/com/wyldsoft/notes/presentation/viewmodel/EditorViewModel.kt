@@ -62,6 +62,9 @@ class EditorViewModel(
     val canUndo: StateFlow<Boolean> = actionManager.canUndo
     val canRedo: StateFlow<Boolean> = actionManager.canRedo
 
+    private val _contentMaxY = MutableStateFlow(0f)
+    val contentMaxY: StateFlow<Float> = _contentMaxY.asStateFlow()
+
     // Late-initialized references set from BaseDrawingActivity
     private var shapesManager: ShapesManager? = null
     private var bitmapManager: BitmapManager? = null
@@ -259,7 +262,9 @@ class EditorViewModel(
     }
 
     fun updateContentBounds() {
-        viewportManager.contentMaxY = shapesManager?.getContentMaxY() ?: return
+        val maxY = shapesManager?.getContentMaxY() ?: return
+        viewportManager.contentMaxY = maxY
+        _contentMaxY.value = maxY
     }
 
     fun notifySelectionChanged() {

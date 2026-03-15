@@ -28,13 +28,16 @@ fun AppSettingsDialog(
 
     val currentRefreshRate by displaySettingsRepository.maxRefreshRate.collectAsState()
     val currentSmoothMotion by displaySettingsRepository.smoothMotion.collectAsState()
+    val currentScrollBarVisible by displaySettingsRepository.scrollBarVisible.collectAsState()
     var refreshRate by remember { mutableStateOf(currentRefreshRate.toFloat()) }
     var smoothMotion by remember { mutableStateOf(currentSmoothMotion) }
+    var scrollBarVisible by remember { mutableStateOf(currentScrollBarVisible) }
 
     val saveAndDismiss = {
         gestureSettingsRepository.saveMappings(mappings)
         displaySettingsRepository.setMaxRefreshRate(refreshRate.roundToInt())
         displaySettingsRepository.setSmoothMotion(smoothMotion)
+        displaySettingsRepository.setScrollBarVisible(scrollBarVisible)
         onDismiss()
     }
 
@@ -57,6 +60,18 @@ fun AppSettingsDialog(
             Switch(
                 checked = smoothMotion,
                 onCheckedChange = { smoothMotion = it }
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Show scroll bar", style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = scrollBarVisible,
+                onCheckedChange = { scrollBarVisible = it }
             )
         }
 

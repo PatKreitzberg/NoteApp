@@ -19,8 +19,10 @@ import com.wyldsoft.notes.export.ExportScope
 import com.wyldsoft.notes.export.PdfExporter
 import com.wyldsoft.notes.export.dispatchExport
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.ui.components.LiveTextInput
 import com.wyldsoft.notes.ui.components.Toolbar
+import com.wyldsoft.notes.ui.components.VerticalScrollBar
 import com.wyldsoft.notes.ui.components.ViewportInfo
 import com.wyldsoft.notes.ui.components.dialogs.ExportDialog
 import com.wyldsoft.notes.ui.components.dialogs.ManageNoteDialog
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun EditorView(
     viewModel: EditorViewModel,
+    displaySettingsRepository: DisplaySettingsRepository? = null,
     onSurfaceViewCreated: (android.view.SurfaceView, EditorViewModel) -> Unit = {_, _ -> },
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -42,6 +45,9 @@ fun EditorView(
     val currentNote by viewModel.currentNote.collectAsState()
     val allNotebooks by viewModel.allNotebooks.collectAsState()
     val noteNotebooks by viewModel.noteNotebooks.collectAsState()
+    val contentMaxY by viewModel.contentMaxY.collectAsState()
+    val showScrollBar by (displaySettingsRepository?.scrollBarVisible
+        ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
     var showManageNotebooksDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -131,6 +137,17 @@ fun EditorView(
                         notePosition = position,
                         viewModel = viewModel,
                         onCommit = { viewModel.commitLiveTextInput() }
+                    )
+                }
+                if (showScrollBar) {
+                    VerticalScrollBar(
+                        scrollY = viewportState.scrollY,
+                        contentMaxY = contentMaxY,
+                        scale = viewportState.scale,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .width(16.dp)
+                            .fillMaxHeight()
                     )
                 }
             }
