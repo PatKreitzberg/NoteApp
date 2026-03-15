@@ -130,12 +130,13 @@ class ShapesManager private constructor(note: Note) {
     }
 
     /**
-     * Returns the maximum Y coordinate across all shapes (bottom of lowest shape).
-     * Returns 0f if there are no shapes.
+     * Returns the maximum Y coordinate across visible shapes (bottom of lowest shape).
+     * Returns 0f if there are no visible shapes.
      */
-    fun getContentMaxY(): Float {
+    fun getContentMaxY(isLayerVisible: (Int) -> Boolean = { true }): Float {
         var maxY = 0f
         for (shape in shapes) {
+            if (!isLayerVisible(shape.layer)) continue
             shape.updateShapeRect()
             val rect = shape.boundingRect ?: continue
             if (rect.bottom > maxY) {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Visibility
@@ -19,6 +20,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,10 +44,13 @@ fun LayerDropdown(
     var expanded by remember { mutableStateOf(false) }
     var showMoveDialog by remember { mutableStateOf(false) }
     var moveFromLayer by remember { mutableStateOf(1) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameTargetLayer by remember { mutableStateOf(1) }
 
     val activeLayer by viewModel.activeLayer.collectAsState()
     val hiddenLayers by viewModel.hiddenLayers.collectAsState()
     val soloLayer by viewModel.soloLayer.collectAsState()
+    val layerNames by viewModel.layerNames.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.closeAllDropdownsEvent.collect { expanded = false }
@@ -71,7 +76,7 @@ fun LayerDropdown(
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "$activeLayer",
+                    text = layerNames[activeLayer] ?: "$activeLayer",
                     fontSize = 10.sp,
                     color = Color.Black
                 )
@@ -101,7 +106,7 @@ fun LayerDropdown(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Layer $layer",
+                                text = viewModel.getLayerDisplayName(layer),
                                 fontSize = 14.sp,
                                 color = if (isActive) Color.Black else Color.Gray,
                                 modifier = Modifier
@@ -112,6 +117,19 @@ fun LayerDropdown(
                                             .padding(horizontal = 4.dp)
                                         else Modifier
                                     )
+                            )
+
+                            // Rename
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Rename layer",
+                                tint = Color.DarkGray,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable {
+                                        renameTargetLayer = layer
+                                        showRenameDialog = true
+                                    }
                             )
 
                             // Visibility toggle
@@ -181,11 +199,24 @@ fun LayerDropdown(
         MoveLayerDialog(
             fromLayer = moveFromLayer,
             existingLayers = viewModel.getExistingLayers(),
+            getDisplayName = { viewModel.getLayerDisplayName(it) },
             onMove = { toLayer ->
                 viewModel.moveLayerStrokes(moveFromLayer, toLayer)
                 showMoveDialog = false
             },
             onDismiss = { showMoveDialog = false }
+        )
+    }
+
+    if (showRenameDialog) {
+        RenameLayerDialog(
+            layer = renameTargetLayer,
+            currentName = layerNames[renameTargetLayer] ?: "",
+            onRename = { name ->
+                viewModel.renameLayer(renameTargetLayer, name)
+                showRenameDialog = false
+            },
+            onDismiss = { showRenameDialog = false }
         )
     }
 }
@@ -194,6 +225,7 @@ fun LayerDropdown(
 private fun MoveLayerDialog(
     fromLayer: Int,
     existingLayers: List<Int>,
+    getDisplayName: (Int) -> String,
     onMove: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -205,13 +237,13 @@ private fun MoveLayerDialog(
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Move strokes from Layer $fromLayer") },
+        title = { Text("Move strokes from ${getDisplayName(fromLayer)}") },
         text = {
             androidx.compose.foundation.layout.Column {
                 Text("Move all strokes to:", fontSize = 14.sp)
                 for (layer in targetLayers) {
                     Text(
-                        text = "Layer $layer",
+                        text = getDisplayName(layer),
                         fontSize = 16.sp,
                         modifier = Modifier
                             .clickable { onMove(layer) }
@@ -223,6 +255,40 @@ private fun MoveLayerDialog(
             }
         },
         confirmButton = {},
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun RenameLayerDialog(
+    layer: Int,
+    currentName: String,
+    onRename: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(currentName) }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename Layer $layer") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Layer name") },
+                singleLine = true,
+                placeholder = { Text("Layer $layer") }
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { onRename(name) }) {
+                Text("OK")
+            }
+        },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text("Cancel")

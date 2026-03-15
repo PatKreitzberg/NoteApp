@@ -60,7 +60,7 @@
   ├── removeAll()
   ├── convertDomainShapeToSdkShape()   ← bridges Domain Shape ↔ SDK BaseShape
   ├── penTypeToShapeType()
-  └── getContentMaxY()                 ← max Y across all shapes (for scroll limits)
+  └── getContentMaxY(isLayerVisible)   ← max Y across visible shapes (for scroll limits)
 
   ShapeFactory
   ├── createShape(int) → BaseShape     ← factory for SDK shapes
@@ -844,8 +844,11 @@
   ├── activeLayer: StateFlow<Int>      ← current drawing layer (default 1)
   ├── hiddenLayers: StateFlow<Set<Int>> ← hidden layer numbers
   ├── soloLayer: StateFlow<Int?>       ← solo: only this layer visible
+  ├── layerNames: StateFlow<Map<Int,String>> ← custom display names
   ├── setActiveLayer(), toggleLayerVisibility(), setSoloLayer()
   ├── addLayer()                       ← creates next layer number
+  ├── renameLayer(layer, name)         ← set custom display name (blank = reset)
+  ├── getLayerDisplayName(layer)       ← custom name or "Layer N" fallback
   ├── moveLayerStrokes(from, to)       ← MoveLayerAction (undoable)
   ├── isLayerVisible(layer)            ← visibility check (solo > hidden)
   └── getVisibleShapes()               ← filtered shapes for rendering
@@ -854,13 +857,16 @@
   ├── DrawingOperationsHandler.addShape() → sets layer = activeLayer
   ├── EraseManager.handleErasing()        → filters by activeLayer
   ├── LassoHandler.finish()               → filters by activeLayer
+  ├── OnyxStylusHandler.findTextShapeAtNotePoint() → filters by activeLayer
+  ├── ShapesManager.getContentMaxY()      → filters by visible layers
   ├── BitmapManager.recreateBitmapFromShapes() → filters by visible layers
   └── BitmapManager.partialRefresh()           → filters by visible layers
 
   UI: LayerDropdown (Toolbar, all tabs)
-  ├── Shows layers icon + active layer number
-  ├── Per-layer: visibility eye toggle, solo filter toggle
+  ├── Shows layers icon + active layer display name
+  ├── Per-layer: rename (edit icon), visibility eye toggle, solo filter toggle
   ├── Click layer to set active
-  ├── "Move strokes..." → MoveLayerDialog
+  ├── "Move strokes..." → MoveLayerDialog (uses display names)
+  ├── RenameLayerDialog → set custom name per layer
   └── "+ Add layer" to create new layer
 #+end_example

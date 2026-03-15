@@ -67,8 +67,10 @@ class OnyxStylusHandler(
     // --- Text shape hit testing ---
 
     private fun findTextShapeAtNotePoint(noteX: Float, noteY: Float): TextShape? {
+        val activeLayer = viewModel.activeLayer.value
         return shapesManager.shapes()
             .filterIsInstance<TextShape>()
+            .filter { it.layer == activeLayer }
             .firstOrNull { shape ->
                 shape.updateShapeRect()
                 shape.boundingRect?.contains(noteX, noteY) == true

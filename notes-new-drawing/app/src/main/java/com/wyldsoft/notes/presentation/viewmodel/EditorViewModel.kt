@@ -105,6 +105,9 @@ class EditorViewModel(
     private val _soloLayer = MutableStateFlow<Int?>(null)
     val soloLayer: StateFlow<Int?> = _soloLayer.asStateFlow()
 
+    private val _layerNames = MutableStateFlow<Map<Int, String>>(emptyMap())
+    val layerNames: StateFlow<Map<Int, String>> = _layerNames.asStateFlow()
+
     // Dropdown open/close tracking
     private val _openDropdownCount = MutableStateFlow(0)
     val openDropdownCount: StateFlow<Int> = _openDropdownCount.asStateFlow()
@@ -312,7 +315,7 @@ class EditorViewModel(
     }
 
     fun updateContentBounds() {
-        val maxY = shapesManager?.getContentMaxY() ?: return
+        val maxY = shapesManager?.getContentMaxY { isLayerVisible(it) } ?: return
         viewportManager.contentMaxY = maxY
         _contentMaxY.value = maxY
     }
@@ -505,6 +508,16 @@ class EditorViewModel(
     fun getVisibleShapes(): MutableList<BaseShape>? {
         val shapes = shapesManager?.shapes() ?: return null
         return shapes.filter { isLayerVisible(it.layer) }.toMutableList()
+    }
+
+    fun renameLayer(layer: Int, name: String) {
+        val current = _layerNames.value.toMutableMap()
+        if (name.isBlank()) current.remove(layer) else current[layer] = name.trim()
+        _layerNames.value = current
+    }
+
+    fun getLayerDisplayName(layer: Int): String {
+        return _layerNames.value[layer] ?: "Layer $layer"
     }
 
     fun moveLayerStrokes(fromLayer: Int, toLayer: Int) {
