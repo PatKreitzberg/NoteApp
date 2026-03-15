@@ -9,20 +9,31 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.State
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.repository.FolderRepository
+import com.wyldsoft.notes.export.ExportAction
+import com.wyldsoft.notes.export.ExportScope
+import com.wyldsoft.notes.export.PdfExporter
+import com.wyldsoft.notes.export.dispatchExport
 import com.wyldsoft.notes.presentation.viewmodel.HomeViewModel
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
+import com.wyldsoft.notes.ui.components.dialogs.ExportDialog
 import com.wyldsoft.notes.ui.components.dialogs.GoogleDriveDialog
 import com.wyldsoft.notes.ui.components.dialogs.ManageNoteDialog
 
@@ -75,6 +86,54 @@ fun HomeView(
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
 
     val isInTrash = currentFolder?.id == FolderRepository.TRASH_FOLDER_ID
+
+    // Export state
+    val context = LocalContext.current
+    var showExportNoteDialog by remember { mutableStateOf(false) }
+    var showExportNotebookDialog by remember { mutableStateOf(false) }
+    var exportNotebookName by remember { mutableStateOf("") }
+    var pendingExportFile by remember { mutableStateOf<File?>(null) }
+    var pendingSuggestedFileName by remember { mutableStateOf("export.pdf") }
+    val saveFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        uri?.let { dest ->
+            val src = pendingExportFile ?: return@let
+            coroutineScope.launch(Dispatchers.IO) {
+                context.contentResolver.openOutputStream(dest)?.use { out ->
+                    src.inputStream().use { it.copyTo(out) }
+                }
+            }
+        }
+    }
+
+    fun launchExport(scope: ExportScope, action: ExportAction) {
+        coroutineScope.launch(Dispatchers.IO) {
+            val noteWidthPx = context.resources.displayMetrics.widthPixels
+            val exporter = PdfExporter(context)
+            val file = when (scope) {
+                ExportScope.SINGLE_NOTE -> {
+                    val noteId = contextMenuNote?.id ?: return@launch
+                    val note = viewModel.getNoteForExport(noteId)
+                    exporter.exportNote(note, noteWidthPx)
+                }
+                ExportScope.NOTEBOOK -> {
+                    val notebookId = contextMenuNotebook?.id
+                        ?: contextMenuNote?.let { viewModel.getNotebooksForNote(it.id).firstOrNull() }
+                        ?: return@launch
+                    val notes = viewModel.getNotebookNotesForExport(notebookId)
+                    val nbName = viewModel.getNotebookName(notebookId)
+                    exporter.exportNotebook(notes, nbName, noteWidthPx)
+                }
+            }
+            withContext(Dispatchers.Main) {
+                dispatchExport(context, file, action, saveFileLauncher) { pending ->
+                    pendingExportFile = pending
+                    pendingSuggestedFileName = pending.name
+                }
+            }
+        }
+    }
 
     // Load folders/notebooks when a context menu action needs them
     fun ensureFoldersLoaded() { viewModel.loadAllFoldersAndNotebooks() }
@@ -176,6 +235,13 @@ fun HomeView(
                     onMove = { showMoveNotebookDialog = true },
                     onRename = { showRenameNotebookDialog = true },
                     onDelete = { showDeleteNotebookDialog = true },
+                    onExport = {
+                        coroutineScope.launch {
+                            exportNotebookName = viewModel.getNotebookName(notebook.id)
+                        }
+                        showExportNotebookDialog = true
+                        contextMenuNotebook = notebook
+                    },
                     onDismiss = { contextMenuNotebook = null }
                 )
             }
@@ -215,6 +281,7 @@ fun HomeView(
                             showManageNoteDialog = true
                         }
                     },
+                    onExport = { showExportNoteDialog = true },
                     onDismiss = { contextMenuNote = null }
                 )
             }
@@ -418,5 +485,42 @@ fun HomeView(
             },
             onDismiss = { showSearchDialog = false; viewModel.clearSearch() }
         )
+    }
+
+    // Export dialog triggered from note context menu
+    if (showExportNoteDialog) {
+        contextMenuNote?.let { note ->
+            var notebookName by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(note.id) {
+                val notebookId = viewModel.getNotebooksForNote(note.id).firstOrNull()
+                notebookName = notebookId?.let { viewModel.getNotebookName(it) }
+            }
+            ExportDialog(
+                noteName = note.title,
+                notebookName = notebookName,
+                defaultScope = ExportScope.SINGLE_NOTE,
+                onExport = { scope, action ->
+                    showExportNoteDialog = false
+                    launchExport(scope, action)
+                },
+                onDismiss = { showExportNoteDialog = false; contextMenuNote = null }
+            )
+        }
+    }
+
+    // Export dialog triggered from notebook context menu
+    if (showExportNotebookDialog) {
+        contextMenuNotebook?.let { notebook ->
+            ExportDialog(
+                noteName = "",
+                notebookName = notebook.name,
+                defaultScope = ExportScope.NOTEBOOK,
+                onExport = { scope, action ->
+                    showExportNotebookDialog = false
+                    launchExport(scope, action)
+                },
+                onDismiss = { showExportNotebookDialog = false; contextMenuNotebook = null }
+            )
+        }
     }
 }

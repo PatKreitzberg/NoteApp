@@ -10,11 +10,13 @@ fun NotebookContextMenu(
     onMove: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onExport: () -> Unit,
     onDismiss: () -> Unit
 ) {
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
         DropdownMenuItem(text = { Text("Move") }, onClick = onMove)
         DropdownMenuItem(text = { Text("Rename") }, onClick = onRename)
+        DropdownMenuItem(text = { Text("Export as PDF") }, onClick = onExport)
         DropdownMenuItem(text = { Text("Move to Trash") }, onClick = onDelete)
     }
 }
@@ -49,12 +51,14 @@ fun NoteContextMenu(
     onRename: () -> Unit,
     onDelete: () -> Unit,
     onManage: () -> Unit,
+    onExport: () -> Unit,
     onDismiss: () -> Unit
 ) {
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
         DropdownMenuItem(text = { Text("Move") }, onClick = onMove)
         DropdownMenuItem(text = { Text("Rename") }, onClick = onRename)
         DropdownMenuItem(text = { Text("Manage Notebooks") }, onClick = onManage)
+        DropdownMenuItem(text = { Text("Export as PDF") }, onClick = onExport)
         DropdownMenuItem(text = { Text("Move to Trash") }, onClick = onDelete)
     }
 }

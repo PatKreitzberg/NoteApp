@@ -438,6 +438,14 @@ class EditorViewModel(
             _noteNotebooks.value = notebookIds
         }
     }
+
+    // Export helpers
+
+    suspend fun getNotebookNotesForExport(notebookId: String) =
+        notebookRepository.getNotesInNotebookOnce(notebookId).map { noteRepository.getNote(it.id) }
+
+    suspend fun getNotebookName(notebookId: String): String =
+        notebookRepository.getNotebook(notebookId)?.name ?: "Notebook"
 }
 
 data class EditorUiState(

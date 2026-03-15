@@ -1,16 +1,28 @@
 package com.wyldsoft.notes.editor
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 import com.wyldsoft.notes.DrawingCanvas
+import com.wyldsoft.notes.export.ExportAction
+import com.wyldsoft.notes.export.ExportScope
+import com.wyldsoft.notes.export.PdfExporter
+import com.wyldsoft.notes.export.dispatchExport
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.ui.components.LiveTextInput
 import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.ViewportInfo
+import com.wyldsoft.notes.ui.components.dialogs.ExportDialog
 import com.wyldsoft.notes.ui.components.dialogs.ManageNoteDialog
 import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
 import kotlinx.coroutines.flow.collectLatest
@@ -32,7 +44,46 @@ fun EditorView(
     val noteNotebooks by viewModel.noteNotebooks.collectAsState()
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
     var showManageNotebooksDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
     var isToolbarCollapsed by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var pendingExportFile by remember { mutableStateOf<File?>(null) }
+    val saveFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        uri?.let { dest ->
+            val src = pendingExportFile ?: return@let
+            coroutineScope.launch(Dispatchers.IO) {
+                context.contentResolver.openOutputStream(dest)?.use { out ->
+                    src.inputStream().use { it.copyTo(out) }
+                }
+            }
+        }
+    }
+
+    fun launchExport(scope: ExportScope, action: ExportAction) {
+        coroutineScope.launch(Dispatchers.IO) {
+            val noteWidthPx = context.resources.displayMetrics.widthPixels
+            val exporter = PdfExporter(context)
+            val note = viewModel.currentNote.value
+            val notebookId = viewModel.notebookId
+            val file = when {
+                scope == ExportScope.NOTEBOOK && notebookId != null -> {
+                    val notes = viewModel.getNotebookNotesForExport(notebookId)
+                    val nbName = viewModel.getNotebookName(notebookId)
+                    exporter.exportNotebook(notes, nbName, noteWidthPx)
+                }
+                else -> exporter.exportNote(note, noteWidthPx)
+            }
+            withContext(Dispatchers.Main) {
+                dispatchExport(context, file, action, saveFileLauncher) { pending ->
+                    pendingExportFile = pending
+                }
+            }
+        }
+    }
 
     // Close dialogs when triggered by SurfaceView touch listener via closeAllDropdownsEvent
     LaunchedEffect(Unit) {
@@ -107,10 +158,32 @@ fun EditorView(
                 showNoteSettingsDialog = false
                 showManageNotebooksDialog = true
             },
+            onExport = {
+                showNoteSettingsDialog = false
+                showExportDialog = true
+            },
             onDismiss = {
                 showNoteSettingsDialog = false
                 viewModel.forceRefresh()
             }
+        )
+    }
+
+    if (showExportDialog) {
+        val notebookId = viewModel.notebookId
+        var notebookName by remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(notebookId) {
+            notebookName = notebookId?.let { viewModel.getNotebookName(it) }
+        }
+        ExportDialog(
+            noteName = currentNote.title,
+            notebookName = notebookName,
+            defaultScope = ExportScope.SINGLE_NOTE,
+            onExport = { scope, action ->
+                showExportDialog = false
+                launchExport(scope, action)
+            },
+            onDismiss = { showExportDialog = false }
         )
     }
 

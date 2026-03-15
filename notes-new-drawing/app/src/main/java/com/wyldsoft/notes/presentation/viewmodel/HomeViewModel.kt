@@ -11,6 +11,7 @@ import com.wyldsoft.notes.data.repository.FolderRepository.Companion.TRASH_FOLDE
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.data.repository.RecognizedSegmentRepository
+import com.wyldsoft.notes.domain.models.Note
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -259,4 +260,16 @@ class HomeViewModel(
     fun clearSearch() {
         _searchResults.value = emptyList()
     }
+
+    // Export helpers: fetch note/notebook data for PDF generation
+
+    suspend fun getNoteForExport(noteId: String): Note = noteRepository.getNote(noteId)
+
+    suspend fun getNotebookNotesForExport(notebookId: String): List<Note> {
+        val noteEntities = notebookRepository.getNotesInNotebookOnce(notebookId)
+        return noteEntities.map { noteRepository.getNote(it.id) }
+    }
+
+    suspend fun getNotebookName(notebookId: String): String =
+        notebookRepository.getNotebook(notebookId)?.name ?: "Notebook"
 }

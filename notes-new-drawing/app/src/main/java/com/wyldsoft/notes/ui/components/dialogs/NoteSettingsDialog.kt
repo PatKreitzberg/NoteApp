@@ -20,6 +20,7 @@ fun NoteSettingsDialog(
     onPaperSizeChange: (PaperSize) -> Unit,
     onPaperTemplateChange: (PaperTemplate) -> Unit,
     onManageNotebooks: () -> Unit,
+    onExport: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var nameField by remember { mutableStateOf(noteName) }
@@ -50,6 +51,16 @@ fun NoteSettingsDialog(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Manage Notebooks")
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Export button
+        OutlinedButton(
+            onClick = onExport,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Export as PDF")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
