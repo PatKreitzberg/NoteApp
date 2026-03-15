@@ -97,6 +97,8 @@ class EditorViewModel(
     private val _activeLayer = MutableStateFlow(1)
     val activeLayer: StateFlow<Int> = _activeLayer.asStateFlow()
 
+    private val _createdLayers = MutableStateFlow<Set<Int>>(setOf(1))
+
     private val _hiddenLayers = MutableStateFlow<Set<Int>>(emptySet())
     val hiddenLayers: StateFlow<Set<Int>> = _hiddenLayers.asStateFlow()
 
@@ -481,15 +483,17 @@ class EditorViewModel(
     }
 
     fun addLayer(): Int {
-        val maxLayer = getExistingLayers().maxOrNull() ?: 1
-        val newLayer = maxLayer + 1
+        val allLayers = getExistingLayers()
+        val newLayer = (allLayers.maxOrNull() ?: 0) + 1
+        _createdLayers.value = _createdLayers.value + newLayer
         _activeLayer.value = newLayer
         return newLayer
     }
 
     fun getExistingLayers(): List<Int> {
-        val layers = shapesManager?.shapes()?.map { it.layer }?.distinct()?.sorted() ?: listOf(1)
-        return if (layers.isEmpty()) listOf(1) else layers
+        val shapeLayers = shapesManager?.shapes()?.map { it.layer }?.toSet() ?: emptySet()
+        val all = (shapeLayers + _createdLayers.value).sorted()
+        return if (all.isEmpty()) listOf(1) else all
     }
 
     fun isLayerVisible(layer: Int): Boolean {
