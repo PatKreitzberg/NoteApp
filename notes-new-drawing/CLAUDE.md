@@ -7,7 +7,7 @@
 4. After implementing a major change, run 'git commit -am <message describing the changes that were just implemented and mention that it has not been tested>"
 5. After writing new code check that no duplicate code was created.
 6. If a class is larger than 300 lines, recomend refactoring it to the human user.
-7. Update ~/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/architecture-diagram.org to reflect changes made by you or the human.
+7. Update ~/AndroidStudioProjects/CURRENT/hands-on-jul16/notes-new-drawing/architecture-diagram.org to reflect changes made by you or the human. When starting on a problem or prompt by user look at this file to understand the code base.
 8. Anything that adds or removes or modifies any shape should be programmed as an action and thus can be undone and redone
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
