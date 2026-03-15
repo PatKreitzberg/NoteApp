@@ -9,6 +9,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.presentation.viewmodel.SearchResult
@@ -144,6 +146,12 @@ fun CreateItemDialog(
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -152,7 +160,8 @@ fun CreateItemDialog(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text(placeholder) },
-                singleLine = true
+                singleLine = true,
+                modifier = Modifier.focusRequester(focusRequester)
             )
         },
         confirmButton = {
