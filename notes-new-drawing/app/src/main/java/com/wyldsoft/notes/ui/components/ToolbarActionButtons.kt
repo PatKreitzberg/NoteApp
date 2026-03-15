@@ -76,6 +76,16 @@ fun ToolbarActionButtons(
                 tint = if (canGoForward) Color.Black else Color.LightGray
             )
         }
+
+        val noteIndex by viewModel.currentNoteIndex.collectAsState()
+        val totalNotes by viewModel.totalNoteCount.collectAsState()
+        if (totalNotes > 0) {
+            Text(
+                text = "$noteIndex/$totalNotes",
+                fontSize = 12.sp,
+                color = Color.DarkGray
+            )
+        }
     }
 
     IconButton(onClick = onCollapse) {

@@ -32,6 +32,12 @@ class NoteNavigationHandler(
     private val _canGoForward = MutableStateFlow(true)
     val canGoForward: StateFlow<Boolean> = _canGoForward.asStateFlow()
 
+    private val _currentNoteIndex = MutableStateFlow(0)
+    val currentNoteIndex: StateFlow<Int> = _currentNoteIndex.asStateFlow()
+
+    private val _totalNoteCount = MutableStateFlow(0)
+    val totalNoteCount: StateFlow<Int> = _totalNoteCount.asStateFlow()
+
     var onNoteSwitched: (() -> Unit)? = null
 
     fun initNavigationState() {
@@ -52,6 +58,8 @@ class NoteNavigationHandler(
         val currentIndex = notes.indexOfFirst { it.id == getCurrentNote().id }
         _canGoBack.value = currentIndex > 0
         _canGoForward.value = true
+        _currentNoteIndex.value = if (currentIndex >= 0) currentIndex + 1 else 1
+        _totalNoteCount.value = notes.size
     }
 
     fun navigateBackward() {

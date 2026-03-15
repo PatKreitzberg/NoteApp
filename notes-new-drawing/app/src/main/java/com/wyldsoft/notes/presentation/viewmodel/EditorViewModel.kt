@@ -159,6 +159,8 @@ class EditorViewModel(
 
     val canGoBack: StateFlow<Boolean> = navigationHandler.canGoBack
     val canGoForward: StateFlow<Boolean> = navigationHandler.canGoForward
+    val currentNoteIndex: StateFlow<Int> = navigationHandler.currentNoteIndex
+    val totalNoteCount: StateFlow<Int> = navigationHandler.totalNoteCount
     var onNoteSwitched: (() -> Unit)?
         get() = navigationHandler.onNoteSwitched
         set(value) { navigationHandler.onNoteSwitched = value }
