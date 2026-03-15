@@ -33,6 +33,7 @@ import com.wyldsoft.notes.presentation.viewmodel.DrawTool
 import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
+import com.wyldsoft.notes.session.NoteSession
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.sync.SyncWorker
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +59,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     private var lastViewportRefreshTime = 0L
 
     // Abstract methods that must be implemented by SDK-specific classes
-    abstract fun initializeShapeMaanager()
     abstract fun initializeStylusHandler()
     abstract fun createDeviceReceiver(): BaseDeviceReceiver
     abstract fun enableFingerTouch()
@@ -118,9 +118,11 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         initializeBitmapManager(surfaceView, vm)
         initializeGestureHandler()
         setViewModel(vm)
-        initializeShapeMaanager()
+        val session = NoteSession.create(editorViewModel)
+        shapesManager = session.shapesManager
         initializeStylusHandler()
-        editorViewModel.setDrawingReferences(shapesManager, bitmapManager) { forceScreenRefresh() }
+        editorViewModel.setDrawingManagers(bitmapManager) { forceScreenRefresh() }
+        editorViewModel.activateSession(session)
         initializePaint()
         initializeDeviceReceiver()
         initializeSurfaceCallback()
@@ -133,10 +135,11 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     private fun onNoteSwitched() {
         lifecycleScope.launch(Dispatchers.Main) {
-            Log.d(TAG, "Note switched — reinitializing drawing surfaces")
+            Log.d(TAG, "Note switched — creating new session")
             bitmapCanvas?.drawColor(Color.WHITE)
-            initializeShapeMaanager()
-            editorViewModel.setDrawingReferences(shapesManager, bitmapManager) { forceScreenRefresh() }
+            val session = NoteSession.create(editorViewModel)
+            shapesManager = session.shapesManager
+            editorViewModel.activateSession(session)
             forceScreenRefresh()
         }
     }

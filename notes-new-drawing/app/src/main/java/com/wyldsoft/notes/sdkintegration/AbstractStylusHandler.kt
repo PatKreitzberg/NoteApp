@@ -27,7 +27,7 @@ abstract class AbstractStylusHandler(
     protected val surfaceView: SurfaceView,
     protected val viewModel: EditorViewModel,
     protected val bitmapManager: BitmapManager,
-    protected val shapesManager: ShapesManager,
+    private val getShapesManager: () -> ShapesManager,
     protected val displaySettingsRepository: DisplaySettingsRepository,
     protected val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
     protected val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
@@ -35,6 +35,7 @@ abstract class AbstractStylusHandler(
     protected val onForceScreenRefresh: () -> Unit,
     rxManager: RxManager? = null
 ) {
+    protected val shapesManager: ShapesManager get() = getShapesManager()
     protected var drawManager = DrawManager(bitmapManager, onShapeCompleted)
     protected val eraseManager = EraseManager(surfaceView, rxManager, bitmapManager, onShapeRemoved)
 
@@ -48,7 +49,7 @@ abstract class AbstractStylusHandler(
     protected val geometryHandler = GeometryDrawingHandler(
         viewModel = viewModel,
         bitmapManager = bitmapManager,
-        shapesManager = shapesManager,
+        getShapesManager = getShapesManager,
         displaySettingsRepository = displaySettingsRepository,
         onStarted = { isDrawingInProgress = true; onDrawingStateChanged(true); viewModel.startDrawing() },
         onFinalized = { isDrawingInProgress = false; onDrawingStateChanged(false); viewModel.endDrawing() },
@@ -59,7 +60,7 @@ abstract class AbstractStylusHandler(
     protected val selectionInputHandler = SelectionInputHandler(
         viewModel = viewModel,
         bitmapManager = bitmapManager,
-        shapesManager = shapesManager,
+        getShapesManager = getShapesManager,
         onSelectionTransformStarted = { onSelectionTransformStarted() },
         onLassoStarted = { onLassoStarted() },
         onLassoSelectionCompleted = { onLassoSelectionCompleted() },
@@ -69,7 +70,7 @@ abstract class AbstractStylusHandler(
     protected val lineSnapHandler = LineSnapHandler(
         viewModel = viewModel,
         bitmapManager = bitmapManager,
-        shapesManager = shapesManager,
+        getShapesManager = getShapesManager,
         onSnapActivated = { onLineSnapActivated() },
         onFinalized = { isDrawingInProgress = false; onDrawingStateChanged(false); viewModel.endDrawing() },
         onForceScreenRefresh = onForceScreenRefresh,

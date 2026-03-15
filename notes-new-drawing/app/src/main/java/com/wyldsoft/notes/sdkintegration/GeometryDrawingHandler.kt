@@ -18,13 +18,14 @@ import com.wyldsoft.notes.shapemanagement.ShapesManager
 class GeometryDrawingHandler(
     private val viewModel: EditorViewModel,
     private val bitmapManager: BitmapManager,
-    private val shapesManager: ShapesManager,
+    private val getShapesManager: () -> ShapesManager,
     private val displaySettingsRepository: DisplaySettingsRepository,
     private val onStarted: () -> Unit,
     private val onFinalized: () -> Unit,
     private val onForceScreenRefresh: () -> Unit,
     private val getCurrentPenProfile: () -> PenProfile
 ) {
+    private val shapesManager: ShapesManager get() = getShapesManager()
     var isActive = false
         private set
     private var startNoteX = 0f

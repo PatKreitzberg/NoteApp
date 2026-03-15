@@ -15,7 +15,6 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
-import com.wyldsoft.notes.shapemanagement.ShapesManager
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
@@ -40,7 +39,7 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
             surfaceView,
             editorViewModel,
             bitmapManager,
-            shapesManager,
+            getShapesManager = { shapesManager },
             displaySettingsRepository,
             onDrawingStateChanged = { isDrawing ->
                 // No finger touch enable/disable needed on generic devices
@@ -52,10 +51,6 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
             onForceScreenRefresh = { forceScreenRefresh() }
         )
         stylusHandler.updatePenProfile(currentPenProfile)
-    }
-
-    override fun initializeShapeMaanager() {
-        shapesManager = ShapesManager(editorViewModel)
     }
 
     @SuppressLint("ClickableViewAccessibility")

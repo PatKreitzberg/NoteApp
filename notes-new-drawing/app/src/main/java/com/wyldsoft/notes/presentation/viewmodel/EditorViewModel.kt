@@ -22,6 +22,7 @@ import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import com.wyldsoft.notes.viewport.ViewportManager
 import kotlinx.coroutines.FlowPreview
+import com.wyldsoft.notes.session.NoteSession
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -58,9 +60,19 @@ class EditorViewModel(
     val viewportManager = ViewportManager()
     val viewportState = viewportManager.viewportState
 
-    val actionManager = ActionManager()
-    val canUndo: StateFlow<Boolean> = actionManager.canUndo
-    val canRedo: StateFlow<Boolean> = actionManager.canRedo
+    private var activeSession: NoteSession? = null
+    private val fallbackActionManager = ActionManager()
+    private val _activeActionManager = MutableStateFlow(fallbackActionManager)
+
+    val actionManager: ActionManager get() = activeSession?.actionManager ?: fallbackActionManager
+
+    val canUndo: StateFlow<Boolean> = _activeActionManager
+        .flatMapLatest { it.canUndo }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val canRedo: StateFlow<Boolean> = _activeActionManager
+        .flatMapLatest { it.canRedo }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _contentMaxY = MutableStateFlow(0f)
     val contentMaxY: StateFlow<Float> = _contentMaxY.asStateFlow()
@@ -139,12 +151,6 @@ class EditorViewModel(
         getCurrentNote = { currentNote.value },
         onSwitchNote = {
             paginationHandler.resetForNote(currentNote.value)
-            actionManager.clear()
-            bitmapManager?.onNoteChanged(
-                currentNote.value.pdfPath,
-                paginationHandler.screenWidth.value,
-                currentNote.value.pdfPageAspectRatio
-            )
         }
     )
 
@@ -245,20 +251,28 @@ class EditorViewModel(
         }
     }
 
-    fun setDrawingReferences(
-        shapesManager: ShapesManager,
+    fun setDrawingManagers(
         bitmapManager: BitmapManager,
         onScreenRefreshNeeded: () -> Unit
     ) {
-        this.shapesManager = shapesManager
         this.bitmapManager = bitmapManager
         this.onScreenRefreshNeeded = onScreenRefreshNeeded
-        bitmapManager.onNoteChanged(
+    }
+
+    fun activateSession(session: NoteSession) {
+        activeSession = session
+        shapesManager = session.shapesManager
+        _activeActionManager.value = session.actionManager
+        bitmapManager?.onNoteChanged(
             currentNote.value.pdfPath,
             paginationHandler.screenWidth.value,
             currentNote.value.pdfPageAspectRatio
         )
         updateContentBounds()
+        if (selectionManager.hasSelection) {
+            selectionManager.clearSelection()
+            notifySelectionChanged()
+        }
     }
 
     fun updateContentBounds() {

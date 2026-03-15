@@ -23,12 +23,13 @@ private const val TAP_HIT_RADIUS = 30f
 class SelectionInputHandler(
     private val viewModel: EditorViewModel,
     private val bitmapManager: BitmapManager,
-    private val shapesManager: ShapesManager,
+    private val getShapesManager: () -> ShapesManager,
     private val onSelectionTransformStarted: () -> Unit,
     private val onLassoStarted: () -> Unit,
     private val onLassoSelectionCompleted: () -> Unit,
     private val onForceScreenRefresh: () -> Unit
 ) {
+    private val shapesManager: ShapesManager get() = getShapesManager()
     private val selectionManager get() = viewModel.selectionManager
     private var preTransformShapeSnapshots: List<Shape>? = null
     private var preTransformBoundingBox: RectF? = null

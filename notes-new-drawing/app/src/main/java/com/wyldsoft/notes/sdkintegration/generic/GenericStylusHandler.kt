@@ -24,14 +24,14 @@ class GenericStylusHandler(
     surfaceView: SurfaceView,
     viewModel: EditorViewModel,
     bitmapManager: BitmapManager,
-    shapesManager: ShapesManager,
+    getShapesManager: () -> ShapesManager,
     displaySettingsRepository: DisplaySettingsRepository,
     onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
     onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
     onShapeRemoved: (shapeId: String) -> Unit,
     onForceScreenRefresh: () -> Unit
 ) : AbstractStylusHandler(
-    surfaceView, viewModel, bitmapManager, shapesManager, displaySettingsRepository,
+    surfaceView, viewModel, bitmapManager, getShapesManager, displaySettingsRepository,
     onDrawingStateChanged, onShapeCompleted, onShapeRemoved,
     onForceScreenRefresh
 ) {

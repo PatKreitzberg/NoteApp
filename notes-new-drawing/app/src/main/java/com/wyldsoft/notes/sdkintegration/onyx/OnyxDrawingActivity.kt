@@ -19,7 +19,6 @@ import com.wyldsoft.notes.rendering.RenderingUtils
 import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
-import com.wyldsoft.notes.shapemanagement.ShapesManager
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
@@ -46,7 +45,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             editorViewModel,
             getRxManager(),
             bitmapManager,
-            shapesManager,
+            getShapesManager = { shapesManager },
             displaySettingsRepository,
             onDrawingStateChanged = { isDrawing ->
                 if (isDrawing) {
@@ -125,10 +124,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun initializeStylusHandler() {
         stylusHandler = createOnyxStylusHandler()
         stylusHandler.updatePenProfile(currentPenProfile)
-    }
-
-    override fun initializeShapeMaanager() {
-        shapesManager = ShapesManager(editorViewModel)
     }
 
     override fun createDeviceReceiver(): BaseDeviceReceiver {

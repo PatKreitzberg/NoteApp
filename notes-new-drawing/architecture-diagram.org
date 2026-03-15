@@ -705,6 +705,18 @@
   ActionInterface / ActionManager / DrawAction
   └── Action history and undo support (works for geometric shapes too)
 
+  session/NoteSession
+  ├── noteId: String
+  ├── shapesManager: ShapesManager       ← per-note shape state
+  ├── actionManager: ActionManager       ← per-note undo/redo stack
+  └── companion object create(EditorViewModel) → NoteSession
+
+  Note switching flow:
+  1. NoteNavigationHandler.switchToNote() → setCurrentNote + resetPagination
+  2. BaseDrawingActivity.onNoteSwitched() → NoteSession.create() + activateSession()
+  3. EditorViewModel.activateSession() → updates shapesManager, actionManager, bitmapManager
+  4. Stylus handler uses lambda accessor { shapesManager } — NOT recreated on switch
+
   geometry/GeometricShapeType (enum)
   ├── LINE | TRIANGLE | SQUARE | CIRCLE
   └── toDomainShapeType() → ShapeType

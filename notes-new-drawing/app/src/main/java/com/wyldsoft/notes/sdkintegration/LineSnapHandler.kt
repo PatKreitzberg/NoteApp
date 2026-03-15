@@ -21,12 +21,13 @@ import com.wyldsoft.notes.shapemanagement.ShapesManager
 class LineSnapHandler(
     private val viewModel: EditorViewModel,
     private val bitmapManager: BitmapManager,
-    private val shapesManager: ShapesManager,
+    private val getShapesManager: () -> ShapesManager,
     private val onSnapActivated: () -> Unit,
     private val onFinalized: () -> Unit,
     private val onForceScreenRefresh: () -> Unit,
     private val getCurrentPenProfile: () -> PenProfile
 ) {
+    private val shapesManager: ShapesManager get() = getShapesManager()
     companion object {
         private const val HOLD_DURATION_MS = 500L
         private const val MOVE_THRESHOLD_PX = 15f
