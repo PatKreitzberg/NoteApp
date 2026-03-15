@@ -37,5 +37,6 @@ data class ShapeEntity(
     val timestamp: Long = System.currentTimeMillis(),
     val text: String? = null,
     val fontSize: Float = 32f,
-    val fontFamily: String = "sans-serif"
+    val fontFamily: String = "sans-serif",
+    val layer: Int = 1
 )

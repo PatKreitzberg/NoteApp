@@ -27,6 +27,7 @@ public class BaseShape {
     protected float strokeWidth;
     protected String id;
     protected boolean transparent;
+    protected int layer = 1;
 
     public TouchPointList touchPointList;
 
@@ -105,6 +106,14 @@ public class BaseShape {
 
     public float getStrokeWidth() {
         return strokeWidth;
+    }
+
+    public int getLayer() {
+        return layer;
+    }
+
+    public void setLayer(int layer) {
+        this.layer = layer;
     }
 
     public void updateShapeRect() {

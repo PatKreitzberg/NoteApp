@@ -69,6 +69,7 @@ class ShapesManager private constructor(note: Note) {
                 .setStrokeColor(domainShape.strokeColor)
                 .setStrokeWidth(domainShape.strokeWidth)
                 .setShapeType(ShapeFactory.SHAPE_TEXT)
+            textShape.layer = domainShape.layer
             textShape.updateShapeRect()
             return textShape
         }
@@ -84,6 +85,9 @@ class ShapesManager private constructor(note: Note) {
             .setShapeType(shapeType)
 
         applyCharcoalTexture(shape, domainShape.penType)
+
+        // Set layer from domain shape
+        shape.layer = domainShape.layer
 
         // Update bounding rect for hit testing
         shape.updateShapeRect()

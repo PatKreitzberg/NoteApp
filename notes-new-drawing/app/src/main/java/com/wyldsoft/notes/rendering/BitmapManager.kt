@@ -81,6 +81,9 @@ class BitmapManager(
     }
 
     fun recreateBitmapFromShapes(setOfShapes: MutableList<BaseShape>?, dirtyRect: RectF? = null) {
+        // Filter shapes to only visible layers
+        val filteredShapes = setOfShapes?.filter { viewModel.isLayerVisible(it.layer) }?.toMutableList()
+
         val bitmap = getBitmap() ?: return
         val canvas = getBitmapCanvas() ?: return
         val viewportManager = viewModel.viewportManager
@@ -104,7 +107,7 @@ class BitmapManager(
             val renderContext = rendererHelper.getRenderContext() ?: run { canvas.restore(); return }
             renderContext.bitmap = bitmap
             renderContext.viewportScale = viewportManager.viewportState.value.scale
-            setOfShapes?.forEach { shape ->
+            filteredShapes?.forEach { shape ->
                 shape.updateShapeRect()
                 val noteBounds = shape.boundingRect ?: return@forEach
                 val sTl = viewportManager.noteToSurfaceCoordinates(noteBounds.left, noteBounds.top)
@@ -130,7 +133,7 @@ class BitmapManager(
         val renderContext = rendererHelper.getRenderContext() ?: return
         renderContext.bitmap = bitmap
         renderContext.viewportScale = viewportManager.viewportState.value.scale
-        setOfShapes?.forEach { shape ->
+        filteredShapes?.forEach { shape ->
             if (!isShapeVisible(shape, viewportManager, screenWidth, screenHeight)) return@forEach
             canvas.withSave {
                 val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
@@ -183,6 +186,7 @@ class BitmapManager(
     }
 
     internal fun partialRefresh(dirtyRectNote: RectF, shapes: List<BaseShape>, selectionManager: SelectionManager?) {
+        val filteredShapesForRefresh = shapes.filter { viewModel.isLayerVisible(it.layer) }
         val bitmap = getBitmap() ?: return
         val canvas = getBitmapCanvas() ?: return
         val viewportManager = viewModel.viewportManager
@@ -209,7 +213,7 @@ class BitmapManager(
         canvas.drawColor(Color.WHITE)
         drawBackground(canvas)
 
-        for (shape in shapes) {
+        for (shape in filteredShapesForRefresh) {
             shape.updateShapeRect()
             val noteBounds = shape.boundingRect ?: continue
             val sTl = viewportManager.noteToSurfaceCoordinates(noteBounds.left, noteBounds.top)

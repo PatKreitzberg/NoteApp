@@ -41,6 +41,7 @@ interface NoteRepository {
     suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>)
     suspend fun createPdfNote(notebookId: String, title: String, pdfPath: String, pdfPageCount: Int, pdfPageAspectRatio: Float): NoteEntity
     suspend fun addPdfPage(noteId: String)
+    suspend fun updateShapesLayer(shapeIds: List<String>, newLayer: Int)
     suspend fun moveNoteToTrash(noteId: String)
     suspend fun restoreNote(noteId: String)
     suspend fun permanentlyDeleteNote(noteId: String)
@@ -215,7 +216,8 @@ class NoteRepositoryImpl(
             timestamp = timestamp,
             text = text,
             fontSize = fontSize,
-            fontFamily = fontFamily
+            fontFamily = fontFamily,
+            layer = layer
         )
     }
 
@@ -304,6 +306,10 @@ class NoteRepositoryImpl(
         }
     }
 
+    override suspend fun updateShapesLayer(shapeIds: List<String>, newLayer: Int) {
+        shapeDao.updateShapesLayer(shapeIds, newLayer)
+    }
+
     override suspend fun moveNoteToTrash(noteId: String) {
         val note = noteDao.getNote(noteId)
         val originalParentId = note.folderId ?: note.parentNotebookId
@@ -370,7 +376,8 @@ class NoteRepositoryImpl(
             timestamp = timestamp,
             text = text,
             fontSize = fontSize,
-            fontFamily = fontFamily
+            fontFamily = fontFamily,
+            layer = layer
         )
     }
 }

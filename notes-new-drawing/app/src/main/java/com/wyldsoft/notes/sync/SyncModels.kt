@@ -42,7 +42,8 @@ data class ShapeJson(
     val penType: String,
     val pressure: List<Float>,
     val pointTimestamps: List<Long>,
-    val timestamp: Long
+    val timestamp: Long,
+    val layer: Int = 1
 )
 
 @Serializable
@@ -123,7 +124,8 @@ fun ShapeEntity.toShapeJson() = ShapeJson(
     penType = penType.name,
     pressure = pressure,
     pointTimestamps = pointTimestamps,
-    timestamp = timestamp
+    timestamp = timestamp,
+    layer = layer
 )
 
 fun ShapeJson.toEntity(noteId: String): ShapeEntity {
@@ -139,7 +141,8 @@ fun ShapeJson.toEntity(noteId: String): ShapeEntity {
         penType = pen,
         pressure = pressure,
         pointTimestamps = pointTimestamps,
-        timestamp = timestamp
+        timestamp = timestamp,
+        layer = layer
     )
 }
 

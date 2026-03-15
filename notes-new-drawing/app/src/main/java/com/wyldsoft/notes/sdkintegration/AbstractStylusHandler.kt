@@ -147,7 +147,7 @@ abstract class AbstractStylusHandler(
     }
 
     protected fun finalizeErase(noteErasePointList: TouchPointList) {
-        lastEraseDidPartialRefresh = eraseManager.handleErasing(noteErasePointList, shapesManager)
+        lastEraseDidPartialRefresh = eraseManager.handleErasing(noteErasePointList, shapesManager, viewModel.activeLayer.value)
     }
 
     protected fun endErasing() {

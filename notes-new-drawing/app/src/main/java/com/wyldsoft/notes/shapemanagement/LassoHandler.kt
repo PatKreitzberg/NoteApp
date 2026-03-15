@@ -36,7 +36,12 @@ class LassoHandler {
      * Finalize lasso and return (selectedIds, boundingBox).
      * BoundingBox is null if nothing was selected.
      */
-    fun finish(allShapes: List<BaseShape>): Pair<Set<String>, RectF?> {
+    /**
+     * Finalize lasso and return (selectedIds, boundingBox).
+     * BoundingBox is null if nothing was selected.
+     * @param activeLayer if > 0, only select shapes on that layer
+     */
+    fun finish(allShapes: List<BaseShape>, activeLayer: Int = -1): Pair<Set<String>, RectF?> {
         isInProgress = false
         if (lassoPoints.size < 3) {
             Log.d(TAG, "Lasso too small (${lassoPoints.size} points)")
@@ -44,8 +49,14 @@ class LassoHandler {
             return Pair(emptySet(), null)
         }
 
+        val candidateShapes = if (activeLayer > 0) {
+            allShapes.filter { it.layer == activeLayer }
+        } else {
+            allShapes
+        }
+
         val selected = mutableSetOf<String>()
-        for (shape in allShapes) {
+        for (shape in candidateShapes) {
             if (isShapeInside(shape)) selected.add(shape.id)
         }
 

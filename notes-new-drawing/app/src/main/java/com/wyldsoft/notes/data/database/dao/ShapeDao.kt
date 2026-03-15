@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ShapeDao {
     
-    @Query("SELECT * FROM shapes WHERE noteId = :noteId ORDER BY timestamp")
+    @Query("SELECT * FROM shapes WHERE noteId = :noteId ORDER BY layer, timestamp")
     fun getShapesForNote(noteId: String): Flow<List<ShapeEntity>>
-    
-    @Query("SELECT * FROM shapes WHERE noteId = :noteId ORDER BY timestamp")
+
+    @Query("SELECT * FROM shapes WHERE noteId = :noteId ORDER BY layer, timestamp")
     suspend fun getShapesForNoteOnce(noteId: String): List<ShapeEntity>
     
     @Insert
@@ -30,4 +30,7 @@ interface ShapeDao {
     
     @Update
     suspend fun update(shape: ShapeEntity)
+
+    @Query("UPDATE shapes SET layer = :newLayer WHERE id IN (:shapeIds)")
+    suspend fun updateShapesLayer(shapeIds: List<String>, newLayer: Int)
 }

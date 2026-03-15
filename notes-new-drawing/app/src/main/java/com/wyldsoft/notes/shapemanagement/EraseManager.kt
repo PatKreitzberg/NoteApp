@@ -32,11 +32,18 @@ class EraseManager(
      * Returns true if a partial screen refresh was performed (Onyx only), false otherwise.
      * Callers should skip a full forceScreenRefresh() when this returns true.
      */
-    internal fun handleErasing(noteErasePointList: TouchPointList, shapesManager: ShapesManager): Boolean {
+    internal fun handleErasing(noteErasePointList: TouchPointList, shapesManager: ShapesManager, activeLayer: Int = -1): Boolean {
+        // Filter to active layer if specified (-1 means erase all layers)
+        val candidateShapes = if (activeLayer > 0) {
+            shapesManager.shapes().filter { it.layer == activeLayer }
+        } else {
+            shapesManager.shapes()
+        }
+
         // Find shapes that intersect with the erase touch points
         val intersectingShapes = findIntersectingShapes(
             noteErasePointList,
-            shapesManager.shapes()
+            candidateShapes
         )
 
         if (intersectingShapes.isNotEmpty()) {

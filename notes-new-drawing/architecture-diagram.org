@@ -18,7 +18,8 @@
   ├── timestamp: Long
   ├── text: String?
   ├── fontSize: Float          ← text font size (default 32f)
-  └── fontFamily: String       ← "sans-serif", "serif", or "monospace"
+  ├── fontFamily: String       ← "sans-serif", "serif", or "monospace"
+  └── layer: Int               ← layer number (default 1)
 
   ShapeType (enum)
   ├── STROKE
@@ -38,6 +39,7 @@
   ├── hitTestPoints()
   ├── updateShapeRect()
   ├── getBoundingRect()
+  ├── getLayer() / setLayer()   ← layer number for layer system
   │
   ├── NormalPencilShape
   ├── BrushScribbleShape
@@ -331,7 +333,8 @@
   │   ├── Double tap
   │   ├── Pan / Scroll        → ViewportManager.updateOffset()
   │   ├── Pinch Zoom          → ViewportManager.updateScale()
-  │   └── Flick
+  │   ├── Flick (1-finger)
+  │   └── Two-finger flick left/right → NEXT_NOTE / PREVIOUS_NOTE
   │
   ├── setViewportManager()
   ├── cleanup()
@@ -414,7 +417,10 @@
   │   ├── screenWidth: Int
   │   ├── pageHeight: Int
   │   ├── excludeRects: List<Rect>
-  │   └── refreshUi: SharedFlow
+  │   ├── refreshUi: SharedFlow
+  │   ├── activeLayer: Int           ← current drawing layer
+  │   ├── hiddenLayers: Set<Int>     ← hidden layer numbers
+  │   └── soloLayer: Int?            ← solo-visible layer
   │
   ├── EditorUiState (data class)
   │   ├── isStrokeOptionsOpen: Boolean
@@ -470,6 +476,7 @@
   │   ├── ToolbarTextButtons → text tool toggle + font/size/color dropdowns
   │   ├── ToolbarEditButtons → EDIT tab: Selection, Copy, Paste, Convert-to-Text
   │   │   └── Convert-to-Text: enabled when hasSelection; spinner while isConvertingToText
+  │   ├── LayerDropdown        ← layer selector with visibility/solo/move controls
   │   └── StrokeOptionsPanel
   │       ├── PenTypeButton   → delegates to PenButton
   │       ├── adjusts PenProfile properties
@@ -535,7 +542,7 @@
   ScrotesApp (Application)
   └── initializes NotesDatabase + all repositories
 
-  NotesDatabase (Room, version 8)
+  NotesDatabase (Room, version 11)
   ├── NoteDao      → NoteEntity (notes table)
   ├── ShapeDao     → ShapeEntity (shapes table)
   ├── NotebookDao  → NotebookEntity (notebooks table)
@@ -716,7 +723,8 @@
   └── Arguments for erase operations
 
   ActionInterface / ActionManager / DrawAction
-  └── Action history and undo support (works for geometric shapes too)
+  ├── Action history and undo support (works for geometric shapes too)
+  └── MoveLayerAction  ← moves strokes between layers (undoable)
 
   session/NoteSession
   ├── noteId: String
@@ -827,4 +835,32 @@
      → creates BaseShape from outline points
      → adds to ShapesManager + persists via EditorViewModel.addGeometricShape()
      → onForceScreenRefresh() redraws from shapes
+
+  Layer System (added 2026-03-15):
+  Data model: Shape.layer, ShapeEntity.layer, BaseShape.layer (all default 1)
+  DB: MIGRATION_10_11 adds layer column, ORDER BY layer, timestamp
+
+  EditorViewModel layer state:
+  ├── activeLayer: StateFlow<Int>      ← current drawing layer (default 1)
+  ├── hiddenLayers: StateFlow<Set<Int>> ← hidden layer numbers
+  ├── soloLayer: StateFlow<Int?>       ← solo: only this layer visible
+  ├── setActiveLayer(), toggleLayerVisibility(), setSoloLayer()
+  ├── addLayer()                       ← creates next layer number
+  ├── moveLayerStrokes(from, to)       ← MoveLayerAction (undoable)
+  ├── isLayerVisible(layer)            ← visibility check (solo > hidden)
+  └── getVisibleShapes()               ← filtered shapes for rendering
+
+  Integration points:
+  ├── DrawingOperationsHandler.addShape() → sets layer = activeLayer
+  ├── EraseManager.handleErasing()        → filters by activeLayer
+  ├── LassoHandler.finish()               → filters by activeLayer
+  ├── BitmapManager.recreateBitmapFromShapes() → filters by visible layers
+  └── BitmapManager.partialRefresh()           → filters by visible layers
+
+  UI: LayerDropdown (Toolbar, all tabs)
+  ├── Shows layers icon + active layer number
+  ├── Per-layer: visibility eye toggle, solo filter toggle
+  ├── Click layer to set active
+  ├── "Move strokes..." → MoveLayerDialog
+  └── "+ Add layer" to create new layer
 #+end_example

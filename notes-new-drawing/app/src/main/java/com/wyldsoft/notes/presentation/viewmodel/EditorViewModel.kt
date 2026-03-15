@@ -19,6 +19,7 @@ import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.wyldsoft.notes.shapemanagement.shapes.BaseShape
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import com.wyldsoft.notes.viewport.ViewportManager
 import kotlinx.coroutines.FlowPreview
@@ -91,6 +92,16 @@ class EditorViewModel(
 
     private val _selectionContainsTextShape = MutableStateFlow(false)
     val selectionContainsTextShape: StateFlow<Boolean> = _selectionContainsTextShape.asStateFlow()
+
+    // Layer state
+    private val _activeLayer = MutableStateFlow(1)
+    val activeLayer: StateFlow<Int> = _activeLayer.asStateFlow()
+
+    private val _hiddenLayers = MutableStateFlow<Set<Int>>(emptySet())
+    val hiddenLayers: StateFlow<Set<Int>> = _hiddenLayers.asStateFlow()
+
+    private val _soloLayer = MutableStateFlow<Int?>(null)
+    val soloLayer: StateFlow<Int?> = _soloLayer.asStateFlow()
 
     // Dropdown open/close tracking
     private val _openDropdownCount = MutableStateFlow(0)
@@ -185,7 +196,8 @@ class EditorViewModel(
         getShapesManager = { shapesManager },
         getBitmapManager = { bitmapManager },
         onUpdateContentBounds = { updateContentBounds() },
-        htrRunManager = htrRunManager
+        htrRunManager = htrRunManager,
+        getActiveLayer = { _activeLayer.value }
     )
 
     val isDrawing: StateFlow<Boolean> = drawingOperationsHandler.isDrawing
@@ -451,6 +463,67 @@ class EditorViewModel(
     fun updatePaperTemplate(template: PaperTemplate) = paginationHandler.updatePaperTemplate(template)
     fun updateCurrentPage(scrollY: Float) = paginationHandler.updateCurrentPage(scrollY)
     fun getPageSeparatorRects(): List<Rect> = paginationHandler.getPageSeparatorRects()
+
+    // --- Layer management ---
+
+    fun setActiveLayer(layer: Int) { _activeLayer.value = layer }
+
+    fun toggleLayerVisibility(layer: Int) {
+        val current = _hiddenLayers.value.toMutableSet()
+        if (layer in current) current.remove(layer) else current.add(layer)
+        _hiddenLayers.value = current
+        refreshAfterLayerChange()
+    }
+
+    fun setSoloLayer(layer: Int?) {
+        _soloLayer.value = if (_soloLayer.value == layer) null else layer
+        refreshAfterLayerChange()
+    }
+
+    fun addLayer(): Int {
+        val maxLayer = getExistingLayers().maxOrNull() ?: 1
+        val newLayer = maxLayer + 1
+        _activeLayer.value = newLayer
+        return newLayer
+    }
+
+    fun getExistingLayers(): List<Int> {
+        val layers = shapesManager?.shapes()?.map { it.layer }?.distinct()?.sorted() ?: listOf(1)
+        return if (layers.isEmpty()) listOf(1) else layers
+    }
+
+    fun isLayerVisible(layer: Int): Boolean {
+        val solo = _soloLayer.value
+        if (solo != null) return layer == solo
+        return layer !in _hiddenLayers.value
+    }
+
+    fun getVisibleShapes(): MutableList<BaseShape>? {
+        val shapes = shapesManager?.shapes() ?: return null
+        return shapes.filter { isLayerVisible(it.layer) }.toMutableList()
+    }
+
+    fun moveLayerStrokes(fromLayer: Int, toLayer: Int) {
+        viewModelScope.launch {
+            val sm = shapesManager ?: return@launch
+            val bm = bitmapManager ?: return@launch
+            val shapeIds = sm.shapes().filter { it.layer == fromLayer }.map { it.id }
+            if (shapeIds.isEmpty()) return@launch
+            val action = com.wyldsoft.notes.actions.MoveLayerAction(
+                shapeIds, fromLayer, toLayer, noteRepository, sm, bm
+            )
+            action.redo()
+            actionManager.recordAction(action)
+            onScreenRefreshNeeded?.invoke()
+        }
+    }
+
+    private fun refreshAfterLayerChange() {
+        val bm = bitmapManager ?: return
+        val visibleShapes = getVisibleShapes() ?: return
+        bm.recreateBitmapFromShapes(visibleShapes)
+        onScreenRefreshNeeded?.invoke()
+    }
 
     // --- Pen / UI state ---
 

@@ -143,7 +143,7 @@ class SelectionInputHandler(
                         onForceScreenRefresh()
                     } else {
                         selectionManager.addLassoPoints(notePointList)
-                        selectionManager.finishLasso(shapesManager.shapes())
+                        selectionManager.finishLasso(shapesManager.shapes(), viewModel.activeLayer.value)
                         viewModel.notifySelectionChanged()
                         if (selectionManager.hasSelection) onLassoSelectionCompleted()
                         onForceScreenRefresh()

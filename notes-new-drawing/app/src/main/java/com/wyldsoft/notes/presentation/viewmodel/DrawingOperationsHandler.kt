@@ -32,7 +32,8 @@ class DrawingOperationsHandler(
     private val getShapesManager: () -> ShapesManager?,
     private val getBitmapManager: () -> BitmapManager?,
     private val onUpdateContentBounds: () -> Unit,
-    private val htrRunManager: HTRRunManager? = null
+    private val htrRunManager: HTRRunManager? = null,
+    private val getActiveLayer: () -> Int = { 1 }
 ) {
     private val _isDrawing = MutableStateFlow(false)
     val isDrawing: StateFlow<Boolean> = _isDrawing.asStateFlow()
@@ -66,7 +67,8 @@ class DrawingOperationsHandler(
                 strokeColor = profile.getColorAsInt(),
                 penType = profile.penType,
                 pressure = pressures,
-                pointTimestamps = timestamps
+                pointTimestamps = timestamps,
+                layer = getActiveLayer()
             )
             noteRepository.addShape(getCurrentNote().id, shape)
 

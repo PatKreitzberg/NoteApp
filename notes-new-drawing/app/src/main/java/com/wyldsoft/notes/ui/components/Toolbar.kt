@@ -203,6 +203,8 @@ fun Toolbar(
                             ToolbarTextButtons(viewModel = viewModel)
                         }
                     }
+                    Spacer(modifier = Modifier.weight(1f))
+                    LayerDropdown(viewModel = viewModel)
                 }
             }
 

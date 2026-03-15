@@ -61,8 +61,8 @@ class SelectionManager {
     fun addLassoPoints(touchPointList: TouchPointList): List<PointF> =
         lassoHandler.addPoints(touchPointList)
 
-    fun finishLasso(allShapes: List<BaseShape>): Set<String> {
-        val (ids, box) = lassoHandler.finish(allShapes)
+    fun finishLasso(allShapes: List<BaseShape>, activeLayer: Int = -1): Set<String> {
+        val (ids, box) = lassoHandler.finish(allShapes, activeLayer)
         selectedShapeIds = ids
         selectionBoundingBox = box
         return ids
