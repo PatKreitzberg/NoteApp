@@ -127,17 +127,19 @@ fun EditorView(
                 )
             }
 
-            Box(modifier = Modifier.weight(1f)) {
-                DrawingCanvas(
-                    viewModel = viewModel,
-                    onSurfaceViewCreated = onSurfaceViewCreated
-                )
-                textInputPosition?.let { position ->
-                    LiveTextInput(
-                        notePosition = position,
+            Row(modifier = Modifier.weight(1f)) {
+                Box(modifier = Modifier.weight(1f)) {
+                    DrawingCanvas(
                         viewModel = viewModel,
-                        onCommit = { viewModel.commitLiveTextInput() }
+                        onSurfaceViewCreated = onSurfaceViewCreated
                     )
+                    textInputPosition?.let { position ->
+                        LiveTextInput(
+                            notePosition = position,
+                            viewModel = viewModel,
+                            onCommit = { viewModel.commitLiveTextInput() }
+                        )
+                    }
                 }
                 if (showScrollBar) {
                     VerticalScrollBar(
@@ -145,7 +147,6 @@ fun EditorView(
                         contentMaxY = contentMaxY,
                         scale = viewportState.scale,
                         modifier = Modifier
-                            .align(Alignment.CenterEnd)
                             .width(16.dp)
                             .fillMaxHeight()
                     )
