@@ -9,10 +9,12 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 
 /**
@@ -31,6 +33,7 @@ fun ToolbarActionButtons(
 ) {
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
+    val isPdfNote by viewModel.isPdfNote.collectAsState()
 
     IconButton(onClick = { viewModel.undo() }, enabled = canUndo) {
         Icon(
@@ -46,6 +49,12 @@ fun ToolbarActionButtons(
             contentDescription = "Redo",
             tint = if (canRedo) Color.Black else Color.LightGray
         )
+    }
+
+    if (isPdfNote) {
+        IconButton(onClick = { viewModel.addPdfPage() }) {
+            Text("+Pg", fontSize = 11.sp, color = Color.Black)
+        }
     }
 
     IconButton(onClick = onSettingsClick) {

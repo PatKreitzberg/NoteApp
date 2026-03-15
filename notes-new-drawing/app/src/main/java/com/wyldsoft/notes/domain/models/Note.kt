@@ -13,7 +13,10 @@ data class Note(
     val viewportScrollX: Float = 0f,
     val viewportScrollY: Float = 0f,
     val isPaginationEnabled: Boolean = true,
-    val paperSize: String = "LETTER"
+    val paperSize: String = "LETTER",
+    val pdfPath: String? = null,
+    val pdfPageCount: Int = 0,
+    val pdfPageAspectRatio: Float = 0f
 )
 
 enum class PaperTemplate(val displayName: String) {

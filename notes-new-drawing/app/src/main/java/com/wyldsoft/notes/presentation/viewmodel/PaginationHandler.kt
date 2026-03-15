@@ -47,12 +47,21 @@ class PaginationHandler(
     private val _pageHeight = MutableStateFlow(0f)
     val pageHeight: StateFlow<Float> = _pageHeight.asStateFlow()
 
+    // Non-zero when the note has a PDF background; overrides paperSize.aspectRatio.
+    private var pdfPageAspectRatio: Float = initialNote.pdfPageAspectRatio
+
+    init {
+        viewportManager.pdfPageCount = initialNote.pdfPageCount
+    }
+
     /** Call when switching to a new note to reset pagination state. */
     fun resetForNote(note: Note) {
         _isPaginationEnabled.value = note.isPaginationEnabled
         viewportManager.isPaginationEnabled = note.isPaginationEnabled
         _paperSize.value = PaperSize.entries.find { it.name == note.paperSize } ?: PaperSize.LETTER
         _paperTemplate.value = PaperTemplate.fromString(note.paperTemplate.name)
+        pdfPageAspectRatio = note.pdfPageAspectRatio
+        viewportManager.pdfPageCount = note.pdfPageCount
         calculatePageDimensions()
     }
 
@@ -64,7 +73,9 @@ class PaginationHandler(
 
     fun calculatePageDimensions() {
         if (_screenWidth.value > 0) {
-            _pageHeight.value = _screenWidth.value * _paperSize.value.aspectRatio
+            val aspectRatio = if (pdfPageAspectRatio > 0f) pdfPageAspectRatio
+                              else _paperSize.value.aspectRatio
+            _pageHeight.value = _screenWidth.value * aspectRatio
             viewportManager.pageHeight = _pageHeight.value
         }
     }

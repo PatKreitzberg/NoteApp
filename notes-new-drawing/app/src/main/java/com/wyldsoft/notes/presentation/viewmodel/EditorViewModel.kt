@@ -123,6 +123,10 @@ class EditorViewModel(
     val screenWidth: StateFlow<Int> = paginationHandler.screenWidth
     val pageHeight: StateFlow<Float> = paginationHandler.pageHeight
 
+    val isPdfNote: StateFlow<Boolean> = currentNote
+        .map { it.pdfPath != null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, currentNote.value.pdfPath != null)
+
     val navigationHandler = NoteNavigationHandler(
         notebookId = notebookId,
         noteRepository = noteRepository,
@@ -130,7 +134,15 @@ class EditorViewModel(
         scope = viewModelScope,
         viewportManager = viewportManager,
         getCurrentNote = { currentNote.value },
-        onSwitchNote = { paginationHandler.resetForNote(currentNote.value); actionManager.clear() }
+        onSwitchNote = {
+            paginationHandler.resetForNote(currentNote.value)
+            actionManager.clear()
+            bitmapManager?.onNoteChanged(
+                currentNote.value.pdfPath,
+                paginationHandler.screenWidth.value,
+                currentNote.value.pdfPageAspectRatio
+            )
+        }
     )
 
     val canGoBack: StateFlow<Boolean> = navigationHandler.canGoBack
@@ -238,6 +250,11 @@ class EditorViewModel(
         this.shapesManager = shapesManager
         this.bitmapManager = bitmapManager
         this.onScreenRefreshNeeded = onScreenRefreshNeeded
+        bitmapManager.onNoteChanged(
+            currentNote.value.pdfPath,
+            paginationHandler.screenWidth.value,
+            currentNote.value.pdfPageAspectRatio
+        )
         updateContentBounds()
     }
 
@@ -249,6 +266,13 @@ class EditorViewModel(
         _hasSelection.value = selectionManager.hasSelection
         _selectionContainsTextShape.value = selectionManager.hasSelection &&
             shapesManager?.shapes()?.any { it.id in selectionManager.selectedShapeIds && it is TextShape } == true
+    }
+
+    fun addPdfPage() {
+        viewModelScope.launch {
+            noteRepository.addPdfPage(currentNote.value.id)
+            viewportManager.pdfPageCount = currentNote.value.pdfPageCount
+        }
     }
 
     fun undo() {

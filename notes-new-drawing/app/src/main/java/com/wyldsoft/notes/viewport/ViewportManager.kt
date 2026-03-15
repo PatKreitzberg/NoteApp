@@ -48,6 +48,9 @@ class ViewportManager {
     var pageWidth: Float = 0f
     var pageHeight: Float = 0f
 
+    // When > 0, the scroll is bounded to exactly this many pages (PDF-backed notes).
+    var pdfPageCount: Int = 0
+
     // Content bounds: the maximum Y coordinate across all shapes (updated externally)
     var contentMaxY: Float = 0f
 
@@ -83,19 +86,18 @@ class ViewportManager {
     }
 
     private fun computeMaxScrollY(scale: Float): Float {
-        if (contentMaxY <= 0f) return Float.MAX_VALUE
-
         if (isPaginationEnabled && pageHeight > 0f) {
-            // Find which page the lowest content is on
+            if (pdfPageCount > 0) {
+                // PDF note: scroll bounded to exactly pdfPageCount pages
+                return pdfPageCount * pageHeight
+            }
+            if (contentMaxY <= 0f) return Float.MAX_VALUE
+            // Regular paginated note: allow one empty page beyond content
             val contentPage = (contentMaxY / pageHeight).toInt()
-            // Allow scrolling to the top of the next page (first empty page)
-            val firstEmptyPageTop = (contentPage + 1) * pageHeight
-            return firstEmptyPageTop
-        } else {
-            // Non-paginated: allow scrolling until screen is completely empty
-            // (all content above viewport top)
-            return contentMaxY
+            return (contentPage + 1) * pageHeight
         }
+        if (contentMaxY <= 0f) return Float.MAX_VALUE
+        return contentMaxY
     }
 
     /**

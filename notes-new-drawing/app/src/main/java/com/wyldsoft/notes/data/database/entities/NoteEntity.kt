@@ -32,5 +32,8 @@ data class NoteEntity(
     @ColumnInfo(name = "viewportOffsetY") val viewportScrollY: Float = 0f,
     val isPaginationEnabled: Boolean = true,
     val paperSize: String = "LETTER",
-    val paperTemplate: String = "BLANK"
+    val paperTemplate: String = "BLANK",
+    val pdfPath: String? = null,
+    val pdfPageCount: Int = 0,
+    val pdfPageAspectRatio: Float = 0f
 )

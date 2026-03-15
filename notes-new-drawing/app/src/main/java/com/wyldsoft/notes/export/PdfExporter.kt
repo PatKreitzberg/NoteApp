@@ -1,11 +1,17 @@
 package com.wyldsoft.notes.export
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import com.wyldsoft.notes.domain.models.Note
 import com.wyldsoft.notes.domain.models.PaperSize
 import com.wyldsoft.notes.domain.models.PaperTemplate
@@ -60,7 +66,9 @@ class PdfExporter(private val context: Context) {
     fun exportNote(note: Note, noteWidthPx: Int): File {
         val doc = PdfDocument()
         try {
-            if (note.isPaginationEnabled) {
+            if (note.pdfPath != null) {
+                renderPdfBackedNote(doc, note, noteWidthPx, startPage = 1)
+            } else if (note.isPaginationEnabled) {
                 renderPaginatedNote(doc, note, noteWidthPx, startPage = 1)
             } else {
                 renderUnpaginatedNote(doc, note, noteWidthPx, pageNumber = 1)
@@ -76,11 +84,10 @@ class PdfExporter(private val context: Context) {
         try {
             var nextPage = 1
             for (note in notes) {
-                nextPage = if (note.isPaginationEnabled) {
-                    renderPaginatedNote(doc, note, noteWidthPx, startPage = nextPage)
-                } else {
-                    renderUnpaginatedNote(doc, note, noteWidthPx, pageNumber = nextPage)
-                    nextPage + 1
+                nextPage = when {
+                    note.pdfPath != null -> renderPdfBackedNote(doc, note, noteWidthPx, startPage = nextPage)
+                    note.isPaginationEnabled -> renderPaginatedNote(doc, note, noteWidthPx, startPage = nextPage)
+                    else -> { renderUnpaginatedNote(doc, note, noteWidthPx, pageNumber = nextPage); nextPage + 1 }
                 }
             }
             // If no notes, add a blank page
@@ -97,6 +104,78 @@ class PdfExporter(private val context: Context) {
         } finally {
             doc.close()
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // PDF-backed note rendering
+    // -------------------------------------------------------------------------
+
+    /**
+     * Renders a PDF-backed note: each page uses the original PDF page as background,
+     * then annotations are drawn on top. User-added blank pages (beyond pdfPageCount)
+     * are rendered as white pages with annotations.
+     */
+    private fun renderPdfBackedNote(doc: PdfDocument, note: Note, noteWidthPx: Int, startPage: Int): Int {
+        val pdfFile = File(note.pdfPath ?: return startPage)
+        if (!pdfFile.exists()) return startPage
+
+        val notePageHeightPx = noteWidthPx * note.pdfPageAspectRatio
+        val totalPageCount = note.pdfPageCount
+        if (totalPageCount == 0) return startPage
+
+        val pfd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+        val srcRenderer = PdfRenderer(pfd)
+        val srcPageCount = srcRenderer.pageCount
+
+        var pageNumber = startPage
+        for (pageIdx in 0 until totalPageCount) {
+            val hasSrcPage = pageIdx < srcPageCount
+
+            // Determine output PDF page size from the source page (or use note aspect ratio for blanks)
+            val (pdfW, pdfH) = if (hasSrcPage) {
+                srcRenderer.openPage(pageIdx).use { p ->
+                    Pair(p.width.toFloat(), p.height.toFloat())
+                }
+            } else {
+                Pair(noteWidthPx.toFloat(), notePageHeightPx)
+            }
+
+            val pageInfo = PdfDocument.PageInfo.Builder(pdfW.toInt(), pdfH.toInt(), pageNumber).create()
+            val page = doc.startPage(pageInfo)
+            val canvas = page.canvas
+
+            canvas.drawColor(Color.WHITE)
+
+            // Draw original PDF page content
+            if (hasSrcPage) {
+                val pageBitmap = Bitmap.createBitmap(pdfW.toInt(), pdfH.toInt(), Bitmap.Config.ARGB_8888)
+                pageBitmap.eraseColor(Color.WHITE)
+                srcRenderer.openPage(pageIdx).use { srcPage ->
+                    srcPage.render(pageBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                }
+                canvas.drawBitmap(pageBitmap, 0f, 0f, null)
+                pageBitmap.recycle()
+            }
+
+            // Scale annotation coordinates: note coords → PDF page coords
+            val scaleX = pdfW / noteWidthPx
+            val scaleY = pdfH / notePageHeightPx
+            val pageOffsetY = pageIdx * notePageHeightPx
+
+            canvas.save()
+            canvas.clipRect(0f, 0f, pdfW, pdfH)
+            for (shape in note.shapes) {
+                renderShapeToPdfPage(canvas, shape, scaleX, scaleY, pageOffsetY)
+            }
+            canvas.restore()
+
+            doc.finishPage(page)
+            pageNumber++
+        }
+
+        srcRenderer.close()
+        pfd.close()
+        return pageNumber
     }
 
     // -------------------------------------------------------------------------

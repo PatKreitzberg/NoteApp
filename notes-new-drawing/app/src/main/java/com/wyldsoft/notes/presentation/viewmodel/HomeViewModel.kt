@@ -1,8 +1,11 @@
 package com.wyldsoft.notes.presentation.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wyldsoft.notes.pdf.PdfImporter
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
@@ -85,6 +88,25 @@ class HomeViewModel(
             val currentId = _currentFolderId.value ?: return@launch
             folderRepository.createFolder(name, currentId)
             _showCreateFolderDialog.value = false
+        }
+    }
+
+    fun importPdf(context: Context, uri: Uri) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val metadata = PdfImporter.importPdf(context, uri) ?: return@launch
+            val name = PdfImporter.nameFromUri(context, uri)
+            val currentId = _currentFolderId.value ?: return@launch
+            val notebook = notebookRepository.createNotebook(name, currentId)
+            // Replace the auto-created blank note with the PDF note
+            val existingNotes = notebookRepository.getNotesInNotebookOnce(notebook.id)
+            existingNotes.forEach { noteRepository.permanentlyDeleteNote(it.id) }
+            noteRepository.createPdfNote(
+                notebookId = notebook.id,
+                title = name,
+                pdfPath = metadata.filePath,
+                pdfPageCount = metadata.pageCount,
+                pdfPageAspectRatio = metadata.pageAspectRatio
+            )
         }
     }
 

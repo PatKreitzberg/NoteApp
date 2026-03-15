@@ -3,6 +3,7 @@ package com.wyldsoft.notes.home
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -89,6 +90,11 @@ fun HomeView(
 
     // Export state
     val context = LocalContext.current
+    val importPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { viewModel.importPdf(context, it) }
+    }
     var showExportNoteDialog by remember { mutableStateOf(false) }
     var showExportNotebookDialog by remember { mutableStateOf(false) }
     var exportNotebookName by remember { mutableStateOf("") }
@@ -205,13 +211,26 @@ fun HomeView(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        SectionHeader(
-            title = "Notebooks",
-            onAddClick = {
-                Log.d("HomeView", "Show create notebook dialog onAddClick")
-                viewModel.showCreateNotebookDialog()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "Notebooks", style = MaterialTheme.typography.headlineSmall)
+            Row {
+                TextButton(onClick = { importPdfLauncher.launch("application/pdf") }) {
+                    Text("Import PDF")
+                }
+                IconButton(
+                    onClick = {
+                        Log.d("HomeView", "Show create notebook dialog onAddClick")
+                        viewModel.showCreateNotebookDialog()
+                    }
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Notebook")
+                }
             }
-        )
+        }
         NotebookRow(
             notebooks = notebooks,
             viewModel = viewModel,

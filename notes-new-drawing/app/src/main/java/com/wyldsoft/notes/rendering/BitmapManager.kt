@@ -11,6 +11,7 @@ import android.view.SurfaceView
 import com.onyx.android.sdk.rx.RxManager
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.wyldsoft.notes.domain.models.PaperTemplate
+import com.wyldsoft.notes.pdf.PdfPageRenderer
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.SelectionManager
@@ -48,6 +49,36 @@ class BitmapManager(
     )
 
     private var geometrySnapshotBitmap: Bitmap? = null
+    private var pdfPageRenderer: PdfPageRenderer? = null
+
+    /** Call when the note changes to (re)create the PDF page renderer if needed. */
+    fun onNoteChanged(pdfPath: String?, screenWidth: Int, pdfPageAspectRatio: Float) {
+        pdfPageRenderer?.close()
+        pdfPageRenderer = if (pdfPath != null && screenWidth > 0 && pdfPageAspectRatio > 0f) {
+            PdfPageRenderer(pdfPath, screenWidth, pdfPageAspectRatio)
+        } else null
+    }
+
+    private fun drawBackground(canvas: Canvas) {
+        val note = viewModel.currentNote.value
+        val pdfRenderer = pdfPageRenderer
+        if (pdfRenderer != null && note.pdfPageCount > 0) {
+            pdfRenderer.drawVisiblePages(
+                canvas,
+                viewModel.viewportManager,
+                viewModel.pageHeight.value,
+                note.pdfPageCount
+            )
+        } else {
+            val template = viewModel.paperTemplate.value
+            if (template != PaperTemplate.BLANK) {
+                templateRenderer.drawTemplate(
+                    canvas, template, viewModel.screenWidth.value,
+                    viewModel.isPaginationEnabled.value, viewModel.pageHeight.value
+                )
+            }
+        }
+    }
 
     fun recreateBitmapFromShapes(setOfShapes: MutableList<BaseShape>?, dirtyRect: RectF? = null) {
         val bitmap = getBitmap() ?: return
@@ -69,11 +100,7 @@ class BitmapManager(
             canvas.save()
             canvas.clipRect(surfaceRect)
             canvas.drawColor(Color.WHITE)
-            val template = viewModel.paperTemplate.value
-            if (template != PaperTemplate.BLANK) {
-                templateRenderer.drawTemplate(canvas, template, viewModel.screenWidth.value,
-                    viewModel.isPaginationEnabled.value, viewModel.pageHeight.value)
-            }
+            drawBackground(canvas)
             val renderContext = rendererHelper.getRenderContext() ?: run { canvas.restore(); return }
             renderContext.bitmap = bitmap
             renderContext.viewportScale = viewportManager.viewportState.value.scale
@@ -99,11 +126,7 @@ class BitmapManager(
 
         // Full redraw path
         canvas.drawColor(Color.WHITE)
-        val template = viewModel.paperTemplate.value
-        if (template != PaperTemplate.BLANK) {
-            templateRenderer.drawTemplate(canvas, template, viewModel.screenWidth.value,
-                viewModel.isPaginationEnabled.value, viewModel.pageHeight.value)
-        }
+        drawBackground(canvas)
         val renderContext = rendererHelper.getRenderContext() ?: return
         renderContext.bitmap = bitmap
         renderContext.viewportScale = viewportManager.viewportState.value.scale
@@ -184,12 +207,7 @@ class BitmapManager(
         canvas.save()
         canvas.clipRect(dirtyRectSurface)
         canvas.drawColor(Color.WHITE)
-
-        val template = viewModel.paperTemplate.value
-        if (template != PaperTemplate.BLANK) {
-            templateRenderer.drawTemplate(canvas, template, viewModel.screenWidth.value,
-                viewModel.isPaginationEnabled.value, viewModel.pageHeight.value)
-        }
+        drawBackground(canvas)
 
         for (shape in shapes) {
             shape.updateShapeRect()

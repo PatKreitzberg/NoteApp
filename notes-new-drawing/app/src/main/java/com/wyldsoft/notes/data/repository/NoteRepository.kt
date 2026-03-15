@@ -39,6 +39,8 @@ interface NoteRepository {
     suspend fun renameNote(noteId: String, newName: String)
     suspend fun getNotebooksForNote(noteId: String): List<String>
     suspend fun updateNoteNotebooks(noteId: String, notebookIds: List<String>)
+    suspend fun createPdfNote(notebookId: String, title: String, pdfPath: String, pdfPageCount: Int, pdfPageAspectRatio: Float): NoteEntity
+    suspend fun addPdfPage(noteId: String)
     suspend fun moveNoteToTrash(noteId: String)
     suspend fun restoreNote(noteId: String)
     suspend fun permanentlyDeleteNote(noteId: String)
@@ -163,7 +165,10 @@ class NoteRepositoryImpl(
             viewportScrollY = viewportScrollY,
             isPaginationEnabled = isPaginationEnabled,
             paperSize = paperSize,
-            paperTemplate = PaperTemplate.fromString(paperTemplate)
+            paperTemplate = PaperTemplate.fromString(paperTemplate),
+            pdfPath = pdfPath,
+            pdfPageCount = pdfPageCount,
+            pdfPageAspectRatio = pdfPageAspectRatio
         )
     }
 
@@ -190,7 +195,10 @@ class NoteRepositoryImpl(
             viewportScrollY = viewportScrollY,
             isPaginationEnabled = isPaginationEnabled,
             paperSize = paperSize,
-            paperTemplate = paperTemplate.name
+            paperTemplate = paperTemplate.name,
+            pdfPath = pdfPath,
+            pdfPageCount = pdfPageCount,
+            pdfPageAspectRatio = pdfPageAspectRatio
         )
     }
     
@@ -264,6 +272,33 @@ class NoteRepositoryImpl(
 
     override suspend fun getNotebooksForNote(noteId: String): List<String> {
         return noteDao.getNotebooksForNote(noteId)
+    }
+
+    override suspend fun createPdfNote(
+        notebookId: String,
+        title: String,
+        pdfPath: String,
+        pdfPageCount: Int,
+        pdfPageAspectRatio: Float
+    ): NoteEntity {
+        val noteEntity = NoteEntity(
+            id = UUID.randomUUID().toString(),
+            title = title,
+            parentNotebookId = notebookId,
+            isPaginationEnabled = true,
+            pdfPath = pdfPath,
+            pdfPageCount = pdfPageCount,
+            pdfPageAspectRatio = pdfPageAspectRatio
+        )
+        noteDao.insert(noteEntity)
+        noteDao.insertNoteNotebookCrossRef(NoteNotebookCrossRef(noteEntity.id, notebookId))
+        return noteEntity
+    }
+
+    override suspend fun addPdfPage(noteId: String) {
+        updateNoteFields(noteId) { entity ->
+            entity.copy(pdfPageCount = entity.pdfPageCount + 1)
+        }
     }
 
     override suspend fun moveNoteToTrash(noteId: String) {

@@ -150,9 +150,58 @@
   ├── renderBitmapToScreen()       ← push bitmap to SurfaceView
   ├── clearDrawing()
   ├── isShapeVisible()
+  ├── onNoteChanged()              ← (re)creates PdfPageRenderer when note has PDF
+  ├── drawBackground()             ← draws PDF pages OR paper template as background
   │
   └── uses: SurfaceView, EditorViewModel, RxManager,
-            ViewportManager, RendererHelper, ShapesManager
+            ViewportManager, RendererHelper, ShapesManager, PdfPageRenderer
+#+end_example
+
+** PDF Import System (added 2026-03-14)
+
+#+begin_example
+  pdf/PdfImporter (object)
+  ├── importPdf(context, uri): PdfMetadata?   ← copies PDF to filesDir/imported_pdfs/,
+  │                                              reads page count & aspect ratio
+  └── nameFromUri(context, uri): String       ← extracts display name from content URI
+
+  pdf/PdfPageRenderer
+  ├── getPage(pageIndex): Bitmap?             ← renders PDF page at screen width, LRU cached
+  ├── drawVisiblePages(canvas, viewport, ...) ← draws only pages visible in current scroll
+  ├── invalidateCache()                       ← clear cache on screen size change
+  └── close()                                 ← releases PdfRenderer and recycles bitmaps
+
+  Data flow for PDF import:
+    HomeView "Import PDF" button
+      → file picker (GetContent "application/pdf")
+        → HomeViewModel.importPdf(context, uri)
+          → PdfImporter.importPdf()           (copy + extract metadata)
+          → notebookRepository.createNotebook()
+          → noteRepository.createPdfNote()    (isPaginationEnabled=true, pdfPath set)
+
+  Data flow for PDF rendering in editor:
+    Note with pdfPath loaded
+      → PaginationHandler.resetForNote()      (uses pdfPageAspectRatio for page height)
+      → ViewportManager.pdfPageCount set      (limits scroll to N pages)
+      → BitmapManager.onNoteChanged()         (creates PdfPageRenderer)
+      → BitmapManager.drawBackground()        (draws PDF pages as background per scroll)
+
+  NoteEntity new fields (DB v10):
+  ├── pdfPath: String?                        ← path to copied PDF in internal storage
+  ├── pdfPageCount: Int                       ← total pages (PDF pages + user-added blanks)
+  └── pdfPageAspectRatio: Float               ← height/width ratio of PDF pages
+
+  "Add Page" button (toolbar, PDF notes only):
+    → EditorViewModel.addPdfPage()
+      → noteRepository.addPdfPage()           (increments pdfPageCount)
+      → viewportManager.pdfPageCount++        (extends max scroll)
+
+  PDF export with annotations:
+    PdfExporter.renderPdfBackedNote()
+    ├── Opens original PDF with PdfRenderer
+    ├── Renders each source page as high-quality bitmap background
+    ├── Draws annotation shapes (scaled from note coords to PDF page size) on top
+    └── Blank pages (user-added beyond PDF page count) rendered as white + annotations
 #+end_example
 
 ** DrawingManager
