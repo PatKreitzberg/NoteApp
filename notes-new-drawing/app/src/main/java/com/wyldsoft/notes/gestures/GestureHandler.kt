@@ -27,6 +27,7 @@ class GestureHandler(
     private val scaleGestureDetector: ScaleGestureDetector
 
     private var isPanning = false
+    private var isTwoFingerPanning = false
     private var panStartX = 0f
     private var panStartY = 0f
     private var totalPanX = 0f
@@ -105,6 +106,7 @@ class GestureHandler(
             }
             MotionEvent.ACTION_MOVE -> {
                 if (!isPinching && activeTouchCount == 1) handleMove(event)
+                else if (activeTouchCount == 2) handleTwoFingerMove(event)
             }
             MotionEvent.ACTION_POINTER_UP -> { activeTouchCount-- }
             MotionEvent.ACTION_UP -> {
@@ -149,10 +151,18 @@ class GestureHandler(
         }
     }
 
+    private fun handleTwoFingerMove(event: MotionEvent) {
+        if (hasScaledMeaningfully) return // it's a pinch-zoom, not a flick
+        if (!isTwoFingerPanning) {
+            isTwoFingerPanning = true
+        }
+    }
+
     private fun handleUp(event: MotionEvent) {
         val currentTime = System.currentTimeMillis()
+        val wasPanning = isPanning || isTwoFingerPanning
 
-        if (flickDetector.checkFlick(currentTime, isPanning)) {
+        if (flickDetector.checkFlick(currentTime, wasPanning, maxTouchCount)) {
             resetStates()
             return
         }
@@ -167,7 +177,7 @@ class GestureHandler(
     }
 
     private fun resetStates() {
-        isPanning = false; isPinching = false
+        isPanning = false; isPinching = false; isTwoFingerPanning = false
         hasScaledMeaningfully = false
         maxTouchCount = 0; activeTouchCount = 0
     }

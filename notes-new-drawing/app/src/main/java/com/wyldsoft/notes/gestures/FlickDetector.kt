@@ -28,8 +28,9 @@ class FlickDetector(
 
     /**
      * Check if the touch-up event constitutes a flick. Returns true if a flick was dispatched.
+     * @param fingerCount max number of fingers that touched during the gesture (1 = single-finger, 2 = two-finger)
      */
-    fun checkFlick(currentTime: Long, wasPanning: Boolean): Boolean {
+    fun checkFlick(currentTime: Long, wasPanning: Boolean, fingerCount: Int = 1): Boolean {
         val duration = currentTime - startTime
         if (duration >= maxDurationMs || !wasPanning) return false
 
@@ -41,9 +42,9 @@ class FlickDetector(
         if (velocity <= thresholdVelocity) return false
 
         val direction = getDirection(velocityX, velocityY)
-        Log.d(TAG, "FLICK detected — direction: $direction, velocity: $velocity")
+        Log.d(TAG, "FLICK detected — direction: $direction, velocity: $velocity, fingers: $fingerCount")
 
-        val flickGesture = getFlickGestureType(direction)
+        val flickGesture = getFlickGestureType(direction, fingerCount)
         if (flickGesture != null) {
             val action = gestureMappings().find { it.gesture == flickGesture }?.action
             if (action != null && action != GestureAction.NONE) {
@@ -66,11 +67,20 @@ class FlickDetector(
         }
     }
 
-    private fun getFlickGestureType(direction: String): GestureType? = when (direction) {
-        "UP" -> GestureType.FLICK_UP
-        "DOWN" -> GestureType.FLICK_DOWN
-        "LEFT" -> GestureType.FLICK_LEFT
-        "RIGHT" -> GestureType.FLICK_RIGHT
-        else -> null
+    private fun getFlickGestureType(direction: String, fingerCount: Int = 1): GestureType? {
+        if (fingerCount >= 2) {
+            return when (direction) {
+                "LEFT" -> GestureType.TWO_FINGER_FLICK_LEFT
+                "RIGHT" -> GestureType.TWO_FINGER_FLICK_RIGHT
+                else -> null // Only horizontal two-finger flicks supported
+            }
+        }
+        return when (direction) {
+            "UP" -> GestureType.FLICK_UP
+            "DOWN" -> GestureType.FLICK_DOWN
+            "LEFT" -> GestureType.FLICK_LEFT
+            "RIGHT" -> GestureType.FLICK_RIGHT
+            else -> null
+        }
     }
 }

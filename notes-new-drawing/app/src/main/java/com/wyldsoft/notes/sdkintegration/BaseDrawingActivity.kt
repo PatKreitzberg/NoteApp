@@ -297,6 +297,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                 }
                 GestureAction.UNDO -> editorViewModel.undo()
                 GestureAction.REDO -> editorViewModel.redo()
+                GestureAction.NEXT_NOTE -> editorViewModel.navigateForward()
+                GestureAction.PREVIOUS_NOTE -> editorViewModel.navigateBackward()
                 else -> Log.d(TAG, "Gesture action $action handled inline")
             }
         }

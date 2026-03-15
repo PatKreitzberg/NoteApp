@@ -17,6 +17,8 @@ enum class GestureType(val displayName: String) {
     FLICK_DOWN("Flick down"),
     FLICK_LEFT("Flick left"),
     FLICK_RIGHT("Flick right"),
+    TWO_FINGER_FLICK_LEFT("2-finger flick left"),
+    TWO_FINGER_FLICK_RIGHT("2-finger flick right"),
     PAN("Pan/scroll"),
     PINCH("Pinch/zoom");
 
@@ -39,7 +41,9 @@ enum class GestureAction(val displayName: String) {
     COPY_SELECTION("Copy selection"),
     PASTE_SELECTION("Paste selection"),
     UNDO("Undo"),
-    REDO("Redo");
+    REDO("Redo"),
+    NEXT_NOTE("Next note"),
+    PREVIOUS_NOTE("Previous note");
 
     companion object {
         fun fromString(value: String): GestureAction? {
@@ -65,7 +69,9 @@ class GestureSettingsRepository(context: Context) {
         val DEFAULT_MAPPINGS = listOf(
             GestureMapping(GestureType.PAN, GestureAction.SCROLL),
             GestureMapping(GestureType.PINCH, GestureAction.ZOOM),
-            GestureMapping(GestureType.THREE_FINGER_DOUBLE_TAP, GestureAction.RESET_ZOOM_AND_CENTER)
+            GestureMapping(GestureType.THREE_FINGER_DOUBLE_TAP, GestureAction.RESET_ZOOM_AND_CENTER),
+            GestureMapping(GestureType.TWO_FINGER_FLICK_LEFT, GestureAction.NEXT_NOTE),
+            GestureMapping(GestureType.TWO_FINGER_FLICK_RIGHT, GestureAction.PREVIOUS_NOTE)
         )
     }
 
