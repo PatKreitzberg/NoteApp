@@ -43,6 +43,7 @@ fun HomeView(
     viewModel: HomeViewModel,
     gestureSettingsRepository: GestureSettingsRepository,
     displaySettingsRepository: DisplaySettingsRepository,
+    defaultNoteSettingsRepository: com.wyldsoft.notes.settings.DefaultNoteSettingsRepository? = null,
     signInLauncher: ActivityResultLauncher<Intent>,
     signInError: State<String?>,
     syncViewModel: SyncViewModel,
@@ -320,6 +321,7 @@ fun HomeView(
         AppSettingsDialog(
             gestureSettingsRepository = gestureSettingsRepository,
             displaySettingsRepository = displaySettingsRepository,
+            defaultNoteSettingsRepository = defaultNoteSettingsRepository,
             onDismiss = { showAppSettingsDialog = false },
             onOpenGoogleDrive = { showAppSettingsDialog = false; showGoogleDriveDialog = true }
         )

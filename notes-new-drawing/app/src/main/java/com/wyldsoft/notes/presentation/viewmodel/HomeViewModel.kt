@@ -30,6 +30,7 @@ class HomeViewModel(
     private val notebookRepository: NotebookRepository,
     private val folderRepository: FolderRepository,
     private val recognizedSegmentRepository: RecognizedSegmentRepository? = null,
+    private val defaultNoteSettingsRepository: com.wyldsoft.notes.settings.DefaultNoteSettingsRepository? = null,
 ) : ViewModel() {
     private val _currentFolderId = MutableStateFlow<String?>(null)
     val currentFolderId: StateFlow<String?> = _currentFolderId.asStateFlow()
@@ -114,7 +115,14 @@ class HomeViewModel(
         Log.d("HomeViewModel", "Creating notebook with name: $name")
         viewModelScope.launch {
             val currentId = _currentFolderId.value ?: return@launch
-            notebookRepository.createNotebook(name, currentId)
+            val defaults = defaultNoteSettingsRepository
+            notebookRepository.createNotebook(
+                name = name,
+                folderId = currentId,
+                isPaginationEnabled = defaults?.isPaginationEnabled?.value ?: true,
+                paperSize = defaults?.paperSize?.value?.name ?: "LETTER",
+                paperTemplate = defaults?.paperTemplate?.value?.name ?: "BLANK"
+            )
             _showCreateNotebookDialog.value = false
         }
     }
@@ -165,7 +173,13 @@ class HomeViewModel(
     fun createLooseNote() {
         viewModelScope.launch {
             val currentId = _currentFolderId.value ?: return@launch
-            noteRepository.createLooseNote(currentId)
+            val defaults = defaultNoteSettingsRepository
+            noteRepository.createLooseNote(
+                folderId = currentId,
+                isPaginationEnabled = defaults?.isPaginationEnabled?.value ?: true,
+                paperSize = defaults?.paperSize?.value?.name ?: "LETTER",
+                paperTemplate = defaults?.paperTemplate?.value?.name ?: "BLANK"
+            )
         }
     }
 

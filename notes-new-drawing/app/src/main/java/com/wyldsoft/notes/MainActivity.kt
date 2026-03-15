@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val app = application as ScrotesApp
-        val viewModel = HomeViewModel(app.noteRepository, app.notebookRepository, app.folderRepository, app.recognizedSegmentRepository)
+        val viewModel = HomeViewModel(app.noteRepository, app.notebookRepository, app.folderRepository, app.recognizedSegmentRepository, app.defaultNoteSettingsRepository)
         SyncWorker.scheduleOneTime(this)
 
         setContent {
@@ -81,6 +81,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel,
                                 gestureSettingsRepository = app.gestureSettingsRepository,
                                 displaySettingsRepository = app.displaySettingsRepository,
+                                defaultNoteSettingsRepository = app.defaultNoteSettingsRepository,
                                 signInLauncher = signInLauncher,
                                 signInError = signInError,
                                 syncViewModel = app.syncViewModel,

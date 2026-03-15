@@ -16,13 +16,13 @@ import java.util.UUID
 interface NotebookRepository {
     suspend fun getNotebook(notebookId: String): NotebookEntity?
     fun getNotebooksInFolder(folderId: String): Flow<List<NotebookEntity>>
-    suspend fun createNotebook(name: String, folderId: String): NotebookEntity
+    suspend fun createNotebook(name: String, folderId: String, isPaginationEnabled: Boolean = true, paperSize: String = "LETTER", paperTemplate: String = "BLANK"): NotebookEntity
     suspend fun renameNotebook(notebookId: String, newName: String)
     suspend fun deleteNotebook(notebookId: String)
     fun getNotesInNotebook(notebookId: String): Flow<List<NoteEntity>>
     suspend fun getFirstNoteInNotebook(notebookId: String): NoteEntity?
     suspend fun getNotesInNotebookOnce(notebookId: String): List<NoteEntity>
-    suspend fun createNoteInNotebook(notebookId: String): NoteEntity
+    suspend fun createNoteInNotebook(notebookId: String, isPaginationEnabled: Boolean = true, paperSize: String = "LETTER", paperTemplate: String = "BLANK"): NoteEntity
     suspend fun moveNotebook(notebookId: String, targetFolderId: String)
     suspend fun getAllNotebooks(): List<NotebookEntity>
     suspend fun moveNotebookToTrash(notebookId: String)
@@ -47,7 +47,7 @@ class NotebookRepositoryImpl(
         return notebookDao.getNotebooksByFolder(folderId)
     }
     
-    override suspend fun createNotebook(name: String, folderId: String): NotebookEntity {
+    override suspend fun createNotebook(name: String, folderId: String, isPaginationEnabled: Boolean, paperSize: String, paperTemplate: String): NotebookEntity {
         val notebook = NotebookEntity(
             id = UUID.randomUUID().toString(),
             name = name,
@@ -58,7 +58,10 @@ class NotebookRepositoryImpl(
         val firstNote = NoteEntity(
             id = UUID.randomUUID().toString(),
             title = "$name-Page 1",
-            parentNotebookId = notebook.id
+            parentNotebookId = notebook.id,
+            isPaginationEnabled = isPaginationEnabled,
+            paperSize = paperSize,
+            paperTemplate = paperTemplate
         )
         noteDao.insert(firstNote)
         noteDao.insertNoteNotebookCrossRef(
@@ -108,7 +111,7 @@ class NotebookRepositoryImpl(
         return notebookDao.getNotesInNotebookOnce(notebookId)
     }
 
-    override suspend fun createNoteInNotebook(notebookId: String): NoteEntity {
+    override suspend fun createNoteInNotebook(notebookId: String, isPaginationEnabled: Boolean, paperSize: String, paperTemplate: String): NoteEntity {
         val notebook = notebookDao.getNotebook(notebookId)
         val existingNotes = notebookDao.getNotesInNotebookOnce(notebookId)
         val pageNumber = existingNotes.size + 1
@@ -117,7 +120,10 @@ class NotebookRepositoryImpl(
         val newNote = NoteEntity(
             id = UUID.randomUUID().toString(),
             title = "$notebookName-Page $pageNumber",
-            parentNotebookId = notebookId
+            parentNotebookId = notebookId,
+            isPaginationEnabled = isPaginationEnabled,
+            paperSize = paperSize,
+            paperTemplate = paperTemplate
         )
         noteDao.insert(newNote)
         noteDao.insertNoteNotebookCrossRef(

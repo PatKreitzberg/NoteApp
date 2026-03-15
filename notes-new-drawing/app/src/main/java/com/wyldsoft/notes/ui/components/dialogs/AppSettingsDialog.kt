@@ -20,6 +20,7 @@ import kotlin.math.roundToInt
 fun AppSettingsDialog(
     gestureSettingsRepository: GestureSettingsRepository,
     displaySettingsRepository: DisplaySettingsRepository,
+    defaultNoteSettingsRepository: com.wyldsoft.notes.settings.DefaultNoteSettingsRepository? = null,
     onDismiss: () -> Unit,
     onOpenGoogleDrive: () -> Unit = {}
 ) {
@@ -32,6 +33,8 @@ fun AppSettingsDialog(
     var refreshRate by remember { mutableStateOf(currentRefreshRate.toFloat()) }
     var smoothMotion by remember { mutableStateOf(currentSmoothMotion) }
     var scrollBarVisible by remember { mutableStateOf(currentScrollBarVisible) }
+
+    var showDefaultNoteSettings by remember { mutableStateOf(false) }
 
     val saveAndDismiss = {
         gestureSettingsRepository.saveMappings(mappings)
@@ -86,6 +89,16 @@ fun AppSettingsDialog(
             steps = 13,
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (defaultNoteSettingsRepository != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { showDefaultNoteSettings = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Default Note Settings")
+            }
+        }
 
         Divider()
 
@@ -149,6 +162,13 @@ fun AppSettingsDialog(
         ) {
             Text("Google Drive")
         }
+    }
+
+    if (showDefaultNoteSettings && defaultNoteSettingsRepository != null) {
+        DefaultNoteSettingsDialog(
+            repository = defaultNoteSettingsRepository,
+            onDismiss = { showDefaultNoteSettings = false }
+        )
     }
 }
 

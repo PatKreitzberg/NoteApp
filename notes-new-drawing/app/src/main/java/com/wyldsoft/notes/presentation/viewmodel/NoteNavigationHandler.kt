@@ -79,7 +79,14 @@ class NoteNavigationHandler(
             if (currentIndex < notes.size - 1) {
                 switchToNote(notes[currentIndex + 1].id)
             } else if (getCurrentNote().shapes.isNotEmpty()) {
-                val newNote = notebookRepository.createNoteInNotebook(nbId)
+                // Use the current note's settings as defaults for new notes in the same notebook
+                val current = getCurrentNote()
+                val newNote = notebookRepository.createNoteInNotebook(
+                    notebookId = nbId,
+                    isPaginationEnabled = current.isPaginationEnabled,
+                    paperSize = current.paperSize,
+                    paperTemplate = current.paperTemplate.name
+                )
                 switchToNote(newNote.id)
             }
         }

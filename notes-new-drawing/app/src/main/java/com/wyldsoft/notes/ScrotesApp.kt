@@ -60,6 +60,10 @@ class ScrotesApp : Application() {
         DisplaySettingsRepository(this)
     }
 
+    val defaultNoteSettingsRepository: com.wyldsoft.notes.settings.DefaultNoteSettingsRepository by lazy {
+        com.wyldsoft.notes.settings.DefaultNoteSettingsRepository(this)
+    }
+
     val recognizedSegmentRepository: RecognizedSegmentRepository by lazy {
         RecognizedSegmentRepository(database.recognizedSegmentDao())
     }

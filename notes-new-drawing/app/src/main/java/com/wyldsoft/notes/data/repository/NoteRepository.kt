@@ -33,7 +33,7 @@ interface NoteRepository {
     suspend fun updateShape(noteId: String, shape: Shape)
     suspend fun getParentNotebookId(noteId: String): String?
     fun getLooseNotesInFolder(folderId: String): Flow<List<NoteEntity>>
-    suspend fun createLooseNote(folderId: String): NoteEntity
+    suspend fun createLooseNote(folderId: String, isPaginationEnabled: Boolean = true, paperSize: String = "LETTER", paperTemplate: String = "BLANK"): NoteEntity
     suspend fun moveNoteToFolder(noteId: String, folderId: String)
     suspend fun moveNoteToNotebook(noteId: String, notebookId: String)
     suspend fun renameNote(noteId: String, newName: String)
@@ -231,13 +231,16 @@ class NoteRepositoryImpl(
         return noteDao.getLooseNotesInFolder(folderId)
     }
 
-    override suspend fun createLooseNote(folderId: String): NoteEntity {
+    override suspend fun createLooseNote(folderId: String, isPaginationEnabled: Boolean, paperSize: String, paperTemplate: String): NoteEntity {
         val count = noteDao.countLooseNotesInFolder(folderId)
         val noteEntity = NoteEntity(
             id = UUID.randomUUID().toString(),
             title = "Note ${count + 1}",
             folderId = folderId,
-            parentNotebookId = null
+            parentNotebookId = null,
+            isPaginationEnabled = isPaginationEnabled,
+            paperSize = paperSize,
+            paperTemplate = paperTemplate
         )
         noteDao.insert(noteEntity)
         return noteEntity
