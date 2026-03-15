@@ -28,7 +28,7 @@ object DrawingManager {
         }
 
         val textPaint = Paint().apply {
-            color = Color.WHITE
+            color = Color.LTGRAY
             textSize = 40f
             isAntiAlias = true
         }
@@ -69,10 +69,11 @@ object DrawingManager {
                     separatorPaint
                 )
 
-                // Draw page number in top right of the page above separator
-                val pageNumberY = pageY - 20f
-                val pageNumberX = noteWidth - 100f
-                canvas.drawText("Page ${pageNum - 1}", pageNumberX, pageNumberY, textPaint)
+                // Draw page number in top right of the page below separator
+                val pageTopY = pageY + separatorHeight
+                val pageNumberY = pageTopY + 50f
+                val pageNumberX = noteWidth - 120f
+                canvas.drawText("$pageNum", pageNumberX, pageNumberY, textPaint)
             }
             pageY += pageHeight
             pageNum++
@@ -80,9 +81,9 @@ object DrawingManager {
 
         // Draw page number for the first page if visible
         if (visibleTop < pageHeight) {
-            val pageNumberY = 40f
-            val pageNumberX = noteWidth - 100f
-            canvas.drawText("Page 1", pageNumberX, pageNumberY, textPaint)
+            val pageNumberY = 50f
+            val pageNumberX = noteWidth - 120f
+            canvas.drawText("1", pageNumberX, pageNumberY, textPaint)
         }
 
         // Draw left and right page borders
