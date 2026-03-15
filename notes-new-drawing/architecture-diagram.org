@@ -51,13 +51,14 @@
 
 #+begin_example
   ShapesManager
+  ├── fromNote(Note): ShapesManager         ← factory: loads shapes from Note directly
+  ├── fromViewModel(EditorViewModel): ShapesManager  ← factory: loads from VM's current note
   ├── addShape()
   ├── removeShape()
   ├── removeAll()
   ├── convertDomainShapeToSdkShape()   ← bridges Domain Shape ↔ SDK BaseShape
   ├── penTypeToShapeType()
-  ├── getContentMaxY()                 ← max Y across all shapes (for scroll limits)
-  └── uses: EditorViewModel
+  └── getContentMaxY()                 ← max Y across all shapes (for scroll limits)
 
   ShapeFactory
   ├── createShape(int) → BaseShape     ← factory for SDK shapes
@@ -709,13 +710,23 @@
   ├── noteId: String
   ├── shapesManager: ShapesManager       ← per-note shape state
   ├── actionManager: ActionManager       ← per-note undo/redo stack
-  └── companion object create(EditorViewModel) → NoteSession
+  ├── companion object create(EditorViewModel) → NoteSession
+  └── companion object createFromNote(Note) → NoteSession  ← for cache pre-loading
+
+  session/NoteSessionCache
+  ├── LRU cache (LinkedHashMap, max 5 entries, access-ordered)
+  ├── get(noteId), put(noteId, session), contains(noteId)
+  ├── invalidate(noteId), clear()
+  ├── suspend preload(noteId, NoteRepository) ← loads note from DB on IO, creates session
+  └── @Synchronized on all methods for thread safety
 
   Note switching flow:
   1. NoteNavigationHandler.switchToNote() → setCurrentNote + resetPagination
-  2. BaseDrawingActivity.onNoteSwitched() → NoteSession.create() + activateSession()
-  3. EditorViewModel.activateSession() → updates shapesManager, actionManager, bitmapManager
-  4. Stylus handler uses lambda accessor { shapesManager } — NOT recreated on switch
+  2. BaseDrawingActivity.onNoteSwitched() → getOrCreateSession() (cache hit or new)
+  3. EditorViewModel.activateSession() → caches outgoing session, updates shapesManager/actionManager
+  4. NoteNavigationHandler.precacheAdjacentNotes() → pre-loads prev+next in background
+  5. On notebook open: precacheInitialNotes() pre-loads first 3 notes
+  6. Stylus handler uses lambda accessor { shapesManager } — NOT recreated on switch
 
   geometry/GeometricShapeType (enum)
   ├── LINE | TRIANGLE | SQUARE | CIRCLE

@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.shapemanagement
 
 import android.util.Log
+import com.wyldsoft.notes.domain.models.Note
 import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
@@ -13,11 +14,14 @@ import com.wyldsoft.notes.utils.domainPointsToTouchPointList
   Lifetime is same as its note repository?
  */
 
-class ShapesManager(
-    private val editorViewModel: EditorViewModel
-) {
+class ShapesManager private constructor(note: Note) {
     companion object {
         val TAG = "ShapeManager"
+
+        fun fromNote(note: Note): ShapesManager = ShapesManager(note)
+
+        fun fromViewModel(editorViewModel: EditorViewModel): ShapesManager =
+            ShapesManager(editorViewModel.currentNote.value)
 
         fun penTypeToShapeType(penType: PenType): Int {
             return when (penType) {
@@ -40,8 +44,6 @@ class ShapesManager(
     private val shapes: MutableList<BaseShape> = mutableListOf<BaseShape>()
 
     init {
-        // load shapes from current note
-        val note = editorViewModel.currentNote.value
         Log.d(TAG, "Initializing ShapeManager with note: ${note.id}, shapes count: ${note.shapes.size}")
         for (domainShape in note.shapes) {
             val sdkShape = convertDomainShapeToSdkShape(domainShape)

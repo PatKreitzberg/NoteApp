@@ -1,8 +1,10 @@
 package com.wyldsoft.notes.presentation.viewmodel
 
+import android.util.Log
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.data.repository.NotebookRepository
 import com.wyldsoft.notes.domain.models.Note
+import com.wyldsoft.notes.session.NoteSessionCache
 import com.wyldsoft.notes.viewport.ViewportManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +23,8 @@ class NoteNavigationHandler(
     private val scope: CoroutineScope,
     private val viewportManager: ViewportManager,
     private val getCurrentNote: () -> Note,
-    private val onSwitchNote: suspend (String) -> Unit
+    private val onSwitchNote: suspend (String) -> Unit,
+    private val sessionCache: NoteSessionCache
 ) {
     private val _canGoBack = MutableStateFlow(false)
     val canGoBack: StateFlow<Boolean> = _canGoBack.asStateFlow()
@@ -37,7 +40,10 @@ class NoteNavigationHandler(
             _canGoForward.value = false
             return
         }
-        scope.launch { updateNavigationState() }
+        scope.launch {
+            updateNavigationState()
+            precacheInitialNotes()
+        }
     }
 
     suspend fun updateNavigationState() {
@@ -78,5 +84,30 @@ class NoteNavigationHandler(
         onSwitchNote(noteId)
         updateNavigationState()
         onNoteSwitched?.invoke()
+        scope.launch { precacheAdjacentNotes() }
+    }
+
+    private suspend fun precacheAdjacentNotes() {
+        val nbId = notebookId ?: return
+        val notes = notebookRepository.getNotesInNotebookOnce(nbId)
+        val currentIndex = notes.indexOfFirst { it.id == getCurrentNote().id }
+        if (currentIndex < 0) return
+
+        if (currentIndex > 0) {
+            sessionCache.preload(notes[currentIndex - 1].id, noteRepository)
+        }
+        if (currentIndex < notes.size - 1) {
+            sessionCache.preload(notes[currentIndex + 1].id, noteRepository)
+        }
+    }
+
+    private suspend fun precacheInitialNotes() {
+        val nbId = notebookId ?: return
+        val notes = notebookRepository.getNotesInNotebookOnce(nbId)
+        val limit = minOf(3, notes.size)
+        for (i in 0 until limit) {
+            sessionCache.preload(notes[i].id, noteRepository)
+        }
+        Log.d("NoteNavigationHandler", "Pre-cached $limit initial notes")
     }
 }

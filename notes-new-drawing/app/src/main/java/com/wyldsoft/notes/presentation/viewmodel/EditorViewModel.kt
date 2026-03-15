@@ -23,6 +23,7 @@ import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import com.wyldsoft.notes.viewport.ViewportManager
 import kotlinx.coroutines.FlowPreview
 import com.wyldsoft.notes.session.NoteSession
+import com.wyldsoft.notes.session.NoteSessionCache
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -61,6 +62,7 @@ class EditorViewModel(
     val viewportState = viewportManager.viewportState
 
     private var activeSession: NoteSession? = null
+    val sessionCache = NoteSessionCache()
     private val fallbackActionManager = ActionManager()
     private val _activeActionManager = MutableStateFlow(fallbackActionManager)
 
@@ -151,7 +153,8 @@ class EditorViewModel(
         getCurrentNote = { currentNote.value },
         onSwitchNote = {
             paginationHandler.resetForNote(currentNote.value)
-        }
+        },
+        sessionCache = sessionCache
     )
 
     val canGoBack: StateFlow<Boolean> = navigationHandler.canGoBack
@@ -259,8 +262,25 @@ class EditorViewModel(
         this.onScreenRefreshNeeded = onScreenRefreshNeeded
     }
 
+    fun getOrCreateSession(): NoteSession {
+        val noteId = currentNote.value.id
+        val cached = sessionCache.get(noteId)
+        if (cached != null) {
+            Log.d("EditorViewModel", "Using cached session for note $noteId")
+            return cached
+        }
+        val session = NoteSession.create(this)
+        sessionCache.put(noteId, session)
+        return session
+    }
+
     fun activateSession(session: NoteSession) {
+        // Cache outgoing session before replacing
+        activeSession?.let { outgoing ->
+            sessionCache.put(outgoing.noteId, outgoing)
+        }
         activeSession = session
+        sessionCache.put(session.noteId, session)
         shapesManager = session.shapesManager
         _activeActionManager.value = session.actionManager
         bitmapManager?.onNoteChanged(

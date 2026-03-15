@@ -118,7 +118,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         initializeBitmapManager(surfaceView, vm)
         initializeGestureHandler()
         setViewModel(vm)
-        val session = NoteSession.create(editorViewModel)
+        val session = editorViewModel.getOrCreateSession()
         shapesManager = session.shapesManager
         initializeStylusHandler()
         editorViewModel.setDrawingManagers(bitmapManager) { forceScreenRefresh() }
@@ -135,9 +135,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     private fun onNoteSwitched() {
         lifecycleScope.launch(Dispatchers.Main) {
-            Log.d(TAG, "Note switched — creating new session")
+            Log.d(TAG, "Note switched — getting or creating session")
             bitmapCanvas?.drawColor(Color.WHITE)
-            val session = NoteSession.create(editorViewModel)
+            val session = editorViewModel.getOrCreateSession()
             shapesManager = session.shapesManager
             editorViewModel.activateSession(session)
             forceScreenRefresh()
