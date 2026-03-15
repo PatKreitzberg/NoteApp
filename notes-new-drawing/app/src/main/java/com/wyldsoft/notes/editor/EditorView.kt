@@ -146,8 +146,9 @@ fun EditorView(
                         scrollY = viewportState.scrollY,
                         contentMaxY = contentMaxY,
                         scale = viewportState.scale,
+                        onScrollTo = { newScrollY -> viewModel.viewportManager.setScrollY(newScrollY) },
                         modifier = Modifier
-                            .width(16.dp)
+                            .width(20.dp)
                             .fillMaxHeight()
                     )
                 }

@@ -217,6 +217,16 @@ class ViewportManager {
     }
 
     /**
+     * Directly sets the vertical scroll position in NoteCoordinates.
+     * Used by the scroll bar drag gesture.
+     */
+    fun setScrollY(newScrollY: Float) {
+        val currentState = _viewportState.value
+        _viewportState.value = currentState.copy(scrollY = constrainScrollY(newScrollY))
+        updateMatrices()
+    }
+
+    /**
      * Sets the viewport state (used for persistence/restoration).
      * scrollX and scrollY are positive NoteCoordinate values (distance scrolled from origin).
      */
