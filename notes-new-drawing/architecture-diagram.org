@@ -472,14 +472,19 @@
   │   │   └── Convert-to-Text: enabled when hasSelection; spinner while isConvertingToText
   │   └── StrokeOptionsPanel
   │       ├── PenTypeButton   → delegates to PenButton
-  │       └── adjusts PenProfile properties
+  │       ├── adjusts PenProfile properties
+  │       ├── alpha/opacity slider (0.05-1.0)
+  │       └── stroke preview (curved path instead of circle)
+  ├── ToolbarActionButtons
+  │   └── note index display (current/total) after nav buttons
   ├── DrawingCanvas
   │   └── wraps SurfaceView
   ├── ViewportInfo
-  │   └── displays zoom % and page number
+  │   └── displays sync status and zoom %
   ├── NoteSettingsDialog      → uses SettingsDialogShell, SettingsDropdown
   ├── NotebookSettingsDialog  → uses SettingsDialogShell
-  └── AppSettingsDialog       → uses SettingsDialogShell
+  ├── DefaultNoteSettingsDialog → uses SettingsDialogShell, sets defaults for new notes
+  └── AppSettingsDialog       → uses SettingsDialogShell, includes Default Note Settings button
 
   Shared UI Components:
   ├── PenButton               ← shared pen type icon button
@@ -671,6 +676,7 @@
   ├── Lazy-initializes all DAOs
   ├── Lazy-initializes all Repositories
   ├── DisplaySettingsRepository     ← max refresh rate + smooth motion
+  ├── DefaultNoteSettingsRepository ← default pagination, paper size/template for new notes
   └── Onyx SDK initialization
 
   DisplaySettingsRepository
@@ -680,6 +686,12 @@
   ├── setMaxRefreshRate(rate)
   ├── setSmoothMotion(enabled)
   └── uses: SharedPreferences ("display_settings")
+
+  DefaultNoteSettingsRepository
+  ├── isPaginationEnabled: StateFlow<Boolean>  ← default true
+  ├── paperSize: StateFlow<PaperSize>          ← default LETTER
+  ├── paperTemplate: StateFlow<PaperTemplate>  ← default BLANK
+  └── uses: SharedPreferences ("default_note_settings")
 
   PaginationUtils
   ├── PaginationConstants.SEPARATOR_HEIGHT  ← shared constant (10f)
