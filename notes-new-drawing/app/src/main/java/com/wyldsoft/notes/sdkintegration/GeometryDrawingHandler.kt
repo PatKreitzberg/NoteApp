@@ -74,6 +74,7 @@ class GeometryDrawingHandler(
                 setShapeType(sdkShapeType)
             }
             ShapesManager.applyCharcoalTexture(baseShape, penProfile.penType)
+            baseShape.layer = viewModel.activeLayer.value
             baseShape.updateShapeRect()
             shapesManager.addShape(baseShape)
 
@@ -83,7 +84,8 @@ class GeometryDrawingHandler(
                 points = notePoints,
                 strokeWidth = penProfile.strokeWidth,
                 strokeColor = penProfile.getColorAsInt(),
-                penType = penProfile.penType
+                penType = penProfile.penType,
+                layer = viewModel.activeLayer.value
             )
             viewModel.addGeometricShape(domainShape)
 

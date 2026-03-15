@@ -36,7 +36,7 @@ abstract class AbstractStylusHandler(
     rxManager: RxManager? = null
 ) {
     protected val shapesManager: ShapesManager get() = getShapesManager()
-    protected var drawManager = DrawManager(bitmapManager, onShapeCompleted)
+    protected var drawManager = DrawManager(bitmapManager, onShapeCompleted, getActiveLayer = { viewModel.activeLayer.value })
     protected val eraseManager = EraseManager(surfaceView, rxManager, bitmapManager, onShapeRemoved)
 
     protected var isDrawingInProgress = false

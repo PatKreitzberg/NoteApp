@@ -19,6 +19,7 @@ This class is responsible for:
 class DrawManager(
     private var bitmapManager: BitmapManager,
     private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
+    private val getActiveLayer: () -> Int = { 1 }
 ) {
     private var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
 
@@ -54,6 +55,9 @@ class DrawManager(
             .setStrokeColor(currentPenProfile.getColorAsInt())
             .setStrokeWidth(currentPenProfile.strokeWidth)
             .setShapeType(shapeType)
+
+        // Set layer from current active layer
+        shape.layer = getActiveLayer()
 
         // Update bounding rect for hit testing
         shape.updateShapeRect()
