@@ -26,10 +26,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.R.drawable
+
 
 private val fontOptions = listOf(
     "Sans Serif" to "sans-serif",
@@ -69,7 +73,7 @@ fun ToolbarTextButtons(
             modifier = Modifier.then(if (isTextActive) Modifier.border(2.dp, Color.Black) else Modifier)
         ) {
             Icon(
-                imageVector = Icons.Default.TextFields,
+                imageVector = ImageVector.vectorResource(id = drawable.text_select_start_24px),
                 contentDescription = "Text Tool",
                 tint = if (isTextActive) Color.Black else Color.Gray
             )

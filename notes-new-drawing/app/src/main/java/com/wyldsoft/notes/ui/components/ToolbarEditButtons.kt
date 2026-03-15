@@ -17,8 +17,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
+import com.wyldsoft.notes.R.drawable
+
 
 /**
  * Edit tab buttons: selection, copy, paste.
@@ -44,7 +48,7 @@ fun ToolbarEditButtons(
         modifier = Modifier.then(if (isSelectionActive) Modifier.border(2.dp, Color.Black) else Modifier)
     ) {
         Icon(
-            imageVector = Icons.Default.SelectAll,
+            imageVector = ImageVector.vectorResource(id = drawable.lasso_select_24px),
             contentDescription = "Selection Tool",
             tint = if (isSelectionActive) Color.Black else Color.Gray
         )
