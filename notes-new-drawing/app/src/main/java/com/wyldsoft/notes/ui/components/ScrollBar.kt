@@ -37,10 +37,12 @@ fun VerticalScrollBar(
         if (viewHeightPx <= 0f) return@BoxWithConstraints
 
         val viewHeightNoteCoords = viewHeightPx / scale
-        val totalHeight = maxOf(contentMaxY, viewHeightNoteCoords)
-        val scrollRange = totalHeight - viewHeightNoteCoords
+        // scrollRange equals the actual max scrollY (how far the viewport top can move).
+        // totalHeight is the effective document height seen by the scroll bar.
+        val scrollRange = contentMaxY
+        val totalHeight = viewHeightNoteCoords + scrollRange
 
-        // If everything fits in view, show a full-size disabled thumb
+        // If contentMaxY == 0 there is nothing to scroll; thumb fills the track.
         val thumbFraction = (viewHeightNoteCoords / totalHeight).coerceIn(MIN_THUMB_FRACTION, 1f)
         val thumbHeight = viewHeightPx * thumbFraction
         val trackHeight = viewHeightPx - thumbHeight
