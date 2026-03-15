@@ -41,15 +41,17 @@ fun StrokeOptionsPanel(
     var strokeSize by remember(currentProfile) { mutableStateOf(currentProfile.strokeWidth) }
     var selectedColor by remember(currentProfile) { mutableStateOf(currentProfile.strokeColor) }
     var selectedPenType by remember(currentProfile) { mutableStateOf(currentProfile.penType) }
+    var strokeAlpha by remember(currentProfile) { mutableStateOf(currentProfile.strokeColor.alpha) }
     val density = LocalDensity.current
 
     val maxStrokeSize = getMaxStrokeSizeForPenType(selectedPenType)
 
     // Apply settings immediately when they change
-    LaunchedEffect(strokeSize, selectedColor, selectedPenType) {
+    LaunchedEffect(strokeSize, selectedColor, selectedPenType, strokeAlpha) {
+        val colorWithAlpha = selectedColor.copy(alpha = strokeAlpha)
         val newProfile = currentProfile.copy(
             strokeWidth = strokeSize,
-            strokeColor = selectedColor,
+            strokeColor = colorWithAlpha,
             penType = selectedPenType
         )
         onProfileChanged(newProfile)
@@ -129,6 +131,19 @@ fun StrokeOptionsPanel(
             value = strokeSize,
             onValueChange = { strokeSize = it },
             valueRange = 1f..maxStrokeSize,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Alpha slider
+        Text(text = "Opacity: ${(strokeAlpha * 100).toInt()}%", fontSize = 14.sp, color = Color.Black)
+        Slider(
+            value = strokeAlpha,
+            onValueChange = { strokeAlpha = it },
+            valueRange = 0.05f..1f,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
