@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun EditorView(
     viewModel: EditorViewModel,
     displaySettingsRepository: DisplaySettingsRepository? = null,
+    syncViewModel: com.wyldsoft.notes.presentation.viewmodel.SyncViewModel? = null,
     onSurfaceViewCreated: (android.view.SurfaceView, EditorViewModel) -> Unit = {_, _ -> },
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -155,10 +156,12 @@ fun EditorView(
             }
         }
 
+        val syncUiState = syncViewModel?.syncUiState?.collectAsState()?.value
+        val isSyncing = syncUiState is com.wyldsoft.notes.presentation.viewmodel.SyncUiState.Syncing
+
         ViewportInfo(
             viewportState = viewportState,
-            isPaginationEnabled = isPaginationEnabled,
-            currentPageNumber = currentPageNumber,
+            isSyncing = isSyncing,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }

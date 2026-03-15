@@ -18,14 +18,13 @@ import kotlin.math.roundToInt
 fun ViewportInfo(
     viewportState: ViewportState,
     modifier: Modifier = Modifier,
-    isPaginationEnabled: Boolean = false,
-    currentPageNumber: Int = 1
+    isSyncing: Boolean = false
 ) {
     val zoomPercent = (viewportState.scale * 100).roundToInt()
     val isZoomed = zoomPercent != 100
 
-    // Only show the overlay when zoomed or pagination is active
-    if (!isZoomed && !isPaginationEnabled) return
+    // Only show the overlay when zoomed or syncing
+    if (!isZoomed && !isSyncing) return
 
     Box(
         modifier = modifier
@@ -43,16 +42,16 @@ fun ViewportInfo(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isPaginationEnabled) {
+            if (isSyncing) {
                 Text(
-                    text = "Page $currentPageNumber",
+                    text = "Syncing...",
                     color = Color.White,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
 
-            if (isPaginationEnabled && isZoomed) {
+            if (isSyncing && isZoomed) {
                 Text(
                     text = "|",
                     color = Color.White.copy(alpha = 0.5f),
