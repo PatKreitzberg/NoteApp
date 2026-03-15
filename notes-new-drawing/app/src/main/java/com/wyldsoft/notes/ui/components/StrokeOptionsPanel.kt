@@ -82,7 +82,7 @@ fun StrokeOptionsPanel(
             modifier = Modifier.padding(bottom = 16.dp)
         ) {
             Text(
-                text = "Profile ${currentProfile.profileId + 1} Options",
+                text = "Profile ${currentProfile.profileId + 1} Type ${currentProfile.penType}",
                 fontSize = 18.sp,
                 modifier = Modifier.padding(end = 16.dp)
             )
