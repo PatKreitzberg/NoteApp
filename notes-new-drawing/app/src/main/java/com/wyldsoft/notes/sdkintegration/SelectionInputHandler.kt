@@ -46,11 +46,8 @@ class SelectionInputHandler(
     private var transformCenterX: Float = 0f
     private var transformCenterY: Float = 0f
 
-    /** Set by [handleBegin] when touch is outside selection; checked by [handleEnd]. */
+    /** Set by [handleBegin] when touch is outside selection; checked/cleared by [handleEnd]. */
     private var pendingCancel = false
-
-    /** True if the current stroke was a cancelled-selection touch (for external queries). */
-    val wasCancelled: Boolean get() = pendingCancel
 
     fun handleMoveUpdate(touchPoint: TouchPoint) {
         val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
