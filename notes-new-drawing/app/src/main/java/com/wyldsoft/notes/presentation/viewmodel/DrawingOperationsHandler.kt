@@ -33,6 +33,7 @@ class DrawingOperationsHandler(
     private val getShapesManager: () -> ShapesManager?,
     private val getBitmapManager: () -> BitmapManager?,
     private val onUpdateContentBounds: () -> Unit,
+    private val onScreenRefreshNeeded: () -> Unit = {},
     private val htrRunManager: HTRRunManager? = null,
     private val getActiveLayer: () -> Int = { 1 }
 ) {
@@ -112,6 +113,7 @@ class DrawingOperationsHandler(
                         }
 
                         bm.recreateBitmapFromShapes(sm.shapes())
+                        onScreenRefreshNeeded()
                         onUpdateContentBounds()
                         return@launch
                     }

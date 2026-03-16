@@ -201,6 +201,7 @@ class EditorViewModel(
         getShapesManager = { shapesManager },
         getBitmapManager = { bitmapManager },
         onUpdateContentBounds = { updateContentBounds() },
+        onScreenRefreshNeeded = { onScreenRefreshNeeded?.invoke() },
         htrRunManager = htrRunManager,
         getActiveLayer = { _activeLayer.value }
     )
