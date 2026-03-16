@@ -118,6 +118,12 @@ class EditorViewModel(
     val isAnyDropdownOpen: Boolean
         get() = isDrawingBlocked.value
 
+    /**
+     * True when UI overlays (dropdowns, dialogs, stroke options) are blocking input.
+     * Note: this does NOT account for non-draw modes (Select, Text) — those are
+     * handled by [ModeInputRouter] which routes touch events to the correct handler.
+     * Use [isInDrawMode] to check whether the editor is in a drawing mode.
+     */
     val isDrawingBlocked: StateFlow<Boolean> = combine(
         _uiState.map { it.isStrokeOptionsOpen },
         _openDropdownCount,
@@ -125,6 +131,9 @@ class EditorViewModel(
     ) { strokeOpen, dropdownCount, dialogOpen ->
         strokeOpen || dropdownCount > 0 || dialogOpen
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** True when the editor is in Draw mode (any draw tool). */
+    val isInDrawMode: Boolean get() = _uiState.value.mode is EditorMode.Draw
 
     private val _closeAllDropdownsEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val closeAllDropdownsEvent: SharedFlow<Unit> = _closeAllDropdownsEvent.asSharedFlow()
