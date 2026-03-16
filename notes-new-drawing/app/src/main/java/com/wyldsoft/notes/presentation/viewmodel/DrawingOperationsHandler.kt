@@ -15,7 +15,10 @@ import com.wyldsoft.notes.geometry.GeometryShapeCalculator
 import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
+import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.onyx.android.sdk.data.note.TouchPoint
+import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.utils.calculateShapesBoundingBox
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -148,7 +151,28 @@ class DrawingOperationsHandler(
                         val notePoints = GeometryShapeCalculator.calculate(
                             result.shapeType, centerX, centerY, endX, endY
                         )
+
+                        // Create SDK BaseShape so it renders
+                        val shapePointList = TouchPointList()
+                        val now = System.currentTimeMillis()
+                        notePoints.forEach { pt ->
+                            shapePointList.add(TouchPoint(pt.x, pt.y, 1.0f, 1.0f, now))
+                        }
+                        val sdkShapeType = ShapesManager.penTypeToShapeType(shape.penType)
+                        val baseShape = ShapeFactory.createShape(sdkShapeType).apply {
+                            setTouchPointList(shapePointList)
+                            setStrokeColor(shape.strokeColor)
+                            setStrokeWidth(shape.strokeWidth)
+                            setShapeType(sdkShapeType)
+                        }
+                        ShapesManager.applyCharcoalTexture(baseShape, shape.penType)
+                        baseShape.layer = shape.layer
+                        baseShape.updateShapeRect()
+                        sm.addShape(baseShape)
+
+                        // Persist domain shape + record undoable action
                         val geometricShape = Shape(
+                            id = baseShape.id,
                             type = result.shapeType.toDomainShapeType(),
                             points = notePoints,
                             strokeWidth = shape.strokeWidth,
