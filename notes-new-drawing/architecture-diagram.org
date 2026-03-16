@@ -764,12 +764,19 @@
   ├── basicRecognize()         ← returns List<RecognitionResult>
   └── isReady()
 
+  GestureRecognitionManager
+  ├── uses Google ML Kit Digital Ink Recognition with en-US-x-gesture model
+  ├── downloadModel()              ← downloads gesture recognition model
+  ├── recognizeGestures()          ← returns List<GestureRecognitionResult>
+  ├── recognizes: circle, scribble, strike, etc.
+  └── isReady()
+
   HTRRunManager
   ├── addShapesForRecognition()    ← debounced (2s), batches shapes per note
-  ├── basicRecognition()           ← runs HTR and saves to RecognizedSegmentRepository
+  ├── basicRecognition()           ← runs gesture recognition first, then HTR, saves to DB
   ├── recognizeShapesDirectly()    ← immediate recognition, returns merged text string
   ├── onShapesDeleted()            ← cleans up segments for deleted shapes
-  └── uses: HTRManager, RecognizedSegmentRepository
+  └── uses: HTRManager, GestureRecognitionManager, RecognizedSegmentRepository
 
   RecognizedSegmentRepository
   ├── searchText(query)        ← used by HomeViewModel search
