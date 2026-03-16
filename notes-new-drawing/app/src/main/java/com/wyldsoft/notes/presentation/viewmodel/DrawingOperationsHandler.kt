@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 class DrawingOperationsHandler(
     private val noteRepository: NoteRepository,
     private val scope: CoroutineScope,
-    private val actionManager: ActionManager,
+    private val getActionManager: () -> ActionManager,
     private val getCurrentNote: () -> Note,
     private val getCurrentPenProfile: () -> PenProfile,
     private val getShapesManager: () -> ShapesManager?,
@@ -106,7 +106,7 @@ class DrawingOperationsHandler(
                         }
 
                         if (coveredDomainShapes.isNotEmpty()) {
-                            actionManager.recordAction(
+                            getActionManager().recordAction(
                                 EraseAction(getCurrentNote().id, coveredDomainShapes, noteRepository, sm, bm)
                             )
                             htrRunManager.onShapesDeleted(
@@ -152,7 +152,7 @@ class DrawingOperationsHandler(
 
             // Normal shape — record DrawAction
             if (sm != null && bm != null) {
-                actionManager.recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
+                getActionManager().recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
             }
 
             htrRunManager?.addShapesForRecognition(getCurrentNote().id, listOf(shape))
@@ -181,7 +181,7 @@ class DrawingOperationsHandler(
             val sm = getShapesManager()
             val bm = getBitmapManager()
             if (sm != null && bm != null) {
-                actionManager.recordAction(
+                getActionManager().recordAction(
                     EraseAction(getCurrentNote().id, pendingErasedShapes.toList(), noteRepository, sm, bm)
                 )
             }
@@ -196,7 +196,7 @@ class DrawingOperationsHandler(
             val sm = getShapesManager()
             val bm = getBitmapManager()
             if (sm != null && bm != null) {
-                actionManager.recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
+                getActionManager().recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
             }
             onUpdateContentBounds()
         }
@@ -213,8 +213,8 @@ class DrawingOperationsHandler(
             noteRepository.addShape(noteId, lineShape)
             val sm = getShapesManager() ?: return@launch
             val bm = getBitmapManager() ?: return@launch
-            actionManager.recordAction(DrawAction(noteId, originalShape, noteRepository, sm, bm))
-            actionManager.recordAction(SnapToLineAction(noteId, originalShape, lineShape, noteRepository, sm, bm))
+            getActionManager().recordAction(DrawAction(noteId, originalShape, noteRepository, sm, bm))
+            getActionManager().recordAction(SnapToLineAction(noteId, originalShape, lineShape, noteRepository, sm, bm))
             onUpdateContentBounds()
         }
     }

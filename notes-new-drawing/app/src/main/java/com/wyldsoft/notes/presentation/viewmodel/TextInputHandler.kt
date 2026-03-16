@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 class TextInputHandler(
     private val noteRepository: NoteRepository,
     private val scope: CoroutineScope,
-    private val actionManager: ActionManager,
+    private val getActionManager: () -> ActionManager,
     private val getCurrentNote: () -> Note,
     private val getShapesManager: () -> ShapesManager?,
     private val getBitmapManager: () -> BitmapManager?,
@@ -129,7 +129,7 @@ class TextInputHandler(
                     bm.recreateBitmapFromShapes(sm.shapes())
                     onScreenRefreshNeeded()
                     if (oldShape != null) {
-                        actionManager.recordAction(EditTextAction(noteId, oldShape, null, noteRepository, sm, bm))
+                        getActionManager().recordAction(EditTextAction(noteId, oldShape, null, noteRepository, sm, bm))
                     }
                 }
                 return@launch
@@ -151,7 +151,7 @@ class TextInputHandler(
                 val sdkShape = sm.convertDomainShapeToSdkShape(shape)
                 sm.addShape(sdkShape)
                 bm.recreateBitmapFromShapes(sm.shapes())
-                actionManager.recordAction(EditTextAction(noteId, oldShape, shape, noteRepository, sm, bm))
+                getActionManager().recordAction(EditTextAction(noteId, oldShape, shape, noteRepository, sm, bm))
                 onScreenRefreshNeeded()
             }
             onUpdateContentBounds()

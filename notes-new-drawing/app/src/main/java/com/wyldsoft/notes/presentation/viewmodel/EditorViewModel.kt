@@ -185,7 +185,7 @@ class EditorViewModel(
         noteRepository = noteRepository,
         scope = viewModelScope,
         selectionManager = selectionManager,
-        actionManager = actionManager,
+        getActionManager = { actionManager },
         getCurrentNote = { currentNote.value },
         getShapesManager = { shapesManager },
         getBitmapManager = { bitmapManager },
@@ -195,7 +195,7 @@ class EditorViewModel(
     val drawingOperationsHandler = DrawingOperationsHandler(
         noteRepository = noteRepository,
         scope = viewModelScope,
-        actionManager = actionManager,
+        getActionManager = { actionManager },
         getCurrentNote = { currentNote.value },
         getCurrentPenProfile = { _currentPenProfile.value },
         getShapesManager = { shapesManager },
@@ -217,7 +217,7 @@ class EditorViewModel(
     val textInputHandler = TextInputHandler(
         noteRepository = noteRepository,
         scope = viewModelScope,
-        actionManager = actionManager,
+        getActionManager = { actionManager },
         getCurrentNote = { currentNote.value },
         getShapesManager = { shapesManager },
         getBitmapManager = { bitmapManager },
@@ -238,7 +238,7 @@ class EditorViewModel(
     private val clipboardSelectionHandler = ClipboardSelectionHandler(
         noteRepository = noteRepository,
         scope = viewModelScope,
-        actionManager = actionManager,
+        getActionManager = { actionManager },
         getCurrentNote = { currentNote.value },
         getShapesManager = { shapesManager },
         getBitmapManager = { bitmapManager },

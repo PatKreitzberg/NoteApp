@@ -27,7 +27,7 @@ class SelectionTransformHandler(
     private val noteRepository: NoteRepository,
     private val scope: CoroutineScope,
     private val selectionManager: SelectionManager,
-    private val actionManager: ActionManager,
+    private val getActionManager: () -> ActionManager,
     private val getCurrentNote: () -> Note,
     private val getShapesManager: () -> ShapesManager?,
     private val getBitmapManager: () -> BitmapManager?,
@@ -105,7 +105,7 @@ class SelectionTransformHandler(
 
         if (beforeShapes.isNotEmpty()) {
             val afterShapes = beforeShapes.map { it.copy(fontSize = fontSize, fontFamily = fontFamily, strokeColor = color) }
-            actionManager.recordAction(TextFormattingAction(note.id, beforeShapes, afterShapes, noteRepository, sm, bm))
+            getActionManager().recordAction(TextFormattingAction(note.id, beforeShapes, afterShapes, noteRepository, sm, bm))
         }
 
         scope.launch {
@@ -123,7 +123,7 @@ class SelectionTransformHandler(
     fun recordMoveAction(originalShapes: List<Shape>, dx: Float, dy: Float) {
         val sm = getShapesManager() ?: return
         val bm = getBitmapManager() ?: return
-        actionManager.recordAction(
+        getActionManager().recordAction(
             MoveAction(getCurrentNote().id, originalShapes, dx, dy, noteRepository, sm, bm)
         )
     }
@@ -149,7 +149,7 @@ class SelectionTransformHandler(
     ) {
         val sm = getShapesManager() ?: return
         val bm = getBitmapManager() ?: return
-        actionManager.recordAction(
+        getActionManager().recordAction(
             TransformAction(getCurrentNote().id, originalShapes, transformType, param, centerX, centerY, noteRepository, sm, bm)
         )
     }

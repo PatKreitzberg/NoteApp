@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 class ClipboardSelectionHandler(
     private val noteRepository: NoteRepository,
     private val scope: CoroutineScope,
-    private val actionManager: ActionManager,
+    private val getActionManager: () -> ActionManager,
     private val getCurrentNote: () -> Note,
     private val getShapesManager: () -> ShapesManager?,
     private val getBitmapManager: () -> BitmapManager?,
@@ -83,7 +83,7 @@ class ClipboardSelectionHandler(
 
             for (newShape in newShapes) {
                 ActionUtils.addShapeToNoteAndMemory(note.id, newShape, noteRepository, sm)
-                actionManager.recordAction(DrawAction(note.id, newShape, noteRepository, sm, bm))
+                getActionManager().recordAction(DrawAction(note.id, newShape, noteRepository, sm, bm))
             }
 
             val newPoints = newShapes.flatMap { it.points }
@@ -131,7 +131,7 @@ class ClipboardSelectionHandler(
                     fontFamily = "sans-serif"
                 )
                 ActionUtils.addShapeToNoteAndMemory(note.id, textShape, noteRepository, sm)
-                actionManager.recordAction(ConvertToTextAction(note.id, selectedShapes, textShape, noteRepository, sm, bm))
+                getActionManager().recordAction(ConvertToTextAction(note.id, selectedShapes, textShape, noteRepository, sm, bm))
                 bm.recreateBitmapFromShapes(sm.shapes())
                 selectionManager.clearSelection()
                 onNotifySelectionChanged()
