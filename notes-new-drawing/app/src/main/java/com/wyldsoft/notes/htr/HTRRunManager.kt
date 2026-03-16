@@ -9,6 +9,7 @@ import java.util.UUID
 
 class HTRRunManager(
     private val htrManager: HTRManager,
+    private val gestureRecognitionManager: GestureRecognitionManager,
     private val recognizedSegmentRepository: RecognizedSegmentRepository
 ) {
     companion object {
@@ -39,12 +40,30 @@ class HTRRunManager(
     }
 
     suspend fun basicRecognition() {
+        // Run gesture recognition first
+        if (gestureRecognitionManager.isReady()) {
+            Log.d(TAG, "Running gesture recognition before HTR")
+            for ((noteId, shapes) in pendingShapes) {
+                val gestureResults = gestureRecognitionManager.recognizeGestures(noteId, shapes)
+                for (result in gestureResults) {
+                    Log.d(TAG, "GESTURE result for note $noteId: '${result.gesture}' (confidence: ${result.confidence})")
+                }
+            }
+        } else {
+            Log.w(TAG, "Gesture recognition model not ready, skipping gesture recognition")
+        }
+
+        // Then run HTR
         if (!htrManager.isReady()) {
             Log.w(TAG, "HTR model not ready, skipping recognition")
             return
         }
-        Log.d(TAG, "Starting basic recognition for all pending shapes")
+        Log.d(TAG, "Starting HTR recognition for all pending shapes")
         val results = htrManager.basicRecognize(pendingShapes)
+
+        for (result in results) {
+            Log.d(TAG, "HTR result for note ${result.noteId}: '${result.text}' (confidence: ${result.confidence})")
+        }
 
         // Save results to database
         val entities = results.map { result ->
@@ -106,6 +125,7 @@ class HTRRunManager(
     fun close() {
         debounceJob?.cancel()
         scope.cancel()
+        gestureRecognitionManager.close()
         htrManager.close()
     }
 }

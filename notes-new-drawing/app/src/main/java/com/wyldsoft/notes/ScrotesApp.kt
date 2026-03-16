@@ -8,6 +8,7 @@ import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.data.repository.*
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
+import com.wyldsoft.notes.htr.GestureRecognitionManager
 import com.wyldsoft.notes.htr.HTRManager
 import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.presentation.viewmodel.SyncViewModel
@@ -69,7 +70,7 @@ class ScrotesApp : Application() {
     }
 
     val htrRunManager: HTRRunManager by lazy {
-        HTRRunManager(HTRManager(), recognizedSegmentRepository)
+        HTRRunManager(HTRManager(), GestureRecognitionManager(), recognizedSegmentRepository)
     }
 
     val syncRepository: SyncRepository by lazy {
