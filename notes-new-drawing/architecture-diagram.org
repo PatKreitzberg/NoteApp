@@ -425,7 +425,8 @@
   ├── EditorUiState (data class)
   │   ├── isStrokeOptionsOpen: Boolean
   │   ├── mode: EditorMode
-  │   └── selectedGeometricShape: GeometricShapeType
+  │   ├── selectedGeometricShape: GeometricShapeType
+  │   └── shapeRecognitionEnabled: Boolean
   │
   ├── EditorMode (sealed class):
   │   ├── Draw(drawTool: DrawTool)  ← DrawTool: PEN | ERASER | GEOMETRY
@@ -436,6 +437,7 @@
   │   ├── exitMode(): clears selection (Select), commits text (Text)
   │   └── enterMode(): triggers screen refresh
   ├── selectGeometricShape()
+  ├── toggleShapeRecognition()       ← toggle auto-replace freehand with geometric shapes
   ├── addGeometricShape(Shape)
   ├── updateContentBounds()              ← syncs contentMaxY to ViewportManager
   ├── applyPenProfileToSelection()       ← changes selected strokes' pen properties
@@ -772,13 +774,23 @@
   ├── recognizes: circle, scribble, strike, etc.
   └── isReady()
 
+  ShapeRecognitionManager
+  ├── uses Google ML Kit Digital Ink Recognition with zxx-Zsym-x-shapes model
+  ├── downloadModel()              ← downloads shape recognition model
+  ├── recognizeShape(shape)        ← immediate single-shape recognition
+  │   returns ShapeRecognitionResult(shapeType, confidence) or null
+  ├── Maps recognized names → GeometricShapeType (CIRCLE, SQUARE, TRIANGLE, LINE)
+  ├── Confidence threshold: < 0.25 (lower = more confident)
+  └── isReady()
+
   HTRRunManager
   ├── addShapesForRecognition()    ← debounced (2s), batches shapes per note
   ├── basicRecognition()           ← runs gesture recognition first, then HTR, saves to DB
   ├── recognizeShapesDirectly()    ← immediate recognition, returns merged text string
   ├── isScribbleGesture(shape)     ← immediate check if shape is a scribble gesture
+  ├── recognizeShape(shape)        ← delegates to ShapeRecognitionManager
   ├── onShapesDeleted()            ← cleans up segments for deleted shapes
-  └── uses: HTRManager, GestureRecognitionManager, RecognizedSegmentRepository
+  └── uses: HTRManager, GestureRecognitionManager, ShapeRecognitionManager, RecognizedSegmentRepository
 
   Scribble-to-Erase Flow:
   1. User draws a shape (stroke completes)
@@ -806,6 +818,21 @@
         → EditorViewModel.switchMode(EditorMode.Select) activates selection mode
         → selection handles shown, user can move/scale/rotate
      c. If no encircled shapes: treat as normal stroke (DrawAction recorded)
+
+  Shape Recognition Flow (auto-replace freehand with geometric shapes):
+  1. User toggles shape recognition button (AutoFixHigh icon) in DRAW tab
+     → EditorUiState.shapeRecognitionEnabled toggled
+  2. After scribble check, if shapeRecognitionEnabled:
+     a. HTRRunManager.recognizeShape(shape) checks via ShapeRecognitionManager
+     b. MLKit zxx-Zsym-x-shapes model returns candidates with scores
+     c. If top candidate score < 0.25 AND maps to supported GeometricShapeType:
+        → freehand stroke removed from DB + memory
+        → bounding box of freehand stroke used to compute geometric shape
+          (center = bbox center, end = bbox right edge center)
+        → GeometryShapeCalculator.calculate() generates outline points
+        → new geometric Shape created + persisted via addGeometricShape()
+     d. If not recognized or unsupported: falls through to normal draw
+  3. When shapeRecognitionEnabled: circle-to-select is skipped
 
   RecognizedSegmentRepository
   ├── searchText(query)        ← used by HomeViewModel search

@@ -10,7 +10,8 @@ import java.util.UUID
 class HTRRunManager(
     private val htrManager: HTRManager,
     private val gestureRecognitionManager: GestureRecognitionManager,
-    private val recognizedSegmentRepository: RecognizedSegmentRepository
+    private val recognizedSegmentRepository: RecognizedSegmentRepository,
+    val shapeRecognitionManager: ShapeRecognitionManager = ShapeRecognitionManager()
 ) {
     companion object {
         private const val TAG = "HTRRunManager"
@@ -120,6 +121,10 @@ class HTRRunManager(
         return gesture?.uppercase() == "CIRCLE"
     }
 
+    suspend fun recognizeShape(shape: Shape): ShapeRecognitionResult? {
+        return shapeRecognitionManager.recognizeShape(shape)
+    }
+
     fun onShapesDeleted(noteId: String, deletedShapeIds: Set<String>) {
         synchronized(pendingShapes) {
             pendingShapes[noteId]?.removeAll { it.id in deletedShapeIds }
@@ -141,6 +146,7 @@ class HTRRunManager(
     fun close() {
         debounceJob?.cancel()
         scope.cancel()
+        shapeRecognitionManager.close()
         gestureRecognitionManager.close()
         htrManager.close()
     }

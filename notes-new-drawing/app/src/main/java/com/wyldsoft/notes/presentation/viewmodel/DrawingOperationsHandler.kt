@@ -10,6 +10,8 @@ import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Note
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
+import com.wyldsoft.notes.geometry.GeometricShapeType
+import com.wyldsoft.notes.geometry.GeometryShapeCalculator
 import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
@@ -37,7 +39,8 @@ class DrawingOperationsHandler(
     private val onScreenRefreshNeeded: () -> Unit = {},
     private val htrRunManager: HTRRunManager? = null,
     private val getActiveLayer: () -> Int = { 1 },
-    private val onCircleSelect: ((Set<String>, RectF) -> Unit)? = null
+    private val onCircleSelect: ((Set<String>, RectF) -> Unit)? = null,
+    private val isShapeRecognitionEnabled: () -> Boolean = { false }
 ) {
     companion object {
         private const val TAG = "DrawingOpsHandler"
@@ -123,8 +126,48 @@ class DrawingOperationsHandler(
                 }
             }
 
-            // Try circle-to-select
-            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty() && onCircleSelect != null) {
+            // Try shape recognition (when enabled, replaces freehand with geometric shape)
+            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()
+                && isShapeRecognitionEnabled()
+            ) {
+                val result = htrRunManager.recognizeShape(shape)
+                if (result != null) {
+                    Log.d(TAG, "Shape recognition: replacing stroke with ${result.shapeType.displayName()} (score=${result.confidence})")
+                    // Remove the freehand stroke
+                    noteRepository.removeShape(getCurrentNote().id, shape.id)
+                    val freehandSdk = sm.shapes().find { it.id == shape.id }
+                    if (freehandSdk != null) sm.removeShape(freehandSdk)
+
+                    // Compute bounding box of freehand stroke, use as start/end for geometry
+                    val bbox = computeBoundingBox(shape)
+                    if (bbox != null) {
+                        val centerX = bbox.centerX()
+                        val centerY = bbox.centerY()
+                        val endX = bbox.right
+                        val endY = bbox.centerY()
+                        val notePoints = GeometryShapeCalculator.calculate(
+                            result.shapeType, centerX, centerY, endX, endY
+                        )
+                        val geometricShape = Shape(
+                            type = result.shapeType.toDomainShapeType(),
+                            points = notePoints,
+                            strokeWidth = shape.strokeWidth,
+                            strokeColor = shape.strokeColor,
+                            penType = shape.penType,
+                            layer = shape.layer
+                        )
+                        addGeometricShape(geometricShape)
+                    }
+                    bm.recreateBitmapFromShapes(sm.shapes())
+                    onScreenRefreshNeeded()
+                    return@launch
+                }
+            }
+
+            // Try circle-to-select (skipped when shape recognition is enabled)
+            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()
+                && onCircleSelect != null && !isShapeRecognitionEnabled()
+            ) {
                 val isCircle = htrRunManager.isCircleGesture(shape)
                 if (isCircle) {
                     val encircledShapes = findShapesEncircledBy(shape, sm)

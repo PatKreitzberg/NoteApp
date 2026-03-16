@@ -209,7 +209,8 @@ class EditorViewModel(
             notifySelectionChanged()
             switchMode(EditorMode.Select)
             onScreenRefreshNeeded?.invoke()
-        }
+        },
+        isShapeRecognitionEnabled = { _uiState.value.shapeRecognitionEnabled }
     )
 
     val isDrawing: StateFlow<Boolean> = drawingOperationsHandler.isDrawing
@@ -400,6 +401,12 @@ class EditorViewModel(
 
     fun selectGeometricShape(shape: GeometricShapeType) {
         _uiState.value = _uiState.value.copy(selectedGeometricShape = shape)
+    }
+
+    fun toggleShapeRecognition() {
+        _uiState.value = _uiState.value.copy(
+            shapeRecognitionEnabled = !_uiState.value.shapeRecognitionEnabled
+        )
     }
 
     fun cancelSelection() {
@@ -613,7 +620,8 @@ class EditorViewModel(
 data class EditorUiState(
     val isStrokeOptionsOpen: Boolean = false,
     val mode: EditorMode = EditorMode.Draw(),
-    val selectedGeometricShape: GeometricShapeType = GeometricShapeType.LINE
+    val selectedGeometricShape: GeometricShapeType = GeometricShapeType.LINE,
+    val shapeRecognitionEnabled: Boolean = false
 ) {
     val isGeometryMode: Boolean
         get() = mode is EditorMode.Draw && (mode as EditorMode.Draw).drawTool == DrawTool.GEOMETRY
