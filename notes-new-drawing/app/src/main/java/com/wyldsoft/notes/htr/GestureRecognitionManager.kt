@@ -117,4 +117,26 @@ class GestureRecognitionManager {
 
         return results
     }
+
+    /**
+     * Recognize gesture for a single shape immediately (no debounce).
+     * Returns the top gesture candidate name (e.g. "SCRIBBLE") or null.
+     */
+    suspend fun recognizeSingleShapeGesture(shape: Shape): String? {
+        if (!modelReady || shape.points.isEmpty() || shape.pointTimestamps.isEmpty()) return null
+
+        val strokeBuilder = Ink.Stroke.builder()
+        for (i in shape.points.indices) {
+            val point = shape.points[i]
+            strokeBuilder.addPoint(Ink.Point.create(point.x, point.y, shape.pointTimestamps[i]))
+        }
+        val ink = Ink.builder().addStroke(strokeBuilder.build()).build()
+
+        val candidates = recognizer?.recognize(ink)?.await()?.candidates
+        if (candidates.isNullOrEmpty()) return null
+
+        val top = candidates[0]
+        Log.d(TAG, "Immediate gesture: '${top.text}' (score: ${top.score})")
+        return top.text
+    }
 }

@@ -104,6 +104,16 @@ class HTRRunManager(
         return merged.takeIf { it.isNotBlank() }
     }
 
+    /**
+     * Immediately check if a single shape is a scribble gesture.
+     * Returns true if the top gesture candidate is "SCRIBBLE".
+     */
+    suspend fun isScribbleGesture(shape: Shape): Boolean {
+        if (!gestureRecognitionManager.isReady()) return false
+        val gesture = gestureRecognitionManager.recognizeSingleShapeGesture(shape)
+        return gesture?.uppercase() == "SCRIBBLE"
+    }
+
     fun onShapesDeleted(noteId: String, deletedShapeIds: Set<String>) {
         synchronized(pendingShapes) {
             pendingShapes[noteId]?.removeAll { it.id in deletedShapeIds }

@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.presentation.viewmodel
 
+import android.graphics.RectF
 import android.util.Log
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.DrawAction
@@ -35,6 +36,10 @@ class DrawingOperationsHandler(
     private val htrRunManager: HTRRunManager? = null,
     private val getActiveLayer: () -> Int = { 1 }
 ) {
+    companion object {
+        private const val TAG = "DrawingOpsHandler"
+        private const val SCRIBBLE_COVERAGE_THRESHOLD = 0.80f
+    }
     private val _isDrawing = MutableStateFlow(false)
     val isDrawing: StateFlow<Boolean> = _isDrawing.asStateFlow()
 
@@ -74,6 +79,46 @@ class DrawingOperationsHandler(
 
             val sm = getShapesManager()
             val bm = getBitmapManager()
+
+            // Try immediate scribble-to-erase
+            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()) {
+                val isScribble = htrRunManager.isScribbleGesture(shape)
+                if (isScribble) {
+                    val coveredShapes = findShapesCoveredByScribble(shape, sm)
+                    if (coveredShapes.isNotEmpty()) {
+                        Log.d(TAG, "Scribble-to-erase: erasing ${coveredShapes.size} shape(s)")
+                        // Remove the scribble itself (no DrawAction — not undoable)
+                        noteRepository.removeShape(getCurrentNote().id, shape.id)
+                        val scribbleSdk = sm.shapes().find { it.id == shape.id }
+                        if (scribbleSdk != null) sm.removeShape(scribbleSdk)
+
+                        // Remove covered shapes and record as EraseAction
+                        val coveredDomainShapes = mutableListOf<Shape>()
+                        for (covered in coveredShapes) {
+                            val domainShape = getCurrentNote().shapes.find { it.id == covered.id }
+                            if (domainShape != null) coveredDomainShapes.add(domainShape)
+                            sm.removeShape(covered)
+                            noteRepository.removeShape(getCurrentNote().id, covered.id)
+                        }
+
+                        if (coveredDomainShapes.isNotEmpty()) {
+                            actionManager.recordAction(
+                                EraseAction(getCurrentNote().id, coveredDomainShapes, noteRepository, sm, bm)
+                            )
+                            htrRunManager.onShapesDeleted(
+                                getCurrentNote().id,
+                                coveredDomainShapes.map { it.id }.toSet()
+                            )
+                        }
+
+                        bm.recreateBitmapFromShapes(sm.shapes())
+                        onUpdateContentBounds()
+                        return@launch
+                    }
+                }
+            }
+
+            // Normal shape — record DrawAction
             if (sm != null && bm != null) {
                 actionManager.recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
             }
@@ -140,5 +185,61 @@ class DrawingOperationsHandler(
             actionManager.recordAction(SnapToLineAction(noteId, originalShape, lineShape, noteRepository, sm, bm))
             onUpdateContentBounds()
         }
+    }
+
+    /**
+     * Compute bounding box of a domain Shape from its points.
+     */
+    private fun computeBoundingBox(shape: Shape): RectF? {
+        if (shape.points.isEmpty()) return null
+        var minX = Float.MAX_VALUE
+        var minY = Float.MAX_VALUE
+        var maxX = Float.MIN_VALUE
+        var maxY = Float.MIN_VALUE
+        for (p in shape.points) {
+            if (p.x < minX) minX = p.x
+            if (p.y < minY) minY = p.y
+            if (p.x > maxX) maxX = p.x
+            if (p.y > maxY) maxY = p.y
+        }
+        return RectF(minX, minY, maxX, maxY)
+    }
+
+    /**
+     * Find SDK shapes on the same layer whose bounding box is >80% covered
+     * by the scribble's bounding box.
+     */
+    private fun findShapesCoveredByScribble(
+        scribble: Shape,
+        shapesManager: ShapesManager
+    ): List<com.wyldsoft.notes.shapemanagement.shapes.BaseShape> {
+        val scribbleRect = computeBoundingBox(scribble) ?: return emptyList()
+        val activeLayer = scribble.layer
+        val result = mutableListOf<com.wyldsoft.notes.shapemanagement.shapes.BaseShape>()
+
+        for (sdkShape in shapesManager.shapes()) {
+            if (sdkShape.id == scribble.id) continue
+            if (sdkShape.layer != activeLayer) continue
+            val shapeRect = sdkShape.boundingRect ?: continue
+
+            // Compute intersection area
+            val interLeft = maxOf(scribbleRect.left, shapeRect.left)
+            val interTop = maxOf(scribbleRect.top, shapeRect.top)
+            val interRight = minOf(scribbleRect.right, shapeRect.right)
+            val interBottom = minOf(scribbleRect.bottom, shapeRect.bottom)
+
+            if (interLeft >= interRight || interTop >= interBottom) continue
+
+            val interArea = (interRight - interLeft) * (interBottom - interTop)
+            val shapeArea = shapeRect.width() * shapeRect.height()
+            if (shapeArea <= 0f) continue
+
+            val coverage = interArea / shapeArea
+            if (coverage >= SCRIBBLE_COVERAGE_THRESHOLD) {
+                result.add(sdkShape)
+            }
+        }
+
+        return result
     }
 }
