@@ -492,9 +492,14 @@
   ├── ViewportInfo
   │   └── displays sync status and zoom %
   ├── NoteSettingsDialog      → uses SettingsDialogShell, SettingsDropdown
+  │   ├── Pagination, paper size/template toggles
+  │   ├── Scribble-to-erase toggle (reads/writes DisplaySettingsRepository)
+  │   ├── Circle-to-select toggle  (reads/writes DisplaySettingsRepository)
+  │   └── "App Settings" button → opens AppSettingsDialog
   ├── NotebookSettingsDialog  → uses SettingsDialogShell
   ├── DefaultNoteSettingsDialog → uses SettingsDialogShell, sets defaults for new notes
   └── AppSettingsDialog       → uses SettingsDialogShell, includes Default Note Settings button
+      └── Gestures: fixed list of all GestureTypes, each with action InlineDropdown (incl. None)
 
   Shared UI Components:
   ├── PenButton               ← shared pen type icon button
@@ -713,11 +718,17 @@
   └── Onyx SDK initialization
 
   DisplaySettingsRepository
-  ├── maxRefreshRate: StateFlow<Int>      ← 1-15 Hz (default 5)
-  ├── smoothMotion: StateFlow<Boolean>    ← default true
-  ├── minRefreshIntervalMs: Long          ← derived from maxRefreshRate
+  ├── maxRefreshRate: StateFlow<Int>           ← 1-15 Hz (default 5)
+  ├── smoothMotion: StateFlow<Boolean>         ← default true
+  ├── scrollBarVisible: StateFlow<Boolean>     ← default true
+  ├── scribbleToEraseEnabled: StateFlow<Boolean> ← default true
+  ├── circleToSelectEnabled: StateFlow<Boolean>  ← default true
+  ├── minRefreshIntervalMs: Long               ← derived from maxRefreshRate
   ├── setMaxRefreshRate(rate)
   ├── setSmoothMotion(enabled)
+  ├── setScrollBarVisible(enabled)
+  ├── setScribbleToEraseEnabled(enabled)
+  ├── setCircleToSelectEnabled(enabled)
   └── uses: SharedPreferences ("display_settings")
 
   DefaultNoteSettingsRepository
