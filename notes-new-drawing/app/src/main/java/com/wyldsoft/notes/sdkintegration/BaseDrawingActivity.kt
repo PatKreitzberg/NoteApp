@@ -84,7 +84,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         runBlocking(Dispatchers.IO) { noteRepository.setCurrentNote(noteId) }
 
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId, notebookId: $notebookId")
-        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrRunManager, notebookId, app.displaySettingsRepository)
+        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrRunManager, notebookId, app.displaySettingsRepository, app.actionHistoryRepository)
         setEditorViewAsContent()
     }
 
@@ -264,6 +264,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         gestureHandler.setViewportManager(editorViewModel.viewportManager)
         val app = application as com.wyldsoft.notes.ScrotesApp
         gestureHandler.gestureMappings = app.gestureSettingsRepository.mappings.value
+
+        // Observe gesture settings changes so they take effect without restarting the note
+        lifecycleScope.launch {
+            app.gestureSettingsRepository.mappings.collect { mappings ->
+                gestureHandler.gestureMappings = mappings
+            }
+        }
 
         gestureHandler.onScrollingStateChanged = { isScrolling ->
             isScrollingOrZooming = isScrolling

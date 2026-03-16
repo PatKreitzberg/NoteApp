@@ -15,10 +15,13 @@ class ActionManager {
     private val _canRedo = MutableStateFlow(false)
     val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
 
+    var onChanged: (() -> Unit)? = null
+
     fun recordAction(action: ActionInterface) {
         undoStack.push(action)
         redoStack.clear()
         updateState()
+        onChanged?.invoke()
     }
 
     suspend fun undo() {
@@ -27,6 +30,7 @@ class ActionManager {
         action.undo()
         redoStack.push(action)
         updateState()
+        onChanged?.invoke()
     }
 
     suspend fun redo() {
@@ -35,11 +39,23 @@ class ActionManager {
         action.redo()
         undoStack.push(action)
         updateState()
+        onChanged?.invoke()
     }
 
     fun clear() {
         undoStack.clear()
         redoStack.clear()
+        updateState()
+    }
+
+    fun getUndoActions(): List<ActionInterface> = undoStack.toList()
+    fun getRedoActions(): List<ActionInterface> = redoStack.toList()
+
+    fun loadActions(undoActions: List<ActionInterface>, redoActions: List<ActionInterface>) {
+        undoStack.clear()
+        redoStack.clear()
+        undoActions.forEach { undoStack.push(it) }
+        redoActions.forEach { redoStack.push(it) }
         updateState()
     }
 

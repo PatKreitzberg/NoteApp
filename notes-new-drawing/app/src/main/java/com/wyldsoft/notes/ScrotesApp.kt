@@ -6,6 +6,7 @@ import com.onyx.android.sdk.rx.RxBaseAction
 import com.onyx.android.sdk.utils.ResManager
 import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.data.repository.*
+import com.wyldsoft.notes.actions.ActionHistoryRepository
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.htr.GestureRecognitionManager
@@ -51,6 +52,10 @@ class ScrotesApp : Application() {
             deletedItemDao = database.deletedItemDao(),
             folderRepository = folderRepository
         )
+    }
+
+    val actionHistoryRepository: ActionHistoryRepository by lazy {
+        ActionHistoryRepository(database.actionHistoryDao())
     }
 
     val gestureSettingsRepository: GestureSettingsRepository by lazy {

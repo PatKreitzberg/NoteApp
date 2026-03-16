@@ -6,9 +6,9 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 class ConvertToTextAction(
-    private val noteId: String,
-    private val originalShapes: List<Shape>,
-    private val textShape: Shape,
+    internal val noteId: String,
+    internal val originalShapes: List<Shape>,
+    internal val textShape: Shape,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager

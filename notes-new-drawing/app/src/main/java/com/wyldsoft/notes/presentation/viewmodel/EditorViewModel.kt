@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wyldsoft.notes.actions.ActionHistoryRepository
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.TransformType
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
@@ -47,7 +48,8 @@ class EditorViewModel(
     private val notebookRepository: NotebookRepository,
     private val htrRunManager: HTRRunManager? = null,
     val notebookId: String? = null,
-    private val displaySettingsRepository: DisplaySettingsRepository? = null
+    private val displaySettingsRepository: DisplaySettingsRepository? = null,
+    private val actionHistoryRepository: ActionHistoryRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditorUiState())
@@ -323,6 +325,31 @@ class EditorViewModel(
         sessionCache.put(session.noteId, session)
         shapesManager = session.shapesManager
         _activeActionManager.value = session.actionManager
+
+        // Load persisted action history if the session's ActionManager is empty
+        val repo = actionHistoryRepository
+        val sm = shapesManager
+        val bm = bitmapManager
+        if (repo != null && sm != null && bm != null &&
+            !session.actionManager.canUndo.value && !session.actionManager.canRedo.value
+        ) {
+            viewModelScope.launch {
+                val (undoActions, redoActions) = repo.loadActions(
+                    session.noteId, noteRepository, sm, bm
+                )
+                if (undoActions.isNotEmpty() || redoActions.isNotEmpty()) {
+                    session.actionManager.loadActions(undoActions, redoActions)
+                }
+            }
+        }
+
+        // Wire up persistence: save action history on every change
+        session.actionManager.onChanged = onChanged@{
+            val histRepo = actionHistoryRepository ?: return@onChanged
+            viewModelScope.launch {
+                histRepo.saveActions(session.noteId, session.actionManager)
+            }
+        }
         bitmapManager?.onNoteChanged(
             currentNote.value.pdfPath,
             paginationHandler.screenWidth.value,

@@ -5,9 +5,9 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 class MoveLayerAction(
-    private val shapeIds: List<String>,
-    private val fromLayer: Int,
-    private val toLayer: Int,
+    internal val shapeIds: List<String>,
+    internal val fromLayer: Int,
+    internal val toLayer: Int,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager

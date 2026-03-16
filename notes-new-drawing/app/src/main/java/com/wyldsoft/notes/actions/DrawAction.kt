@@ -6,8 +6,8 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 class DrawAction(
-    private val noteId: String,
-    private val shape: Shape,
+    internal val noteId: String,
+    internal val shape: Shape,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager

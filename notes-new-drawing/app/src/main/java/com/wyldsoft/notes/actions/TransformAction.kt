@@ -15,12 +15,12 @@ enum class TransformType { SCALE, ROTATE }
  * Stores the original domain shapes before the transform.
  */
 class TransformAction(
-    private val noteId: String,
-    private val originalShapes: List<Shape>,
-    private val transformType: TransformType,
-    private val param: Float, // scaleFactor for SCALE, angleRad for ROTATE
-    private val centerX: Float,
-    private val centerY: Float,
+    internal val noteId: String,
+    internal val originalShapes: List<Shape>,
+    internal val transformType: TransformType,
+    internal val param: Float, // scaleFactor for SCALE, angleRad for ROTATE
+    internal val centerX: Float,
+    internal val centerY: Float,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager

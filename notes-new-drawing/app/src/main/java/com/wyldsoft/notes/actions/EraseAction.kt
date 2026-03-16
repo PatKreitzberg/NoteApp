@@ -6,8 +6,8 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 class EraseAction(
-    private val noteId: String,
-    private val erasedShapes: List<Shape>,
+    internal val noteId: String,
+    internal val erasedShapes: List<Shape>,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager

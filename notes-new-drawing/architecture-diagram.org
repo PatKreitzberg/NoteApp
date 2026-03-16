@@ -339,6 +339,8 @@
   ├── setViewportManager()
   ├── cleanup()
   ├── onScrollingStateChanged callback  ← notifies scroll/zoom start/end
+  ├── gestureMappings updated live via StateFlow collector in BaseDrawingActivity
+  │   (settings changes take effect without closing/reopening the note)
   │
   └── uses: Context, View, ViewportManager
 #+end_example
@@ -550,16 +552,20 @@
   ScrotesApp (Application)
   └── initializes NotesDatabase + all repositories
 
-  NotesDatabase (Room, version 11)
+  NotesDatabase (Room, version 12)
   ├── NoteDao      → NoteEntity (notes table)
   ├── ShapeDao     → ShapeEntity (shapes table)
   ├── NotebookDao  → NotebookEntity (notebooks table)
   ├── FolderDao    → FolderEntity (folders table)
   │                  NoteNotebookCrossRef (junction table)
-  └── RecognizedSegmentDao → RecognizedSegmentEntity (recognized_segments table)
-      ├── searchText(query) ← LIKE search across all notes
-      ├── getSegmentsForNote()
-      └── deleteByIds()
+  ├── RecognizedSegmentDao → RecognizedSegmentEntity (recognized_segments table)
+  │   ├── searchText(query) ← LIKE search across all notes
+  │   ├── getSegmentsForNote()
+  │   └── deleteByIds()
+  └── ActionHistoryDao → ActionHistoryEntity (action_history table)
+      ├── getActionsForNote(noteId) ← loads undo/redo stacks
+      ├── deleteAllForNote(noteId)
+      └── insertAll(entities)
 #+end_example
 
 ** Entity Relationships
@@ -569,6 +575,7 @@
   Folder ──1:N──→ Notebook
   Notebook ─1:N─→ Note
   Note ────1:N──→ Shape
+  Note ────1:N──→ ActionHistory  (persisted undo/redo stacks)
 #+end_example
 
 ** Repositories
@@ -767,7 +774,11 @@
 
   ActionInterface / ActionManager / DrawAction
   ├── Action history and undo support (works for geometric shapes too)
-  └── MoveLayerAction  ← moves strokes between layers (undoable)
+  ├── MoveLayerAction  ← moves strokes between layers (undoable)
+  ├── ActionManager.onChanged callback → triggers DB persistence
+  ├── ActionSerializer  ← serializes/deserializes actions to/from JSON
+  └── ActionHistoryRepository ← persists undo/redo stacks to action_history table
+      (actions survive app close/reopen; loaded when NoteSession activates)
 
   session/NoteSession
   ├── noteId: String

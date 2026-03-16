@@ -14,9 +14,9 @@ import com.wyldsoft.notes.shapemanagement.ShapesManager
  *   2. SnapToLineAction         - first undo reverts line → original stroke
  */
 class SnapToLineAction(
-    private val noteId: String,
-    private val originalShape: Shape,
-    private val lineShape: Shape,
+    internal val noteId: String,
+    internal val originalShape: Shape,
+    internal val lineShape: Shape,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager

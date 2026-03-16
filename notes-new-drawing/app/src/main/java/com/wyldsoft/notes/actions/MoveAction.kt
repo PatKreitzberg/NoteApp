@@ -11,10 +11,10 @@ import com.wyldsoft.notes.shapemanagement.ShapesManager
  * Stores the original and moved domain shapes for each affected shape.
  */
 class MoveAction(
-    private val noteId: String,
-    private val originalShapes: List<Shape>,
-    private val dx: Float,
-    private val dy: Float,
+    internal val noteId: String,
+    internal val originalShapes: List<Shape>,
+    internal val dx: Float,
+    internal val dy: Float,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager

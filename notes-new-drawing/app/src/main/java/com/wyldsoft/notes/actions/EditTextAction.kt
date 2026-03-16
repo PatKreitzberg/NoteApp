@@ -11,9 +11,9 @@ import com.wyldsoft.notes.shapemanagement.ShapesManager
  * - newShape: the TextShape after editing (null when deleting text by committing blank)
  */
 class EditTextAction(
-    private val noteId: String,
-    private val oldShape: Shape?,
-    private val newShape: Shape?,
+    internal val noteId: String,
+    internal val oldShape: Shape?,
+    internal val newShape: Shape?,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager

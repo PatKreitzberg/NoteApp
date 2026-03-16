@@ -7,9 +7,9 @@ import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 
 class TextFormattingAction(
-    private val noteId: String,
-    private val beforeShapes: List<Shape>,
-    private val afterShapes: List<Shape>,
+    internal val noteId: String,
+    internal val beforeShapes: List<Shape>,
+    internal val afterShapes: List<Shape>,
     private val noteRepository: NoteRepository,
     private val shapesManager: ShapesManager,
     private val bitmapManager: BitmapManager
