@@ -197,7 +197,6 @@ fun EditorView(
                 showExportDialog = true
             },
             onOpenAppSettings = {
-                showNoteSettingsDialog = false
                 showAppSettingsDialog = true
             },
             onDismiss = {
