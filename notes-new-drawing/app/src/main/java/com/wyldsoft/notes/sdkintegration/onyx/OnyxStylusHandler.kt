@@ -7,8 +7,6 @@ import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.RawInputCallback
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
-import com.wyldsoft.notes.presentation.viewmodel.DrawTool
-import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
@@ -18,8 +16,7 @@ import com.wyldsoft.notes.settings.DisplaySettingsRepository
 
 /**
  * Onyx-specific stylus handler. Receives input via Onyx SDK's RawInputCallback
- * and delegates shared logic to AbstractStylusHandler. Overrides hooks to
- * toggle Onyx's raw drawing render mode during selection transforms.
+ * and delegates mode-based dispatch to [ModeInputRouter].
  */
 class OnyxStylusHandler(
     surfaceView: SurfaceView,
@@ -41,6 +38,8 @@ class OnyxStylusHandler(
     companion object {
         private const val TAG = "OnyxStylusHandler"
     }
+
+    private val modeRouter = createModeInputRouter()
 
     init {
         Log.d(TAG, "NEW OnyxStylusHandler")
@@ -64,7 +63,19 @@ class OnyxStylusHandler(
         onSetRawDrawingRenderEnabled(false)
     }
 
-    // --- Text shape hit testing ---
+    override fun onTextModeBegin() {
+        onSetRawDrawingRenderEnabled(false)
+    }
+
+    override fun onGeometryModeBegin() {
+        onSetRawDrawingRenderEnabled(false)
+    }
+
+    override fun onPenModeBegin() {
+        onSetRawDrawingRenderEnabled(true)
+    }
+
+    // --- Text shape hit testing (Onyx-specific: edits existing text shapes) ---
 
     private fun findTextShapeAtNotePoint(noteX: Float, noteY: Float): TextShape? {
         val activeLayer = viewModel.activeLayer.value
@@ -77,48 +88,32 @@ class OnyxStylusHandler(
             }
     }
 
-    // --- Onyx SDK callback ---
+    override fun handleTextBegin(touchPoint: TouchPoint) {
+        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
+        val hitShape = findTextShapeAtNotePoint(notePoint.x, notePoint.y)
+        if (hitShape != null) {
+            val anchor = hitShape.touchPointList?.points?.firstOrNull()
+            val anchorX = anchor?.x ?: notePoint.x
+            val anchorY = anchor?.y ?: notePoint.y
+            viewModel.beginEditingTextShape(
+                shapeId = hitShape.id,
+                anchorNoteX = anchorX,
+                anchorNoteY = anchorY,
+                existingText = hitShape.text,
+                existingFontSize = hitShape.fontSize,
+                existingFontFamily = hitShape.fontFamily,
+                existingColor = hitShape.strokeColor
+            )
+        } else {
+            viewModel.beginTextInput(notePoint.x, notePoint.y)
+        }
+    }
+
+    // --- Onyx SDK callback (uses ModeInputRouter for dispatch) ---
 
     fun createOnyxCallback(): RawInputCallback = object : RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
-            when (val mode = viewModel.uiState.value.mode) {
-                is EditorMode.Select -> {
-                    beginSelectionStroke(touchPoint)
-                }
-                is EditorMode.Text -> {
-                    onSetRawDrawingRenderEnabled(false)
-                    touchPoint?.let {
-                        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(it.x, it.y)
-                        val hitShape = findTextShapeAtNotePoint(notePoint.x, notePoint.y)
-                        if (hitShape != null) {
-                            val anchor = hitShape.touchPointList?.points?.firstOrNull()
-                            val anchorX = anchor?.x ?: notePoint.x
-                            val anchorY = anchor?.y ?: notePoint.y
-                            viewModel.beginEditingTextShape(
-                                shapeId = hitShape.id,
-                                anchorNoteX = anchorX,
-                                anchorNoteY = anchorY,
-                                existingText = hitShape.text,
-                                existingFontSize = hitShape.fontSize,
-                                existingFontFamily = hitShape.fontFamily,
-                                existingColor = hitShape.strokeColor
-                            )
-                        } else {
-                            viewModel.beginTextInput(notePoint.x, notePoint.y)
-                        }
-                    }
-                }
-                is EditorMode.Draw -> when (mode.drawTool) {
-                    DrawTool.GEOMETRY -> {
-                        onSetRawDrawingRenderEnabled(false)
-                        touchPoint?.let { beginGeometryDrawing(it) }
-                    }
-                    DrawTool.PEN, DrawTool.ERASER -> {
-                        onSetRawDrawingRenderEnabled(true)
-                        beginDrawing(touchPoint)
-                    }
-                }
-            }
+            modeRouter.routeBegin(touchPoint)
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
@@ -128,49 +123,11 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            when (val mode = viewModel.uiState.value.mode) {
-                is EditorMode.Text -> return
-                is EditorMode.Draw -> when (mode.drawTool) {
-                    DrawTool.GEOMETRY -> {
-                        touchPoint?.let { updateGeometryPreview(it) }
-                        return
-                    }
-                    DrawTool.PEN -> if (touchPoint != null) {
-                        if (isLineSnapped) { updateLineSnapMove(touchPoint); return }
-                        trackLineSnapMove(touchPoint)
-                    }
-                    DrawTool.ERASER -> { /* handled by onRawErasingTouchPointMoveReceived */ }
-                }
-                is EditorMode.Select -> {
-                    if (refreshCount < REFRESH_COUNT_LIMIT) { refreshCount++; return }
-                    refreshCount = 0
-                    if (touchPoint == null) return
-                    if (!selectionManager.hasSelection) return
-                    handleSelectionMoveUpdate(touchPoint)
-                    return
-                }
-            }
+            modeRouter.routeMove(touchPoint)
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
-            when (val mode = viewModel.uiState.value.mode) {
-                is EditorMode.Text -> return
-                is EditorMode.Draw -> when (mode.drawTool) {
-                    DrawTool.GEOMETRY -> {
-                        touchPointList?.let { finalizeGeometryShape(it) }
-                        return
-                    }
-                    DrawTool.PEN, DrawTool.ERASER -> {
-                        if (handleCancelledStroke()) return
-                        if (touchPointList != null && finalizeWithLineSnap(touchPointList)) return
-                        touchPointList?.let { finalizeStroke(it) }
-                    }
-                }
-                is EditorMode.Select -> {
-                    if (handleCancelledStroke()) return
-                    if (touchPointList != null) handleSelectorStrokeEnd(touchPointList)
-                }
-            }
+            modeRouter.routeEnd(touchPointList)
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {

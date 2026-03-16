@@ -22,6 +22,7 @@ import com.wyldsoft.notes.utils.surfacePointsToNoteTouchPoints
  * SDK-specific input wiring is done by subclasses (Onyx, Generic).
  * Geometry drawing delegated to [GeometryDrawingHandler].
  * Selection input delegated to [SelectionInputHandler].
+ * Mode-based input dispatch delegated to [ModeInputRouter].
  */
 abstract class AbstractStylusHandler(
     protected val surfaceView: SurfaceView,
@@ -43,8 +44,6 @@ abstract class AbstractStylusHandler(
     protected var isErasingInProgress = false
     private var lastEraseDidPartialRefresh = false
     protected var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
-    protected var refreshCount: Int = 0
-    protected val REFRESH_COUNT_LIMIT: Int = 100
 
     protected val geometryHandler = GeometryDrawingHandler(
         viewModel = viewModel,
@@ -82,6 +81,79 @@ abstract class AbstractStylusHandler(
     protected open fun onLassoSelectionCompleted() {}
     protected open fun onLassoStarted() {}
     protected open fun onLineSnapActivated() {}
+    /** Called before text mode begins input (e.g. to disable raw drawing render on Onyx). */
+    protected open fun onTextModeBegin() {}
+    /** Called before geometry mode begins input. */
+    protected open fun onGeometryModeBegin() {}
+    /** Called before pen/eraser drawing begins. */
+    protected open fun onPenModeBegin() {}
+
+    // --- ModeInputRouter (refactoring 1) ---
+
+    /**
+     * Creates a [ModeInputRouter] wired to this handler's methods.
+     * Subclasses can use this in their SDK-specific input callbacks.
+     */
+    protected fun createModeInputRouter(): ModeInputRouter = ModeInputRouter(viewModel, object : ModeInputRouter.Callbacks {
+        override fun onBeginPenOrEraser(touchPoint: TouchPoint?) {
+            onPenModeBegin()
+            beginDrawing(touchPoint)
+        }
+
+        override fun onBeginGeometry(touchPoint: TouchPoint) {
+            onGeometryModeBegin()
+            beginGeometryDrawing(touchPoint)
+        }
+
+        override fun onBeginSelection(touchPoint: TouchPoint?) {
+            onDrawingStateChanged(true)
+            selectionInputHandler.handleBegin(touchPoint)
+        }
+
+        override fun onBeginText(touchPoint: TouchPoint) {
+            onTextModeBegin()
+            handleTextBegin(touchPoint)
+        }
+
+        override fun onMovePen(touchPoint: TouchPoint) {
+            if (isLineSnapped) { updateLineSnapMove(touchPoint); return }
+            trackLineSnapMove(touchPoint)
+        }
+
+        override fun onMoveGeometry(touchPoint: TouchPoint) {
+            updateGeometryPreview(touchPoint)
+        }
+
+        override fun onMoveSelection(touchPoint: TouchPoint) {
+            handleSelectionMoveUpdate(touchPoint)
+        }
+
+        override fun onEndPenOrEraser(touchPointList: TouchPointList) {
+            if (finalizeWithLineSnap(touchPointList)) return
+            finalizeStroke(touchPointList)
+        }
+
+        override fun onEndGeometry(touchPointList: TouchPointList) {
+            finalizeGeometryShape(touchPointList)
+        }
+
+        override fun onEndSelection(touchPointList: TouchPointList) {
+            // SelectionInputHandler.handleEnd returns true if this was a cancel
+            val wasCancelled = selectionInputHandler.handleEnd(touchPointList)
+            onDrawingStateChanged(false)
+            if (wasCancelled) onEndCancelledStroke()
+        }
+
+        override fun onEndCancelledStroke() {
+            onDrawingStateChanged(false)
+        }
+    })
+
+    /** Override in subclasses to handle text begin with SDK-specific hit testing. */
+    protected open fun handleTextBegin(touchPoint: TouchPoint) {
+        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
+        viewModel.beginTextInput(notePoint.x, notePoint.y)
+    }
 
     // --- Drawing ---
 
@@ -108,21 +180,13 @@ abstract class AbstractStylusHandler(
         viewModel.endDrawing()
     }
 
-    protected fun handleCancelledStroke(): Boolean {
-        if (selectionInputHandler.wasCancelled) {
-            selectionInputHandler.clearCancelled()
-            onDrawingStateChanged(false)
-            // Now that stylus is lifted, switch to Draw mode so next touch draws
-            viewModel.cancelSelection()
-            return true
-        }
-        return false
-    }
-
     protected fun handleSelectorStrokeEnd(touchPointList: TouchPointList): Boolean {
         if (viewModel.uiState.value.mode is EditorMode.Select) {
-            selectionInputHandler.handleEnd(touchPointList)
+            val wasCancelled = selectionInputHandler.handleEnd(touchPointList)
             onDrawingStateChanged(false)
+            if (wasCancelled) {
+                // SelectionInputHandler already called viewModel.cancelSelection()
+            }
             return true
         }
         return false

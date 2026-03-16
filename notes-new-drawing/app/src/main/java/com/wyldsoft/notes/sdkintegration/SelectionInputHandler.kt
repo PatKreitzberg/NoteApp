@@ -15,7 +15,8 @@ import com.wyldsoft.notes.utils.surfacePointsToNoteTouchPoints
 
 /**
  * Handles lasso + drag/scale/rotate input for selection mode.
- * Extracted from AbstractStylusHandler to keep it under 300 lines.
+ * Owns the "auto-return-to-draw" policy: touching outside the selection
+ * cancels it and switches back to Draw mode on stylus lift.
  */
 private const val TAP_MAX_MOVEMENT_PX = 20f
 private const val TAP_HIT_RADIUS = 30f
@@ -29,6 +30,15 @@ class SelectionInputHandler(
     private val onLassoSelectionCompleted: () -> Unit,
     private val onForceScreenRefresh: () -> Unit
 ) {
+    /** Result of [handleBegin] so callers know what happened without mutable flags. */
+    sealed class BeginResult {
+        data object TransformStarted : BeginResult()
+        data object LassoStarted : BeginResult()
+        /** Touch was outside selection — selection cleared, will auto-return to Draw on lift. */
+        data object Cancelled : BeginResult()
+        data object Ignored : BeginResult()
+    }
+
     private val shapesManager: ShapesManager get() = getShapesManager()
     private val selectionManager get() = viewModel.selectionManager
     private var preTransformShapeSnapshots: List<Shape>? = null
@@ -36,10 +46,11 @@ class SelectionInputHandler(
     private var transformCenterX: Float = 0f
     private var transformCenterY: Float = 0f
 
-    var wasCancelled = false
-        private set
+    /** Set by [handleBegin] when touch is outside selection; checked by [handleEnd]. */
+    private var pendingCancel = false
 
-    fun clearCancelled() { wasCancelled = false }
+    /** True if the current stroke was a cancelled-selection touch (for external queries). */
+    val wasCancelled: Boolean get() = pendingCancel
 
     fun handleMoveUpdate(touchPoint: TouchPoint) {
         val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
@@ -63,8 +74,8 @@ class SelectionInputHandler(
         }
     }
 
-    fun handleBegin(touchPoint: TouchPoint?) {
-        if (touchPoint == null) return
+    fun handleBegin(touchPoint: TouchPoint?): BeginResult {
+        if (touchPoint == null) return BeginResult.Ignored
         val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
 
         if (selectionManager.hasSelection) {
@@ -72,31 +83,44 @@ class SelectionInputHandler(
                 selectionManager.isOnRotationHandle(notePoint.x, notePoint.y) -> {
                     startTransform()
                     selectionManager.beginRotate(notePoint)
+                    return BeginResult.TransformStarted
                 }
                 selectionManager.isOnScaleHandle(notePoint.x, notePoint.y).also {
                     if (it != null) { startTransform(); selectionManager.beginScale(it, notePoint) }
-                } != null -> { /* handled above */ }
+                } != null -> return BeginResult.TransformStarted
                 selectionManager.isInsideBoundingBox(notePoint.x, notePoint.y) -> {
                     startTransform()
                     selectionManager.beginDrag(notePoint)
+                    return BeginResult.TransformStarted
                 }
                 else -> {
                     val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
-                    wasCancelled = true
-                    // Clear selection but stay in Select mode for this stroke.
-                    // Mode switches to Draw in handleCancelledStroke() on stylus lift.
+                    pendingCancel = true
                     selectionManager.clearSelection()
                     viewModel.notifySelectionChanged()
                     doPartialRefresh(oldBBox, null, drawOverlay = false)
+                    return BeginResult.Cancelled
                 }
             }
         } else {
             onLassoStarted()
             selectionManager.beginLasso()
+            return BeginResult.LassoStarted
         }
     }
 
-    fun handleEnd(touchPointList: TouchPointList) {
+    /**
+     * Completes the selection stroke. If the stroke was a cancel (touch outside selection),
+     * this method switches back to Draw mode automatically.
+     * @return true if the stroke was a cancelled selection (caller should skip further processing)
+     */
+    fun handleEnd(touchPointList: TouchPointList): Boolean {
+        if (pendingCancel) {
+            pendingCancel = false
+            viewModel.cancelSelection()
+            return true
+        }
+
         val notePointList = surfacePointsToNoteTouchPoints(touchPointList, viewModel.viewportManager)
 
         when (selectionManager.transformMode) {
@@ -154,6 +178,7 @@ class SelectionInputHandler(
                 }
             }
         }
+        return false
     }
 
     fun doPartialRefresh(oldBBoxNote: RectF?, newBBoxNote: RectF?, drawOverlay: Boolean = true) {
