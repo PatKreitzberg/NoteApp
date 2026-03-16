@@ -56,6 +56,11 @@ abstract class AbstractStylusHandler(
         getCurrentPenProfile = { currentPenProfile }
     )
 
+    protected val textModeInputHandler = TextModeInputHandler(
+        viewModel = viewModel,
+        getShapesManager = getShapesManager
+    )
+
     protected val selectionInputHandler = SelectionInputHandler(
         viewModel = viewModel,
         bitmapManager = bitmapManager,
@@ -149,10 +154,9 @@ abstract class AbstractStylusHandler(
         }
     })
 
-    /** Override in subclasses to handle text begin with SDK-specific hit testing. */
+    /** Override in subclasses if SDK-specific text begin behavior is needed. */
     protected open fun handleTextBegin(touchPoint: TouchPoint) {
-        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
-        viewModel.beginTextInput(notePoint.x, notePoint.y)
+        textModeInputHandler.handleBegin(touchPoint)
     }
 
     // --- Drawing ---

@@ -10,7 +10,6 @@ import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
-import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import com.wyldsoft.notes.sdkintegration.AbstractStylusHandler
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 
@@ -73,40 +72,6 @@ class OnyxStylusHandler(
 
     override fun onPenModeBegin() {
         onSetRawDrawingRenderEnabled(true)
-    }
-
-    // --- Text shape hit testing (Onyx-specific: edits existing text shapes) ---
-
-    private fun findTextShapeAtNotePoint(noteX: Float, noteY: Float): TextShape? {
-        val activeLayer = viewModel.activeLayer.value
-        return shapesManager.shapes()
-            .filterIsInstance<TextShape>()
-            .filter { it.layer == activeLayer }
-            .firstOrNull { shape ->
-                shape.updateShapeRect()
-                shape.boundingRect?.contains(noteX, noteY) == true
-            }
-    }
-
-    override fun handleTextBegin(touchPoint: TouchPoint) {
-        val notePoint = viewModel.viewportManager.surfaceToNoteCoordinates(touchPoint.x, touchPoint.y)
-        val hitShape = findTextShapeAtNotePoint(notePoint.x, notePoint.y)
-        if (hitShape != null) {
-            val anchor = hitShape.touchPointList?.points?.firstOrNull()
-            val anchorX = anchor?.x ?: notePoint.x
-            val anchorY = anchor?.y ?: notePoint.y
-            viewModel.beginEditingTextShape(
-                shapeId = hitShape.id,
-                anchorNoteX = anchorX,
-                anchorNoteY = anchorY,
-                existingText = hitShape.text,
-                existingFontSize = hitShape.fontSize,
-                existingFontFamily = hitShape.fontFamily,
-                existingColor = hitShape.strokeColor
-            )
-        } else {
-            viewModel.beginTextInput(notePoint.x, notePoint.y)
-        }
     }
 
     // --- Onyx SDK callback (uses ModeInputRouter for dispatch) ---
