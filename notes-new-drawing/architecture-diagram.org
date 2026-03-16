@@ -620,14 +620,37 @@
   BaseDrawingActivity (abstract)
   └── OnyxDrawingActivity
       │
-      ├── OnyxStylusHandler
-      │   ├── createOnyxCallback()          ← receives raw stylus events
-      │   ├── updatePenProfile()
-      │   ├── convertTouchPointListToNoteCoordinates()
-      │   ├── clearDrawing()
-      │   ├── isErasing()
+      ├── AbstractStylusHandler (base class)
+      │   ├── createModeInputRouter()       ← creates ModeInputRouter for dispatch
+      │   ├── Delegates: GeometryDrawingHandler, SelectionInputHandler,
+      │   │              TextModeInputHandler, LineSnapHandler
+      │   ├── DrawManager, EraseManager
+      │   └── SDK hooks: onTextModeBegin(), onGeometryModeBegin(), onPenModeBegin()
+      │
+      ├── ModeInputRouter                   ← centralized when(mode) dispatch
+      │   ├── routeBegin(touchPoint)        ← routes to correct handler by EditorMode
+      │   ├── routeMove(touchPoint)         ← includes selection move throttle
+      │   ├── routeEnd(touchPointList)
+      │   └── Callbacks interface           ← implemented by AbstractStylusHandler
+      │
+      ├── SelectionInputHandler             ← owns selection touch input + auto-return-to-draw
+      │   ├── handleBegin() → BeginResult   ← sealed: TransformStarted|LassoStarted|Cancelled|Ignored
+      │   ├── handleEnd() → Boolean         ← true if cancelled (auto-switches to Draw mode)
+      │   └── handleMoveUpdate()
+      │
+      ├── TextModeInputHandler              ← owns text mode touch input
+      │   ├── handleBegin()                 ← hit-tests TextShapes, edits or creates new
+      │   └── findTextShapeAtNotePoint()
+      │
+      ├── OnyxStylusHandler (extends AbstractStylusHandler)
+      │   ├── createOnyxCallback()          ← delegates to modeRouter
+      │   ├── SDK hooks: onSetRawDrawingRenderEnabled()
       │   └── uses: SurfaceView, EditorViewModel, RxManager,
-      │             BitmapManager, ShapesManager, DrawManager, EraseManager
+      │             BitmapManager, ShapesManager
+      │
+      ├── GenericStylusHandler (extends AbstractStylusHandler)
+      │   ├── onTouchEvent()                ← delegates to modeRouter
+      │   └── incremental drawing segments
       │
       ├── GestureHandler                    ← finger touch gestures
       ├── TouchHelper (Onyx SDK)            ← raw stylus input
@@ -649,7 +672,7 @@
 #+begin_example
   1. Stylus touches screen
   2. TouchHelper (Onyx SDK) captures raw input
-  3. OnyxStylusHandler.createOnyxCallback() receives touch points
+  3. OnyxStylusHandler.createOnyxCallback() → ModeInputRouter.routeBegin()
   4. Points converted: SurfaceView coords → Note coords (ViewportManager)
   5. DrawManager.newShape() creates BaseShape via ShapeFactory
   6. onShapeCompleted() callback fires
@@ -856,8 +879,8 @@
 
   Text Drawing Flow:
   1. User taps Text tab → activates EditorMode.Text
-  2. Stylus tap on canvas → OnyxStylusHandler converts to note coords
-     → EditorViewModel.beginTextInput(noteX, noteY)
+  2. Stylus tap on canvas → ModeInputRouter → TextModeInputHandler.handleBegin()
+     → hit-tests existing TextShapes, else EditorViewModel.beginTextInput(noteX, noteY)
   3. AlertDialog shown with TextField for text entry
   4. User types text + presses OK → EditorViewModel.commitTextInput(text)
      → creates Shape(type=TEXT, points=[tapPoint], text=text,
@@ -920,7 +943,7 @@
   ├── DrawingOperationsHandler.addShape() → sets layer = activeLayer
   ├── EraseManager.handleErasing()        → filters by activeLayer
   ├── LassoHandler.finish()               → filters by activeLayer
-  ├── OnyxStylusHandler.findTextShapeAtNotePoint() → filters by activeLayer
+  ├── TextModeInputHandler.findTextShapeAtNotePoint() → filters by activeLayer
   ├── ShapesManager.getContentMaxY()      → filters by visible layers
   ├── BitmapManager.recreateBitmapFromShapes() → filters by visible layers
   └── BitmapManager.partialRefresh()           → filters by visible layers
