@@ -112,6 +112,8 @@ abstract class AbstractStylusHandler(
         if (selectionInputHandler.wasCancelled) {
             selectionInputHandler.clearCancelled()
             onDrawingStateChanged(false)
+            // Now that stylus is lifted, switch to Draw mode so next touch draws
+            viewModel.cancelSelection()
             return true
         }
         return false

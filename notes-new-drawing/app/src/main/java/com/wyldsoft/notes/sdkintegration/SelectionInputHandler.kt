@@ -83,7 +83,10 @@ class SelectionInputHandler(
                 else -> {
                     val oldBBox = selectionManager.selectionBoundingBox?.let { RectF(it) }
                     wasCancelled = true
-                    viewModel.cancelSelection()
+                    // Clear selection but stay in Select mode for this stroke.
+                    // Mode switches to Draw in handleCancelledStroke() on stylus lift.
+                    selectionManager.clearSelection()
+                    viewModel.notifySelectionChanged()
                     doPartialRefresh(oldBBox, null, drawOverlay = false)
                 }
             }
