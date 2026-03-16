@@ -794,6 +794,19 @@
      c. If no covered shapes: treat as normal stroke (DrawAction recorded)
   5. If not a scribble: normal draw flow (DrawAction + HTR queued)
 
+  Circle-to-Select Flow:
+  1. After scribble check fails, HTRRunManager.isCircleGesture() checks shape
+  2. If detected as CIRCLE:
+     a. findShapesEncircledBy() checks all shapes on same layer
+        → uses point-in-polygon: >90% of target shape's touch points
+           must fall inside the drawn circle's stroke polygon
+     b. If encircled shapes found:
+        → circle removed from DB + memory (never persisted as DrawAction)
+        → SelectionManager.setSelection() sets encircled shapes as selected
+        → EditorViewModel.switchMode(EditorMode.Select) activates selection mode
+        → selection handles shown, user can move/scale/rotate
+     c. If no encircled shapes: treat as normal stroke (DrawAction recorded)
+
   RecognizedSegmentRepository
   ├── searchText(query)        ← used by HomeViewModel search
   ├── saveSegments()
