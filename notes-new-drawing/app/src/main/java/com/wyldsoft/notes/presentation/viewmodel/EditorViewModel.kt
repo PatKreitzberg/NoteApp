@@ -203,7 +203,13 @@ class EditorViewModel(
         onUpdateContentBounds = { updateContentBounds() },
         onScreenRefreshNeeded = { onScreenRefreshNeeded?.invoke() },
         htrRunManager = htrRunManager,
-        getActiveLayer = { _activeLayer.value }
+        getActiveLayer = { _activeLayer.value },
+        onCircleSelect = { ids, box ->
+            selectionManager.setSelection(ids, box)
+            notifySelectionChanged()
+            switchMode(EditorMode.Select)
+            onScreenRefreshNeeded?.invoke()
+        }
     )
 
     val isDrawing: StateFlow<Boolean> = drawingOperationsHandler.isDrawing

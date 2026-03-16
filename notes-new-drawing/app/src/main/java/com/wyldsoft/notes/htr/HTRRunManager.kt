@@ -114,6 +114,12 @@ class HTRRunManager(
         return gesture?.uppercase() == "SCRIBBLE"
     }
 
+    suspend fun isCircleGesture(shape: Shape): Boolean {
+        if (!gestureRecognitionManager.isReady()) return false
+        val gesture = gestureRecognitionManager.recognizeSingleShapeGesture(shape)
+        return gesture?.uppercase() == "CIRCLE"
+    }
+
     fun onShapesDeleted(noteId: String, deletedShapeIds: Set<String>) {
         synchronized(pendingShapes) {
             pendingShapes[noteId]?.removeAll { it.id in deletedShapeIds }

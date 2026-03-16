@@ -14,6 +14,7 @@ import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
+import com.wyldsoft.notes.utils.calculateShapesBoundingBox
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,11 +36,13 @@ class DrawingOperationsHandler(
     private val onUpdateContentBounds: () -> Unit,
     private val onScreenRefreshNeeded: () -> Unit = {},
     private val htrRunManager: HTRRunManager? = null,
-    private val getActiveLayer: () -> Int = { 1 }
+    private val getActiveLayer: () -> Int = { 1 },
+    private val onCircleSelect: ((Set<String>, RectF) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "DrawingOpsHandler"
         private const val SCRIBBLE_COVERAGE_THRESHOLD = 0.80f
+        private const val CIRCLE_ENCLOSURE_THRESHOLD = 0.90f
     }
     private val _isDrawing = MutableStateFlow(false)
     val isDrawing: StateFlow<Boolean> = _isDrawing.asStateFlow()
@@ -115,6 +118,33 @@ class DrawingOperationsHandler(
                         bm.recreateBitmapFromShapes(sm.shapes())
                         onScreenRefreshNeeded()
                         onUpdateContentBounds()
+                        return@launch
+                    }
+                }
+            }
+
+            // Try circle-to-select
+            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty() && onCircleSelect != null) {
+                val isCircle = htrRunManager.isCircleGesture(shape)
+                if (isCircle) {
+                    val encircledShapes = findShapesEncircledBy(shape, sm)
+                    if (encircledShapes.isNotEmpty()) {
+                        Log.d(TAG, "Circle-to-select: selecting ${encircledShapes.size} shape(s)")
+                        // Remove the circle shape — never persist it
+                        noteRepository.removeShape(getCurrentNote().id, shape.id)
+                        val circleSdk = sm.shapes().find { it.id == shape.id }
+                        if (circleSdk != null) sm.removeShape(circleSdk)
+
+                        val selectedIds = encircledShapes.map { it.id }.toSet()
+                        val selectedSdkShapes = sm.shapes().filter { it.id in selectedIds }
+                        selectedSdkShapes.forEach { it.updateShapeRect() }
+                        val boundingBox = calculateShapesBoundingBox(selectedSdkShapes)
+
+                        if (boundingBox != null) {
+                            bm.recreateBitmapFromShapes(sm.shapes())
+                            onScreenRefreshNeeded()
+                            onCircleSelect.invoke(selectedIds, boundingBox)
+                        }
                         return@launch
                     }
                 }
@@ -243,5 +273,52 @@ class DrawingOperationsHandler(
         }
 
         return result
+    }
+
+    /**
+     * Find SDK shapes on the same layer where >90% of their points
+     * fall inside the circle's polygon (the drawn stroke points).
+     */
+    private fun findShapesEncircledBy(
+        circle: Shape,
+        shapesManager: ShapesManager
+    ): List<com.wyldsoft.notes.shapemanagement.shapes.BaseShape> {
+        if (circle.points.size < 3) return emptyList()
+        val polygon = circle.points
+        val activeLayer = circle.layer
+        val result = mutableListOf<com.wyldsoft.notes.shapemanagement.shapes.BaseShape>()
+
+        for (sdkShape in shapesManager.shapes()) {
+            if (sdkShape.id == circle.id) continue
+            if (sdkShape.layer != activeLayer) continue
+            val touchPoints = sdkShape.touchPointList ?: continue
+            if (touchPoints.size() == 0) continue
+
+            var insideCount = 0
+            for (i in 0 until touchPoints.size()) {
+                val tp = touchPoints.get(i)
+                if (pointInPolygon(tp.x, tp.y, polygon)) insideCount++
+            }
+
+            val ratio = insideCount.toFloat() / touchPoints.size()
+            if (ratio >= CIRCLE_ENCLOSURE_THRESHOLD) {
+                result.add(sdkShape)
+            }
+        }
+
+        return result
+    }
+
+    private fun pointInPolygon(x: Float, y: Float, polygon: List<android.graphics.PointF>): Boolean {
+        var inside = false
+        var j = polygon.size - 1
+        for (i in polygon.indices) {
+            val xi = polygon[i].x; val yi = polygon[i].y
+            val xj = polygon[j].x; val yj = polygon[j].y
+            val intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+            if (intersect) inside = !inside
+            j = i
+        }
+        return inside
     }
 }
