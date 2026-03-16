@@ -2,7 +2,6 @@ package com.wyldsoft.notes.sdkintegration.onyx
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
@@ -139,14 +138,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         TouchUtils.disableFingerTouch(applicationContext)
     }
 
-    override fun cleanSurfaceView(surfaceView: SurfaceView): Boolean {
-        val holder = surfaceView.holder ?: return false
-        val canvas = holder.lockCanvas() ?: return false
-        canvas.drawColor(Color.WHITE)
-        holder.unlockCanvasAndPost(canvas)
-        return true
-    }
-
     override fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
         if (bitmap != null) {
             getRxManager().enqueue(
@@ -270,22 +261,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun onViewportChanged() {
-        Log.d("DebugAug11.1", "Viewport changed, updating touch helper and bitmap, stylusHandler: $stylusHandler")
+        Log.d(TAG, "Viewport changed, refreshing")
         // Recreate bitmap with new viewport transformation (includes selection overlay via recreateBitmapFromShapes)
         forceScreenRefresh()
     }
 
     override fun forceScreenRefresh() {
-        RenderingUtils.enableScreenPost(surfaceView) // absolutely necessary to ensure the screen refreshes properly
-        surfaceView.let { sv ->
-            // Note: cleanSurfaceView() is intentionally omitted here. The renderToScreen()
-            // call already draws a white background via renderBackground() before drawing the
-            // bitmap, so a separate white clear would cause a visible flash between frames.
-            recreateBitmapFromShapes()
-            bitmap?.let { renderToScreen(sv, it) }
-        }
-        // fixme: should we disable screen post after refresh?
-        // RenderingUtils.enableScreenPost(surfaceView) with 0 instead of 1
+        RenderingUtils.enableScreenPost(surfaceView)
+        super.forceScreenRefresh()
     }
     
     override fun initializeBitmapManager(sv: SurfaceView, vm: EditorViewModel) {

@@ -63,7 +63,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     abstract fun createDeviceReceiver(): BaseDeviceReceiver
     abstract fun enableFingerTouch()
     abstract fun disableFingerTouch()
-    abstract fun cleanSurfaceView(surfaceView: SurfaceView): Boolean
+    open fun cleanSurfaceView(surfaceView: SurfaceView): Boolean {
+        val holder = surfaceView.holder ?: return false
+        val canvas = holder.lockCanvas() ?: return false
+        canvas.drawColor(Color.WHITE)
+        holder.unlockCanvasAndPost(canvas)
+        return true
+    }
     abstract fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -184,13 +190,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         observeUndoRedoState()
         observeDrawingBlocked()
         observeModeChanges()
-        Log.d("DebugAug12", "DONE Setting observers in BaseDrawingActivity")
+        Log.d(TAG, "Observers set")
     }
 
     private fun observePenProfile() {
         lifecycleScope.launch {
             editorViewModel.currentPenProfile.collect { profile ->
-                Log.d("DebugAug12", "OBSERVER: Pen profile changed: $profile")
+                Log.d(TAG, "Pen profile changed: $profile")
                 updatePenProfile(profile)
             }
         }
@@ -200,7 +206,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         lifecycleScope.launch {
             editorViewModel.isPaginationEnabled.collect { enabled ->
                 updatePaginationExclusionZones()
-                Log.d("DebugAug12", "OBSERVER: Pagination enabled: $enabled")
+                Log.d(TAG, "Pagination enabled: $enabled")
             }
         }
     }
@@ -360,6 +366,13 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     protected open fun refreshUIChrome() { window.decorView.postInvalidate() }
     open fun setDrawingEnabled(enabled: Boolean) {}
+
+    override fun forceScreenRefresh() {
+        surfaceView.let { sv ->
+            recreateBitmapFromShapes()
+            bitmap?.let { renderToScreen(sv, it) }
+        }
+    }
 
     protected abstract fun onResumeDrawing()
     protected abstract fun onPauseDrawing()

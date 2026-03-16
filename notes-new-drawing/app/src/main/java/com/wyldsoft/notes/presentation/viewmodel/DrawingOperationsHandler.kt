@@ -19,6 +19,7 @@ import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
+import com.wyldsoft.notes.utils.ShapeGeometryUtils
 import com.wyldsoft.notes.utils.calculateShapesBoundingBox
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,8 +48,6 @@ class DrawingOperationsHandler(
 ) {
     companion object {
         private const val TAG = "DrawingOpsHandler"
-        private const val SCRIBBLE_COVERAGE_THRESHOLD = 0.80f
-        private const val CIRCLE_ENCLOSURE_THRESHOLD = 0.90f
     }
     private val _isDrawing = MutableStateFlow(false)
     val isDrawing: StateFlow<Boolean> = _isDrawing.asStateFlow()
@@ -57,12 +56,12 @@ class DrawingOperationsHandler(
     private var isErasingInProgress = false
 
     fun startDrawing() {
-        Log.d("DebugMarch6", "Starting drawing on note: ${getCurrentNote().id}")
+        Log.d(TAG, "Starting drawing on note: ${getCurrentNote().id}")
         _isDrawing.value = true
     }
 
     fun endDrawing() {
-        Log.d("DebugMarch6", "Ending drawing on note: ${getCurrentNote().id}")
+        Log.d(TAG, "Ending drawing on note: ${getCurrentNote().id}")
         _isDrawing.value = false
     }
 
@@ -94,7 +93,7 @@ class DrawingOperationsHandler(
             if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()) {
                 val isScribble = htrRunManager.isScribbleGesture(shape)
                 if (isScribble) {
-                    val coveredShapes = findShapesCoveredByScribble(shape, sm)
+                    val coveredShapes = ShapeGeometryUtils.findShapesCoveredByScribble(shape, sm)
                     if (coveredShapes.isNotEmpty()) {
                         Log.d(TAG, "Scribble-to-erase: erasing ${coveredShapes.size} shape(s)")
                         // Remove the scribble itself (no DrawAction — not undoable)
@@ -142,7 +141,7 @@ class DrawingOperationsHandler(
                     if (freehandSdk != null) sm.removeShape(freehandSdk)
 
                     // Compute bounding box of freehand stroke, use as start/end for geometry
-                    val bbox = computeBoundingBox(shape)
+                    val bbox = ShapeGeometryUtils.computeBoundingBox(shape)
                     if (bbox != null) {
                         val centerX = bbox.centerX()
                         val centerY = bbox.centerY()
@@ -194,7 +193,7 @@ class DrawingOperationsHandler(
             ) {
                 val isCircle = htrRunManager.isCircleGesture(shape)
                 if (isCircle) {
-                    val encircledShapes = findShapesEncircledBy(shape, sm)
+                    val encircledShapes = ShapeGeometryUtils.findShapesEncircledBy(shape, sm)
                     if (encircledShapes.isNotEmpty()) {
                         Log.d(TAG, "Circle-to-select: selecting ${encircledShapes.size} shape(s)")
                         // Remove the circle shape — never persist it
@@ -286,106 +285,4 @@ class DrawingOperationsHandler(
         }
     }
 
-    /**
-     * Compute bounding box of a domain Shape from its points.
-     */
-    private fun computeBoundingBox(shape: Shape): RectF? {
-        if (shape.points.isEmpty()) return null
-        var minX = Float.MAX_VALUE
-        var minY = Float.MAX_VALUE
-        var maxX = Float.MIN_VALUE
-        var maxY = Float.MIN_VALUE
-        for (p in shape.points) {
-            if (p.x < minX) minX = p.x
-            if (p.y < minY) minY = p.y
-            if (p.x > maxX) maxX = p.x
-            if (p.y > maxY) maxY = p.y
-        }
-        return RectF(minX, minY, maxX, maxY)
-    }
-
-    /**
-     * Find SDK shapes on the same layer whose bounding box is >80% covered
-     * by the scribble's bounding box.
-     */
-    private fun findShapesCoveredByScribble(
-        scribble: Shape,
-        shapesManager: ShapesManager
-    ): List<com.wyldsoft.notes.shapemanagement.shapes.BaseShape> {
-        val scribbleRect = computeBoundingBox(scribble) ?: return emptyList()
-        val activeLayer = scribble.layer
-        val result = mutableListOf<com.wyldsoft.notes.shapemanagement.shapes.BaseShape>()
-
-        for (sdkShape in shapesManager.shapes()) {
-            if (sdkShape.id == scribble.id) continue
-            if (sdkShape.layer != activeLayer) continue
-            val shapeRect = sdkShape.boundingRect ?: continue
-
-            // Compute intersection area
-            val interLeft = maxOf(scribbleRect.left, shapeRect.left)
-            val interTop = maxOf(scribbleRect.top, shapeRect.top)
-            val interRight = minOf(scribbleRect.right, shapeRect.right)
-            val interBottom = minOf(scribbleRect.bottom, shapeRect.bottom)
-
-            if (interLeft >= interRight || interTop >= interBottom) continue
-
-            val interArea = (interRight - interLeft) * (interBottom - interTop)
-            val shapeArea = shapeRect.width() * shapeRect.height()
-            if (shapeArea <= 0f) continue
-
-            val coverage = interArea / shapeArea
-            if (coverage >= SCRIBBLE_COVERAGE_THRESHOLD) {
-                result.add(sdkShape)
-            }
-        }
-
-        return result
-    }
-
-    /**
-     * Find SDK shapes on the same layer where >90% of their points
-     * fall inside the circle's polygon (the drawn stroke points).
-     */
-    private fun findShapesEncircledBy(
-        circle: Shape,
-        shapesManager: ShapesManager
-    ): List<com.wyldsoft.notes.shapemanagement.shapes.BaseShape> {
-        if (circle.points.size < 3) return emptyList()
-        val polygon = circle.points
-        val activeLayer = circle.layer
-        val result = mutableListOf<com.wyldsoft.notes.shapemanagement.shapes.BaseShape>()
-
-        for (sdkShape in shapesManager.shapes()) {
-            if (sdkShape.id == circle.id) continue
-            if (sdkShape.layer != activeLayer) continue
-            val touchPoints = sdkShape.touchPointList ?: continue
-            if (touchPoints.size() == 0) continue
-
-            var insideCount = 0
-            for (i in 0 until touchPoints.size()) {
-                val tp = touchPoints.get(i)
-                if (pointInPolygon(tp.x, tp.y, polygon)) insideCount++
-            }
-
-            val ratio = insideCount.toFloat() / touchPoints.size()
-            if (ratio >= CIRCLE_ENCLOSURE_THRESHOLD) {
-                result.add(sdkShape)
-            }
-        }
-
-        return result
-    }
-
-    private fun pointInPolygon(x: Float, y: Float, polygon: List<android.graphics.PointF>): Boolean {
-        var inside = false
-        var j = polygon.size - 1
-        for (i in polygon.indices) {
-            val xi = polygon[i].x; val yi = polygon[i].y
-            val xj = polygon[j].x; val yj = polygon[j].y
-            val intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
-            if (intersect) inside = !inside
-            j = i
-        }
-        return inside
-    }
 }

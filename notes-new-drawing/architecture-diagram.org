@@ -386,7 +386,8 @@
   ├── implements DrawingActivityInterface
   ├── onShapeCompleted()
   ├── onShapeRemoved()
-  ├── forceScreenRefresh()
+  ├── forceScreenRefresh()               ← default impl (recreate + render)
+  ├── cleanSurfaceView()                 ← default impl (lock canvas, white, post)
   ├── Manages: UI creation, SurfaceView, BitmapManager, observers
   │
   └── OnyxDrawingActivity (extends BaseDrawingActivity)
@@ -396,7 +397,7 @@
       ├── initializeGestureHandler()
       ├── initializeBitmapManager()
       ├── enableFingerTouch() / disableFingerTouch()
-      ├── cleanSurfaceView()
+      ├── forceScreenRefresh()           ← adds enableScreenPost before super
       ├── renderToScreen()
       └── recreateBitmapFromShapes()
 #+end_example
@@ -418,9 +419,9 @@
   │   ├── pageHeight: Int
   │   ├── excludeRects: List<Rect>
   │   ├── refreshUi: SharedFlow
-  │   ├── activeLayer: Int           ← current drawing layer
-  │   ├── hiddenLayers: Set<Int>     ← hidden layer numbers
-  │   └── soloLayer: Int?            ← solo-visible layer
+  │   ├── activeLayer: Int           ← delegated to LayerManagementHandler
+  │   ├── hiddenLayers: Set<Int>     ← delegated to LayerManagementHandler
+  │   └── soloLayer: Int?            ← delegated to LayerManagementHandler
   │
   ├── EditorUiState (data class)
   │   ├── isStrokeOptionsOpen: Boolean
@@ -741,6 +742,12 @@
   ComposeUtils
   └── Compose utility functions
 
+  ShapeGeometryUtils (object, extracted from DrawingOperationsHandler)
+  ├── computeBoundingBox(shape) → RectF?
+  ├── findShapesCoveredByScribble(scribble, shapesManager) → List<BaseShape>
+  ├── findShapesEncircledBy(circle, shapesManager) → List<BaseShape>
+  └── pointInPolygon(x, y, polygon) → Boolean
+
   InteractiveMode (Java enum)
   └── Mode constants
 
@@ -926,7 +933,7 @@
   Data model: Shape.layer, ShapeEntity.layer, BaseShape.layer (all default 1)
   DB: MIGRATION_10_11 adds layer column, ORDER BY layer, timestamp
 
-  EditorViewModel layer state:
+  LayerManagementHandler (extracted from EditorViewModel)
   ├── activeLayer: StateFlow<Int>      ← current drawing layer (default 1)
   ├── hiddenLayers: StateFlow<Set<Int>> ← hidden layer numbers
   ├── soloLayer: StateFlow<Int?>       ← solo: only this layer visible
@@ -938,6 +945,7 @@
   ├── moveLayerStrokes(from, to)       ← MoveLayerAction (undoable)
   ├── isLayerVisible(layer)            ← visibility check (solo > hidden)
   └── getVisibleShapes()               ← filtered shapes for rendering
+  EditorViewModel delegates all layer methods to LayerManagementHandler
 
   Integration points:
   ├── DrawingOperationsHandler.addShape() → sets layer = activeLayer

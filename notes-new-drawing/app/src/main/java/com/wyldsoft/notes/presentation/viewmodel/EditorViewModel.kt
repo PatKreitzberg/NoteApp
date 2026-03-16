@@ -93,20 +93,20 @@ class EditorViewModel(
     private val _selectionContainsTextShape = MutableStateFlow(false)
     val selectionContainsTextShape: StateFlow<Boolean> = _selectionContainsTextShape.asStateFlow()
 
-    // Layer state
-    private val _activeLayer = MutableStateFlow(1)
-    val activeLayer: StateFlow<Int> = _activeLayer.asStateFlow()
+    // --- Delegated layer handler ---
+    private val layerHandler = LayerManagementHandler(
+        noteRepository = noteRepository,
+        scope = viewModelScope,
+        getActionManager = { actionManager },
+        getShapesManager = { shapesManager },
+        getBitmapManager = { bitmapManager },
+        onScreenRefreshNeeded = { onScreenRefreshNeeded?.invoke() }
+    )
 
-    private val _createdLayers = MutableStateFlow<Set<Int>>(setOf(1))
-
-    private val _hiddenLayers = MutableStateFlow<Set<Int>>(emptySet())
-    val hiddenLayers: StateFlow<Set<Int>> = _hiddenLayers.asStateFlow()
-
-    private val _soloLayer = MutableStateFlow<Int?>(null)
-    val soloLayer: StateFlow<Int?> = _soloLayer.asStateFlow()
-
-    private val _layerNames = MutableStateFlow<Map<Int, String>>(emptyMap())
-    val layerNames: StateFlow<Map<Int, String>> = _layerNames.asStateFlow()
+    val activeLayer: StateFlow<Int> = layerHandler.activeLayer
+    val hiddenLayers: StateFlow<Set<Int>> = layerHandler.hiddenLayers
+    val soloLayer: StateFlow<Int?> = layerHandler.soloLayer
+    val layerNames: StateFlow<Map<Int, String>> = layerHandler.layerNames
 
     // Dropdown open/close tracking
     private val _openDropdownCount = MutableStateFlow(0)
@@ -212,7 +212,7 @@ class EditorViewModel(
         onUpdateContentBounds = { updateContentBounds() },
         onScreenRefreshNeeded = { onScreenRefreshNeeded?.invoke() },
         htrRunManager = htrRunManager,
-        getActiveLayer = { _activeLayer.value },
+        getActiveLayer = { layerHandler.activeLayer.value },
         onCircleSelect = { ids, box ->
             selectionManager.setSelection(ids, box)
             notifySelectionChanged()
@@ -492,78 +492,18 @@ class EditorViewModel(
     fun updateCurrentPage(scrollY: Float) = paginationHandler.updateCurrentPage(scrollY)
     fun getPageSeparatorRects(): List<Rect> = paginationHandler.getPageSeparatorRects()
 
-    // --- Layer management ---
+    // --- Delegation to LayerManagementHandler ---
 
-    fun setActiveLayer(layer: Int) { _activeLayer.value = layer }
-
-    fun toggleLayerVisibility(layer: Int) {
-        val current = _hiddenLayers.value.toMutableSet()
-        if (layer in current) current.remove(layer) else current.add(layer)
-        _hiddenLayers.value = current
-        refreshAfterLayerChange()
-    }
-
-    fun setSoloLayer(layer: Int?) {
-        _soloLayer.value = if (_soloLayer.value == layer) null else layer
-        refreshAfterLayerChange()
-    }
-
-    fun addLayer(): Int {
-        val allLayers = getExistingLayers()
-        val newLayer = (allLayers.maxOrNull() ?: 0) + 1
-        _createdLayers.value = _createdLayers.value + newLayer
-        _activeLayer.value = newLayer
-        return newLayer
-    }
-
-    fun getExistingLayers(): List<Int> {
-        val shapeLayers = shapesManager?.shapes()?.map { it.layer }?.toSet() ?: emptySet()
-        val all = (shapeLayers + _createdLayers.value).sorted()
-        return if (all.isEmpty()) listOf(1) else all
-    }
-
-    fun isLayerVisible(layer: Int): Boolean {
-        val solo = _soloLayer.value
-        if (solo != null) return layer == solo
-        return layer !in _hiddenLayers.value
-    }
-
-    fun getVisibleShapes(): MutableList<BaseShape>? {
-        val shapes = shapesManager?.shapes() ?: return null
-        return shapes.filter { isLayerVisible(it.layer) }.toMutableList()
-    }
-
-    fun renameLayer(layer: Int, name: String) {
-        val current = _layerNames.value.toMutableMap()
-        if (name.isBlank()) current.remove(layer) else current[layer] = name.trim()
-        _layerNames.value = current
-    }
-
-    fun getLayerDisplayName(layer: Int): String {
-        return _layerNames.value[layer] ?: "Layer $layer"
-    }
-
-    fun moveLayerStrokes(fromLayer: Int, toLayer: Int) {
-        viewModelScope.launch {
-            val sm = shapesManager ?: return@launch
-            val bm = bitmapManager ?: return@launch
-            val shapeIds = sm.shapes().filter { it.layer == fromLayer }.map { it.id }
-            if (shapeIds.isEmpty()) return@launch
-            val action = com.wyldsoft.notes.actions.MoveLayerAction(
-                shapeIds, fromLayer, toLayer, noteRepository, sm, bm
-            )
-            action.redo()
-            actionManager.recordAction(action)
-            onScreenRefreshNeeded?.invoke()
-        }
-    }
-
-    private fun refreshAfterLayerChange() {
-        val bm = bitmapManager ?: return
-        val visibleShapes = getVisibleShapes() ?: return
-        bm.recreateBitmapFromShapes(visibleShapes)
-        onScreenRefreshNeeded?.invoke()
-    }
+    fun setActiveLayer(layer: Int) = layerHandler.setActiveLayer(layer)
+    fun toggleLayerVisibility(layer: Int) = layerHandler.toggleLayerVisibility(layer)
+    fun setSoloLayer(layer: Int?) = layerHandler.setSoloLayer(layer)
+    fun addLayer(): Int = layerHandler.addLayer()
+    fun getExistingLayers(): List<Int> = layerHandler.getExistingLayers()
+    fun isLayerVisible(layer: Int): Boolean = layerHandler.isLayerVisible(layer)
+    fun getVisibleShapes(): MutableList<BaseShape>? = layerHandler.getVisibleShapes()
+    fun renameLayer(layer: Int, name: String) = layerHandler.renameLayer(layer, name)
+    fun getLayerDisplayName(layer: Int): String = layerHandler.getLayerDisplayName(layer)
+    fun moveLayerStrokes(fromLayer: Int, toLayer: Int) = layerHandler.moveLayerStrokes(fromLayer, toLayer)
 
     // --- Pen / UI state ---
 

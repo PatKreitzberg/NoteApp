@@ -2,7 +2,6 @@ package com.wyldsoft.notes.sdkintegration.generic
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
@@ -15,8 +14,6 @@ import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 
 /**
  * Drawing activity for non-Onyx Android devices.
@@ -113,14 +110,6 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
         // No-op on generic devices
     }
 
-    override fun cleanSurfaceView(surfaceView: SurfaceView): Boolean {
-        val holder = surfaceView.holder ?: return false
-        val canvas = holder.lockCanvas() ?: return false
-        canvas.drawColor(Color.WHITE)
-        holder.unlockCanvasAndPost(canvas)
-        return true
-    }
-
     override fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
         if (bitmap == null) return
         try {
@@ -171,16 +160,6 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
 
     override fun onViewportChanged() {
         forceScreenRefresh()
-    }
-
-    override fun forceScreenRefresh() {
-        surfaceView.let { sv ->
-            // Note: cleanSurfaceView() is intentionally omitted here. The renderToScreen()
-            // call already draws a white background via renderBackground() before drawing the
-            // bitmap, so a separate white clear would cause a visible flash between frames.
-            recreateBitmapFromShapes()
-            bitmap?.let { renderToScreen(sv, it) }
-        }
     }
 
     override fun setViewModel(viewModel: EditorViewModel) {
