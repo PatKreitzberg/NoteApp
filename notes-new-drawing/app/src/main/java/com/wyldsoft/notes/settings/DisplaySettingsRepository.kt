@@ -18,6 +18,12 @@ class DisplaySettingsRepository(context: Context) {
     private val _scrollBarVisible = MutableStateFlow(prefs.getBoolean(KEY_SCROLL_BAR_VISIBLE, DEFAULT_SCROLL_BAR_VISIBLE))
     val scrollBarVisible: StateFlow<Boolean> = _scrollBarVisible
 
+    private val _scribbleToEraseEnabled = MutableStateFlow(prefs.getBoolean(KEY_SCRIBBLE_TO_ERASE, DEFAULT_SCRIBBLE_TO_ERASE))
+    val scribbleToEraseEnabled: StateFlow<Boolean> = _scribbleToEraseEnabled
+
+    private val _circleToSelectEnabled = MutableStateFlow(prefs.getBoolean(KEY_CIRCLE_TO_SELECT, DEFAULT_CIRCLE_TO_SELECT))
+    val circleToSelectEnabled: StateFlow<Boolean> = _circleToSelectEnabled
+
     /** Minimum interval between screen refreshes in milliseconds */
     val minRefreshIntervalMs: Long
         get() = if (_maxRefreshRate.value > 0) 1000L / _maxRefreshRate.value else 0L
@@ -37,12 +43,26 @@ class DisplaySettingsRepository(context: Context) {
         _scrollBarVisible.value = enabled
     }
 
+    fun setScribbleToEraseEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SCRIBBLE_TO_ERASE, enabled).apply()
+        _scribbleToEraseEnabled.value = enabled
+    }
+
+    fun setCircleToSelectEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CIRCLE_TO_SELECT, enabled).apply()
+        _circleToSelectEnabled.value = enabled
+    }
+
     companion object {
         private const val KEY_MAX_REFRESH_RATE = "max_refresh_rate"
         private const val KEY_SMOOTH_MOTION = "smooth_motion"
         private const val KEY_SCROLL_BAR_VISIBLE = "scroll_bar_visible"
+        private const val KEY_SCRIBBLE_TO_ERASE = "scribble_to_erase"
+        private const val KEY_CIRCLE_TO_SELECT = "circle_to_select"
         const val DEFAULT_MAX_REFRESH_RATE = 5
         const val DEFAULT_SMOOTH_MOTION = true
         const val DEFAULT_SCROLL_BAR_VISIBLE = true
+        const val DEFAULT_SCRIBBLE_TO_ERASE = true
+        const val DEFAULT_CIRCLE_TO_SELECT = true
     }
 }

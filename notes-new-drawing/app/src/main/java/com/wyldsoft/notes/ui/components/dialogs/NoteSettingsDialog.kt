@@ -15,12 +15,17 @@ fun NoteSettingsDialog(
     isPaginationEnabled: Boolean,
     currentPaperSize: PaperSize,
     currentPaperTemplate: PaperTemplate,
+    scribbleToEraseEnabled: Boolean,
+    circleToSelectEnabled: Boolean,
     onRenameNote: (String) -> Unit,
     onPaginationToggle: (Boolean) -> Unit,
     onPaperSizeChange: (PaperSize) -> Unit,
     onPaperTemplateChange: (PaperTemplate) -> Unit,
+    onScribbleToEraseToggle: (Boolean) -> Unit,
+    onCircleToSelectToggle: (Boolean) -> Unit,
     onManageNotebooks: () -> Unit,
     onExport: () -> Unit,
+    onOpenAppSettings: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var nameField by remember { mutableStateOf(noteName) }
@@ -105,5 +110,43 @@ fun NoteSettingsDialog(
                 onPaperTemplateChange(template)
             }
         )
+
+        Divider()
+
+        // Scribble-to-erase toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Scribble to erase")
+            Switch(
+                checked = scribbleToEraseEnabled,
+                onCheckedChange = onScribbleToEraseToggle
+            )
+        }
+
+        // Circle-to-select toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Circle to select")
+            Switch(
+                checked = circleToSelectEnabled,
+                onCheckedChange = onCircleToSelectToggle
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // App Settings button
+        OutlinedButton(
+            onClick = onOpenAppSettings,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("App Settings")
+        }
     }
 }

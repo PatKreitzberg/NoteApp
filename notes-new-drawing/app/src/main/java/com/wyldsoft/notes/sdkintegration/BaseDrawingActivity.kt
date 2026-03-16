@@ -84,7 +84,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         runBlocking(Dispatchers.IO) { noteRepository.setCurrentNote(noteId) }
 
         Log.d(TAG, "Setting EditorView as content with noteId: $noteId, notebookId: $notebookId")
-        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrRunManager, notebookId)
+        editorViewModel = EditorViewModel(noteRepository, notebookRepository, app.htrRunManager, notebookId, app.displaySettingsRepository)
         setEditorViewAsContent()
     }
 
@@ -92,7 +92,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         setContent {
             MinimaleditorTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    EditorView(editorViewModel, displaySettingsRepository = displaySettingsRepository, syncViewModel = (application as com.wyldsoft.notes.ScrotesApp).syncViewModel, onSurfaceViewCreated = { sv, vm ->
+                    EditorView(editorViewModel, displaySettingsRepository = displaySettingsRepository, gestureSettingsRepository = (application as com.wyldsoft.notes.ScrotesApp).gestureSettingsRepository, syncViewModel = (application as com.wyldsoft.notes.ScrotesApp).syncViewModel, onSurfaceViewCreated = { sv, vm ->
                         Log.d(TAG, "SurfaceView created in EditorView")
                         handleSurfaceViewCreated(sv, vm)
                     })

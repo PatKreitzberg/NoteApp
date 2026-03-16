@@ -1,17 +1,15 @@
 package com.wyldsoft.notes.ui.components.dialogs
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.gestures.GestureAction
-import com.wyldsoft.notes.gestures.GestureMapping
 import com.wyldsoft.notes.gestures.GestureSettingsRepository
 import com.wyldsoft.notes.gestures.GestureType
+import com.wyldsoft.notes.gestures.GestureMapping
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import kotlin.math.roundToInt
 
@@ -25,7 +23,14 @@ fun AppSettingsDialog(
     onOpenGoogleDrive: () -> Unit = {}
 ) {
     val savedMappings by gestureSettingsRepository.mappings.collectAsState()
-    var mappings by remember { mutableStateOf(savedMappings) }
+    // Build a mutable map of gesture → action, defaulting unmapped gestures to NONE
+    var gestureActions by remember(savedMappings) {
+        mutableStateOf(
+            GestureType.entries.associateWith { gesture ->
+                savedMappings.find { it.gesture == gesture }?.action ?: GestureAction.NONE
+            }
+        )
+    }
 
     val currentRefreshRate by displaySettingsRepository.maxRefreshRate.collectAsState()
     val currentSmoothMotion by displaySettingsRepository.smoothMotion.collectAsState()
@@ -37,6 +42,9 @@ fun AppSettingsDialog(
     var showDefaultNoteSettings by remember { mutableStateOf(false) }
 
     val saveAndDismiss = {
+        val mappings = gestureActions
+            .filter { (_, action) -> action != GestureAction.NONE }
+            .map { (gesture, action) -> GestureMapping(gesture, action) }
         gestureSettingsRepository.saveMappings(mappings)
         displaySettingsRepository.setMaxRefreshRate(refreshRate.roundToInt())
         displaySettingsRepository.setSmoothMotion(smoothMotion)
@@ -107,42 +115,28 @@ fun AppSettingsDialog(
             style = MaterialTheme.typography.titleMedium
         )
 
-        val usedGestures = mappings.map { it.gesture }.toSet()
-
-        mappings.forEachIndexed { index, mapping ->
-            GestureMappingRow(
-                mapping = mapping,
-                usedGestures = usedGestures,
-                onGestureChange = { newGesture ->
-                    mappings = mappings.toMutableList().apply {
-                        this[index] = mapping.copy(gesture = newGesture)
-                    }
-                },
-                onActionChange = { newAction ->
-                    mappings = mappings.toMutableList().apply {
-                        this[index] = mapping.copy(action = newAction)
-                    }
-                },
-                onRemove = {
-                    mappings = mappings.toMutableList().apply {
-                        removeAt(index)
-                    }
-                }
-            )
-        }
-
-        val availableGestures = GestureType.entries.filter { it !in usedGestures }
-        if (availableGestures.isNotEmpty()) {
-            OutlinedButton(
-                onClick = {
-                    mappings = mappings + GestureMapping(
-                        availableGestures.first(),
-                        GestureAction.NONE
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
+        GestureType.entries.forEach { gesture ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Add Gesture")
+                Text(
+                    text = gesture.displayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                InlineDropdown(
+                    items = GestureAction.entries,
+                    selectedItem = gestureActions[gesture] ?: GestureAction.NONE,
+                    displayName = { it.displayName },
+                    onItemSelected = { action ->
+                        gestureActions = gestureActions.toMutableMap().apply { put(gesture, action) }
+                    },
+                    modifier = Modifier.weight(1f),
+                    textStyle = MaterialTheme.typography.bodySmall
+                )
             }
         }
 
@@ -155,6 +149,9 @@ fun AppSettingsDialog(
 
         OutlinedButton(
             onClick = {
+                val mappings = gestureActions
+                    .filter { (_, action) -> action != GestureAction.NONE }
+                    .map { (gesture, action) -> GestureMapping(gesture, action) }
                 gestureSettingsRepository.saveMappings(mappings)
                 onOpenGoogleDrive()
             },
@@ -169,53 +166,5 @@ fun AppSettingsDialog(
             repository = defaultNoteSettingsRepository,
             onDismiss = { showDefaultNoteSettings = false }
         )
-    }
-}
-
-@Composable
-private fun GestureMappingRow(
-    mapping: GestureMapping,
-    usedGestures: Set<GestureType>,
-    onGestureChange: (GestureType) -> Unit,
-    onActionChange: (GestureAction) -> Unit,
-    onRemove: () -> Unit
-) {
-    val availableGestures = GestureType.entries.filter {
-        it == mapping.gesture || it !in usedGestures
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        InlineDropdown(
-            items = availableGestures,
-            selectedItem = mapping.gesture,
-            displayName = { it.displayName },
-            onItemSelected = onGestureChange,
-            modifier = Modifier.weight(1f),
-            textStyle = MaterialTheme.typography.bodySmall
-        )
-
-        InlineDropdown(
-            items = GestureAction.entries,
-            selectedItem = mapping.action,
-            displayName = { it.displayName },
-            onItemSelected = onActionChange,
-            modifier = Modifier.weight(1f),
-            textStyle = MaterialTheme.typography.bodySmall
-        )
-
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Remove gesture",
-                modifier = Modifier.size(18.dp)
-            )
-        }
     }
 }

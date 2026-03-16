@@ -24,6 +24,8 @@ import com.wyldsoft.notes.ui.components.LiveTextInput
 import com.wyldsoft.notes.ui.components.Toolbar
 import com.wyldsoft.notes.ui.components.VerticalScrollBar
 import com.wyldsoft.notes.ui.components.ViewportInfo
+import com.wyldsoft.notes.gestures.GestureSettingsRepository
+import com.wyldsoft.notes.ui.components.dialogs.AppSettingsDialog
 import com.wyldsoft.notes.ui.components.dialogs.ExportDialog
 import com.wyldsoft.notes.ui.components.dialogs.ManageNoteDialog
 import com.wyldsoft.notes.ui.components.dialogs.NoteSettingsDialog
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun EditorView(
     viewModel: EditorViewModel,
     displaySettingsRepository: DisplaySettingsRepository? = null,
+    gestureSettingsRepository: GestureSettingsRepository? = null,
     syncViewModel: com.wyldsoft.notes.presentation.viewmodel.SyncViewModel? = null,
     onSurfaceViewCreated: (android.view.SurfaceView, EditorViewModel) -> Unit = {_, _ -> },
 ) {
@@ -49,9 +52,14 @@ fun EditorView(
     val contentMaxY by viewModel.contentMaxY.collectAsState()
     val showScrollBar by (displaySettingsRepository?.scrollBarVisible
         ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
+    val scribbleToEraseEnabled by (displaySettingsRepository?.scribbleToEraseEnabled
+        ?: kotlinx.coroutines.flow.MutableStateFlow(true)).collectAsState()
+    val circleToSelectEnabled by (displaySettingsRepository?.circleToSelectEnabled
+        ?: kotlinx.coroutines.flow.MutableStateFlow(true)).collectAsState()
     var showNoteSettingsDialog by remember { mutableStateOf(false) }
     var showManageNotebooksDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
+    var showAppSettingsDialog by remember { mutableStateOf(false) }
     var isToolbarCollapsed by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -172,10 +180,14 @@ fun EditorView(
             isPaginationEnabled = isPaginationEnabled,
             currentPaperSize = paperSize,
             currentPaperTemplate = paperTemplate,
+            scribbleToEraseEnabled = scribbleToEraseEnabled,
+            circleToSelectEnabled = circleToSelectEnabled,
             onRenameNote = { newName -> viewModel.renameNote(newName) },
             onPaginationToggle = { enabled -> viewModel.updatePaginationEnabled(enabled) },
             onPaperSizeChange = { newPaperSize -> viewModel.updatePaperSize(newPaperSize) },
             onPaperTemplateChange = { newTemplate -> viewModel.updatePaperTemplate(newTemplate) },
+            onScribbleToEraseToggle = { enabled -> displaySettingsRepository?.setScribbleToEraseEnabled(enabled) },
+            onCircleToSelectToggle = { enabled -> displaySettingsRepository?.setCircleToSelectEnabled(enabled) },
             onManageNotebooks = {
                 showNoteSettingsDialog = false
                 showManageNotebooksDialog = true
@@ -183,6 +195,10 @@ fun EditorView(
             onExport = {
                 showNoteSettingsDialog = false
                 showExportDialog = true
+            },
+            onOpenAppSettings = {
+                showNoteSettingsDialog = false
+                showAppSettingsDialog = true
             },
             onDismiss = {
                 showNoteSettingsDialog = false
@@ -215,6 +231,14 @@ fun EditorView(
             checkedNotebookIds = noteNotebooks,
             onSave = { notebookIds -> viewModel.updateNoteNotebooks(notebookIds) },
             onDismiss = { showManageNotebooksDialog = false }
+        )
+    }
+
+    if (showAppSettingsDialog && gestureSettingsRepository != null && displaySettingsRepository != null) {
+        AppSettingsDialog(
+            gestureSettingsRepository = gestureSettingsRepository,
+            displaySettingsRepository = displaySettingsRepository,
+            onDismiss = { showAppSettingsDialog = false }
         )
     }
 }

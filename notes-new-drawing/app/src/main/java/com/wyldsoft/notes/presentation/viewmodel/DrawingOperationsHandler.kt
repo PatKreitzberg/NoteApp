@@ -44,7 +44,9 @@ class DrawingOperationsHandler(
     private val htrRunManager: HTRRunManager? = null,
     private val getActiveLayer: () -> Int = { 1 },
     private val onCircleSelect: ((Set<String>, RectF) -> Unit)? = null,
-    private val isShapeRecognitionEnabled: () -> Boolean = { false }
+    private val isShapeRecognitionEnabled: () -> Boolean = { false },
+    private val isScribbleToEraseEnabled: () -> Boolean = { true },
+    private val isCircleToSelectEnabled: () -> Boolean = { true }
 ) {
     companion object {
         private const val TAG = "DrawingOpsHandler"
@@ -90,7 +92,7 @@ class DrawingOperationsHandler(
             val bm = getBitmapManager()
 
             // Try immediate scribble-to-erase
-            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()) {
+            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty() && isScribbleToEraseEnabled()) {
                 val isScribble = htrRunManager.isScribbleGesture(shape)
                 if (isScribble) {
                     val coveredShapes = ShapeGeometryUtils.findShapesCoveredByScribble(shape, sm)
@@ -187,9 +189,9 @@ class DrawingOperationsHandler(
                 }
             }
 
-            // Try circle-to-select (skipped when shape recognition is enabled)
+            // Try circle-to-select (skipped when shape recognition is enabled or feature disabled)
             if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()
-                && onCircleSelect != null && !isShapeRecognitionEnabled()
+                && onCircleSelect != null && !isShapeRecognitionEnabled() && isCircleToSelectEnabled()
             ) {
                 val isCircle = htrRunManager.isCircleGesture(shape)
                 if (isCircle) {

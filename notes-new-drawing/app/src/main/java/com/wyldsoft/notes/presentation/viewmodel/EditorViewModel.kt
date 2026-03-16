@@ -16,6 +16,7 @@ import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.geometry.GeometricShapeType
 import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.pen.PenProfile
+import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
@@ -45,7 +46,8 @@ class EditorViewModel(
     private val noteRepository: NoteRepository,
     private val notebookRepository: NotebookRepository,
     private val htrRunManager: HTRRunManager? = null,
-    val notebookId: String? = null
+    val notebookId: String? = null,
+    private val displaySettingsRepository: DisplaySettingsRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditorUiState())
@@ -219,7 +221,9 @@ class EditorViewModel(
             switchMode(EditorMode.Select)
             onScreenRefreshNeeded?.invoke()
         },
-        isShapeRecognitionEnabled = { _uiState.value.shapeRecognitionEnabled }
+        isShapeRecognitionEnabled = { _uiState.value.shapeRecognitionEnabled },
+        isScribbleToEraseEnabled = { displaySettingsRepository?.scribbleToEraseEnabled?.value ?: true },
+        isCircleToSelectEnabled = { displaySettingsRepository?.circleToSelectEnabled?.value ?: true }
     )
 
     val isDrawing: StateFlow<Boolean> = drawingOperationsHandler.isDrawing
