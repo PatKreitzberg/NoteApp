@@ -78,10 +78,12 @@ class OnyxStylusHandler(
 
     fun createOnyxCallback(): RawInputCallback = object : RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
+            Log.d("DROPSTROKEBUG", "onBeginRawDrawing: b=$b, touchPoint=${touchPoint != null}")
             modeRouter.routeBegin(touchPoint)
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
+            Log.d("DROPSTROKEBUG", "onEndRawDrawing: b=$b, isGeometry=$isGeometryDrawingInProgress, isLineSnapped=$isLineSnapped")
             if (!isGeometryDrawingInProgress && !isLineSnapped) {
                 isDrawingInProgress = false
             }
@@ -92,6 +94,10 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
+            Log.d("DROPSTROKEBUG", "onRawDrawingTouchPointListReceived: " +
+                "touchPointList=${touchPointList != null}, " +
+                "size=${touchPointList?.size() ?: "null"}, " +
+                "points=${touchPointList?.points?.size ?: "null"}")
             modeRouter.routeEnd(touchPointList)
         }
 

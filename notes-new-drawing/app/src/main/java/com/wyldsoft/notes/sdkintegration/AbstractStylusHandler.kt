@@ -15,6 +15,7 @@ import com.wyldsoft.notes.shapemanagement.DrawManager
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
+import android.util.Log
 import com.wyldsoft.notes.utils.surfacePointsToNoteTouchPoints
 
 /**
@@ -174,11 +175,29 @@ abstract class AbstractStylusHandler(
     }
 
     protected fun finalizeStroke(touchPointList: TouchPointList) {
-        touchPointList.points?.let {
-            val notePointList = surfacePointsToNoteTouchPoints(touchPointList, viewModel.viewportManager)
-            val newShape = drawManager.newShape(notePointList)
-            shapesManager.addShape(newShape)
+        val points = touchPointList.points
+        if (points == null) {
+            Log.w("DROPSTROKEBUG", "finalizeStroke: touchPointList.points is NULL — stroke silently dropped! " +
+                "touchPointList.size=${touchPointList.size()}")
+            isDrawingInProgress = false
+            onDrawingStateChanged(false)
+            viewModel.endDrawing()
+            return
         }
+        if (points.isEmpty()) {
+            Log.w("DROPSTROKEBUG", "finalizeStroke: touchPointList.points is EMPTY — stroke silently dropped!")
+            isDrawingInProgress = false
+            onDrawingStateChanged(false)
+            viewModel.endDrawing()
+            return
+        }
+        Log.d("DROPSTROKEBUG", "finalizeStroke: ${points.size} points, converting to note coords")
+        val notePointList = surfacePointsToNoteTouchPoints(touchPointList, viewModel.viewportManager)
+        Log.d("DROPSTROKEBUG", "finalizeStroke: notePointList size=${notePointList.size()}, creating shape")
+        val newShape = drawManager.newShape(notePointList)
+        Log.d("DROPSTROKEBUG", "finalizeStroke: shape created id=${newShape.id}, adding to shapesManager")
+        shapesManager.addShape(newShape)
+        Log.d("DROPSTROKEBUG", "finalizeStroke: shape added to shapesManager, total shapes=${shapesManager.shapes().size}")
         isDrawingInProgress = false
         onDrawingStateChanged(false)
         viewModel.endDrawing()

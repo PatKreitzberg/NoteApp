@@ -73,158 +73,174 @@ class DrawingOperationsHandler(
         pressures: List<Float> = emptyList(),
         timestamps: List<Long> = emptyList()
     ) {
+        Log.d("DROPSTROKEBUG", "addShape: id=$id, points=${points.size}, pressures=${pressures.size}, timestamps=${timestamps.size}")
         scope.launch {
-            val profile = getCurrentPenProfile()
-            val shape = Shape(
-                id = id,
-                type = ShapeType.STROKE,
-                points = points,
-                strokeWidth = profile.strokeWidth,
-                strokeColor = profile.getColorAsInt(),
-                penType = profile.penType,
-                pressure = pressures,
-                pointTimestamps = timestamps,
-                layer = getActiveLayer()
-            )
-            noteRepository.addShape(getCurrentNote().id, shape)
+            try {
+                val profile = getCurrentPenProfile()
+                val shape = Shape(
+                    id = id,
+                    type = ShapeType.STROKE,
+                    points = points,
+                    strokeWidth = profile.strokeWidth,
+                    strokeColor = profile.getColorAsInt(),
+                    penType = profile.penType,
+                    pressure = pressures,
+                    pointTimestamps = timestamps,
+                    layer = getActiveLayer()
+                )
+                Log.d("DROPSTROKEBUG", "addShape: persisting to DB, noteId=${getCurrentNote().id}")
+                noteRepository.addShape(getCurrentNote().id, shape)
+                Log.d("DROPSTROKEBUG", "addShape: persisted to DB successfully")
 
-            val sm = getShapesManager()
-            val bm = getBitmapManager()
+                val sm = getShapesManager()
+                val bm = getBitmapManager()
 
-            // Try immediate scribble-to-erase
-            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty() && isScribbleToEraseEnabled()) {
-                val isScribble = htrRunManager.isScribbleGesture(shape)
-                if (isScribble) {
-                    val coveredShapes = ShapeGeometryUtils.findShapesCoveredByScribble(shape, sm)
-                    if (coveredShapes.isNotEmpty()) {
-                        Log.d(TAG, "Scribble-to-erase: erasing ${coveredShapes.size} shape(s)")
-                        // Remove the scribble itself (no DrawAction — not undoable)
-                        noteRepository.removeShape(getCurrentNote().id, shape.id)
-                        val scribbleSdk = sm.shapes().find { it.id == shape.id }
-                        if (scribbleSdk != null) sm.removeShape(scribbleSdk)
+                // Try immediate scribble-to-erase
+                if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty() && isScribbleToEraseEnabled()) {
+                    val isScribble = htrRunManager.isScribbleGesture(shape)
+                    if (isScribble) {
+                        Log.d("DROPSTROKEBUG", "addShape: detected as SCRIBBLE gesture, checking for covered shapes")
+                        val coveredShapes = ShapeGeometryUtils.findShapesCoveredByScribble(shape, sm)
+                        if (coveredShapes.isNotEmpty()) {
+                            Log.d(TAG, "Scribble-to-erase: erasing ${coveredShapes.size} shape(s)")
+                            // Remove the scribble itself (no DrawAction — not undoable)
+                            noteRepository.removeShape(getCurrentNote().id, shape.id)
+                            val scribbleSdk = sm.shapes().find { it.id == shape.id }
+                            if (scribbleSdk != null) sm.removeShape(scribbleSdk)
 
-                        // Remove covered shapes and record as EraseAction
-                        val coveredDomainShapes = mutableListOf<Shape>()
-                        for (covered in coveredShapes) {
-                            val domainShape = getCurrentNote().shapes.find { it.id == covered.id }
-                            if (domainShape != null) coveredDomainShapes.add(domainShape)
-                            sm.removeShape(covered)
-                            noteRepository.removeShape(getCurrentNote().id, covered.id)
-                        }
+                            // Remove covered shapes and record as EraseAction
+                            val coveredDomainShapes = mutableListOf<Shape>()
+                            for (covered in coveredShapes) {
+                                val domainShape = getCurrentNote().shapes.find { it.id == covered.id }
+                                if (domainShape != null) coveredDomainShapes.add(domainShape)
+                                sm.removeShape(covered)
+                                noteRepository.removeShape(getCurrentNote().id, covered.id)
+                            }
 
-                        if (coveredDomainShapes.isNotEmpty()) {
-                            getActionManager().recordAction(
-                                EraseAction(getCurrentNote().id, coveredDomainShapes, noteRepository, sm, bm)
-                            )
-                            htrRunManager.onShapesDeleted(
-                                getCurrentNote().id,
-                                coveredDomainShapes.map { it.id }.toSet()
-                            )
-                        }
+                            if (coveredDomainShapes.isNotEmpty()) {
+                                getActionManager().recordAction(
+                                    EraseAction(getCurrentNote().id, coveredDomainShapes, noteRepository, sm, bm)
+                                )
+                                htrRunManager.onShapesDeleted(
+                                    getCurrentNote().id,
+                                    coveredDomainShapes.map { it.id }.toSet()
+                                )
+                            }
 
-                        bm.recreateBitmapFromShapes(sm.shapes())
-                        onScreenRefreshNeeded()
-                        onUpdateContentBounds()
-                        return@launch
-                    }
-                }
-            }
-
-            // Try shape recognition (when enabled, replaces freehand with geometric shape)
-            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()
-                && isShapeRecognitionEnabled()
-            ) {
-                val result = htrRunManager.recognizeShape(shape)
-                if (result != null) {
-                    Log.d(TAG, "Shape recognition: replacing stroke with ${result.shapeType.displayName()} (score=${result.confidence})")
-                    // Remove the freehand stroke
-                    noteRepository.removeShape(getCurrentNote().id, shape.id)
-                    val freehandSdk = sm.shapes().find { it.id == shape.id }
-                    if (freehandSdk != null) sm.removeShape(freehandSdk)
-
-                    // Compute bounding box of freehand stroke, use as start/end for geometry
-                    val bbox = ShapeGeometryUtils.computeBoundingBox(shape)
-                    if (bbox != null) {
-                        val centerX = bbox.centerX()
-                        val centerY = bbox.centerY()
-                        val endX = bbox.right
-                        val endY = bbox.centerY()
-                        val notePoints = GeometryShapeCalculator.calculate(
-                            result.shapeType, centerX, centerY, endX, endY
-                        )
-
-                        // Create SDK BaseShape so it renders
-                        val shapePointList = TouchPointList()
-                        val now = System.currentTimeMillis()
-                        notePoints.forEach { pt ->
-                            shapePointList.add(TouchPoint(pt.x, pt.y, 1.0f, 1.0f, now))
-                        }
-                        val sdkShapeType = ShapesManager.penTypeToShapeType(shape.penType)
-                        val baseShape = ShapeFactory.createShape(sdkShapeType).apply {
-                            setTouchPointList(shapePointList)
-                            setStrokeColor(shape.strokeColor)
-                            setStrokeWidth(shape.strokeWidth)
-                            setShapeType(sdkShapeType)
-                        }
-                        ShapesManager.applyCharcoalTexture(baseShape, shape.penType)
-                        baseShape.layer = shape.layer
-                        baseShape.updateShapeRect()
-                        sm.addShape(baseShape)
-
-                        // Persist domain shape + record undoable action
-                        val geometricShape = Shape(
-                            id = baseShape.id,
-                            type = result.shapeType.toDomainShapeType(),
-                            points = notePoints,
-                            strokeWidth = shape.strokeWidth,
-                            strokeColor = shape.strokeColor,
-                            penType = shape.penType,
-                            layer = shape.layer
-                        )
-                        addGeometricShape(geometricShape)
-                    }
-                    bm.recreateBitmapFromShapes(sm.shapes())
-                    onScreenRefreshNeeded()
-                    return@launch
-                }
-            }
-
-            // Try circle-to-select (skipped when shape recognition is enabled or feature disabled)
-            if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()
-                && onCircleSelect != null && !isShapeRecognitionEnabled() && isCircleToSelectEnabled()
-            ) {
-                val isCircle = htrRunManager.isCircleGesture(shape)
-                if (isCircle) {
-                    val encircledShapes = ShapeGeometryUtils.findShapesEncircledBy(shape, sm)
-                    if (encircledShapes.isNotEmpty()) {
-                        Log.d(TAG, "Circle-to-select: selecting ${encircledShapes.size} shape(s)")
-                        // Remove the circle shape — never persist it
-                        noteRepository.removeShape(getCurrentNote().id, shape.id)
-                        val circleSdk = sm.shapes().find { it.id == shape.id }
-                        if (circleSdk != null) sm.removeShape(circleSdk)
-
-                        val selectedIds = encircledShapes.map { it.id }.toSet()
-                        val selectedSdkShapes = sm.shapes().filter { it.id in selectedIds }
-                        selectedSdkShapes.forEach { it.updateShapeRect() }
-                        val boundingBox = calculateShapesBoundingBox(selectedSdkShapes)
-
-                        if (boundingBox != null) {
                             bm.recreateBitmapFromShapes(sm.shapes())
                             onScreenRefreshNeeded()
-                            onCircleSelect.invoke(selectedIds, boundingBox)
+                            onUpdateContentBounds()
+                            return@launch
+                        } else {
+                            Log.d("DROPSTROKEBUG", "addShape: scribble detected but no covered shapes, treating as normal stroke")
                         }
+                    }
+                }
+
+                // Try shape recognition (when enabled, replaces freehand with geometric shape)
+                if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()
+                    && isShapeRecognitionEnabled()
+                ) {
+                    val result = htrRunManager.recognizeShape(shape)
+                    if (result != null) {
+                        Log.d(TAG, "Shape recognition: replacing stroke with ${result.shapeType.displayName()} (score=${result.confidence})")
+                        // Remove the freehand stroke
+                        noteRepository.removeShape(getCurrentNote().id, shape.id)
+                        val freehandSdk = sm.shapes().find { it.id == shape.id }
+                        if (freehandSdk != null) sm.removeShape(freehandSdk)
+
+                        // Compute bounding box of freehand stroke, use as start/end for geometry
+                        val bbox = ShapeGeometryUtils.computeBoundingBox(shape)
+                        if (bbox != null) {
+                            val centerX = bbox.centerX()
+                            val centerY = bbox.centerY()
+                            val endX = bbox.right
+                            val endY = bbox.centerY()
+                            val notePoints = GeometryShapeCalculator.calculate(
+                                result.shapeType, centerX, centerY, endX, endY
+                            )
+
+                            // Create SDK BaseShape so it renders
+                            val shapePointList = TouchPointList()
+                            val now = System.currentTimeMillis()
+                            notePoints.forEach { pt ->
+                                shapePointList.add(TouchPoint(pt.x, pt.y, 1.0f, 1.0f, now))
+                            }
+                            val sdkShapeType = ShapesManager.penTypeToShapeType(shape.penType)
+                            val baseShape = ShapeFactory.createShape(sdkShapeType).apply {
+                                setTouchPointList(shapePointList)
+                                setStrokeColor(shape.strokeColor)
+                                setStrokeWidth(shape.strokeWidth)
+                                setShapeType(sdkShapeType)
+                            }
+                            ShapesManager.applyCharcoalTexture(baseShape, shape.penType)
+                            baseShape.layer = shape.layer
+                            baseShape.updateShapeRect()
+                            sm.addShape(baseShape)
+
+                            // Persist domain shape + record undoable action
+                            val geometricShape = Shape(
+                                id = baseShape.id,
+                                type = result.shapeType.toDomainShapeType(),
+                                points = notePoints,
+                                strokeWidth = shape.strokeWidth,
+                                strokeColor = shape.strokeColor,
+                                penType = shape.penType,
+                                layer = shape.layer
+                            )
+                            addGeometricShape(geometricShape)
+                        }
+                        bm.recreateBitmapFromShapes(sm.shapes())
+                        onScreenRefreshNeeded()
                         return@launch
                     }
                 }
-            }
 
-            // Normal shape — record DrawAction
-            if (sm != null && bm != null) {
-                getActionManager().recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
-            }
+                // Try circle-to-select (skipped when shape recognition is enabled or feature disabled)
+                if (sm != null && bm != null && htrRunManager != null && timestamps.isNotEmpty()
+                    && onCircleSelect != null && !isShapeRecognitionEnabled() && isCircleToSelectEnabled()
+                ) {
+                    val isCircle = htrRunManager.isCircleGesture(shape)
+                    if (isCircle) {
+                        Log.d("DROPSTROKEBUG", "addShape: detected as CIRCLE gesture, checking for encircled shapes")
+                        val encircledShapes = ShapeGeometryUtils.findShapesEncircledBy(shape, sm)
+                        if (encircledShapes.isNotEmpty()) {
+                            Log.d(TAG, "Circle-to-select: selecting ${encircledShapes.size} shape(s)")
+                            // Remove the circle shape — never persist it
+                            noteRepository.removeShape(getCurrentNote().id, shape.id)
+                            val circleSdk = sm.shapes().find { it.id == shape.id }
+                            if (circleSdk != null) sm.removeShape(circleSdk)
 
-            htrRunManager?.addShapesForRecognition(getCurrentNote().id, listOf(shape))
-            onUpdateContentBounds()
+                            val selectedIds = encircledShapes.map { it.id }.toSet()
+                            val selectedSdkShapes = sm.shapes().filter { it.id in selectedIds }
+                            selectedSdkShapes.forEach { it.updateShapeRect() }
+                            val boundingBox = calculateShapesBoundingBox(selectedSdkShapes)
+
+                            if (boundingBox != null) {
+                                bm.recreateBitmapFromShapes(sm.shapes())
+                                onScreenRefreshNeeded()
+                                onCircleSelect.invoke(selectedIds, boundingBox)
+                            }
+                            return@launch
+                        } else {
+                            Log.d("DROPSTROKEBUG", "addShape: circle detected but no encircled shapes, treating as normal stroke")
+                        }
+                    }
+                }
+
+                // Normal shape — record DrawAction
+                Log.d("DROPSTROKEBUG", "addShape: recording DrawAction for shape id=$id")
+                if (sm != null && bm != null) {
+                    getActionManager().recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
+                } else {
+                    Log.w("DROPSTROKEBUG", "addShape: sm=$sm, bm=$bm — cannot record DrawAction!")
+                }
+
+                htrRunManager?.addShapesForRecognition(getCurrentNote().id, listOf(shape))
+                onUpdateContentBounds()
+            } catch (e: Exception) {
+                Log.e("DROPSTROKEBUG", "addShape: EXCEPTION in coroutine — stroke may be lost! id=$id", e)
+            }
         }
     }
 

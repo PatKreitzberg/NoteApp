@@ -28,16 +28,19 @@ class DrawManager(
     }
 
     fun newShape(noteCoordinateTouchPointList: TouchPointList): BaseShape {
-        Log.d("DrawManager", "Creating new shape with ${noteCoordinateTouchPointList.size()} points")
+        Log.d("DROPSTROKEBUG", "DrawManager.newShape: ${noteCoordinateTouchPointList.size()} points")
         // Create shape and add to bitmap then render to screen
         val shape = createShapeFromPenType(noteCoordinateTouchPointList)
+        Log.d("DROPSTROKEBUG", "DrawManager.newShape: shape created id=${shape.id}, calling onShapeCompleted")
         // Convert TouchPointList to domain data for ViewModel (in NoteCoordinates)
         val touchData = extractTouchData(noteCoordinateTouchPointList)
         onShapeCompleted(shape.id, touchData.points, touchData.pressures, touchData.timestamps)
+        Log.d("DROPSTROKEBUG", "DrawManager.newShape: onShapeCompleted fired, rendering to bitmap")
 
         // Render the new shape to the bitmap
         bitmapManager.renderShapeToBitmap(shape)
         bitmapManager.renderBitmapToScreen()
+        Log.d("DROPSTROKEBUG", "DrawManager.newShape: rendered to bitmap and screen, returning shape id=${shape.id}")
 
         // return to OnyxStylusHandler so it can put in drawnShapes
         return shape
