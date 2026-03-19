@@ -96,26 +96,6 @@
 
 * Drawing & Rendering to Screen
 
-** Renderer Hierarchy
-
-#+begin_example
-  «interface» Renderer
-  ├── renderToBitmap()
-  └── renderToScreen()
-        │
-        ▼
-  BaseRenderer (abstract)
-  ├── renderToBitmap()
-  ├── renderToScreen()
-  ├── drawRendererContent()
-  ├── lockHardwareCanvas()
-  └── unlockCanvasAndPost()
-        │
-        ├── NormalRenderer        ← standard drawing
-        ├── EraseRenderer         ← erasing strokes
-        └── PartialRefreshRenderer ← partial screen updates
-#+end_example
-
 ** Rendering Support Classes
 
 #+begin_example
@@ -124,7 +104,7 @@
       ├── bitmap: Bitmap
       ├── canvas: Canvas
       ├── paint: Paint
-      └── shapes: List<BaseShape>
+      └── viewportScale: Float
 
   RenderingUtils (static utilities)
   ├── renderBackground()
@@ -150,7 +130,8 @@
   BitmapManager
   ├── recreateBitmapFromShapes()   ← full redraw of all shapes
   ├── renderShapeToBitmap()        ← incremental single shape
-  ├── renderBitmapToScreen()       ← push bitmap to SurfaceView
+  ├── renderBitmapToScreen()       ← push full bitmap to SurfaceView (single entry point)
+  ├── partialRefresh()             ← redraws dirty region on bitmap, blits only that region
   ├── clearDrawing()
   ├── isShapeVisible()
   ├── onNoteChanged()              ← (re)creates PdfPageRenderer when note has PDF
@@ -348,10 +329,11 @@
 * Screen Refresh (E-ink)
 
 #+begin_example
-  ScreenRefreshManager
-  ├── forceScreenRefresh()
-  ├── cleanSurfaceView: lambda
-  └── renderToScreen: lambda
+  Screen refresh is centralized in BitmapManager:
+  ├── Full refresh: forceScreenRefresh() → recreateBitmapFromShapes() + renderBitmapToScreen()
+  ├── Partial refresh: partialRefresh() → redraws dirty region → renderBitmapRegionToScreen()
+  │   (uses lockCanvas(dirtyRect) to blit only the affected area — efficient on e-ink)
+  └── renderBitmapToScreen() → PaginationRendererToScreenRequest (single entry point)
 
   Display Settings (throttling applied in BaseDrawingActivity):
   ├── Viewport observer respects maxRefreshRate (skips if too soon)
@@ -359,19 +341,6 @@
   │   refreshes only on gesture end
   └── Geometry preview: skipped when smoothMotion=false,
       throttled by maxRefreshRate when on
-
-  RefreshCoordinator
-  ├── createRefreshingSurfaceCallback()
-  └── uses: ScreenRefreshManager
-
-  PartialEraseRefresh
-  └── performPartialRefresh()     ← refreshes only the erased region
-
-  PartialRefreshRequest
-  ├── surfaceView: SurfaceView
-  ├── rect: Rect (refresh area)
-  ├── bitmap: Bitmap
-  └── enqueued to RxManager
 #+end_example
 
 * UI Layer
@@ -388,7 +357,7 @@
   ├── implements DrawingActivityInterface
   ├── onShapeCompleted()
   ├── onShapeRemoved()
-  ├── forceScreenRefresh()               ← default impl (recreate + render)
+  ├── forceScreenRefresh()               ← recreate + BitmapManager.renderBitmapToScreen()
   ├── cleanSurfaceView()                 ← default impl (lock canvas, white, post)
   ├── Manages: UI creation, SurfaceView, BitmapManager, observers
   │
@@ -400,7 +369,6 @@
       ├── initializeBitmapManager()
       ├── enableFingerTouch() / disableFingerTouch()
       ├── forceScreenRefresh()           ← adds enableScreenPost before super
-      ├── renderToScreen()
       └── recreateBitmapFromShapes()
 #+end_example
 
