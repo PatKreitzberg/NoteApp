@@ -47,7 +47,7 @@ class BitmapManager(
         rendererHelper = rendererHelper,
         getBitmap = getBitmap,
         getBitmapCanvas = getBitmapCanvas,
-        renderBitmapToScreen = { renderBitmapToScreen() }
+        renderBitmapToScreen = { caller -> renderBitmapToScreen(caller) }
     )
 
     private var geometrySnapshotBitmap: Bitmap? = null
@@ -82,7 +82,8 @@ class BitmapManager(
         }
     }
 
-    fun recreateBitmapFromShapes(setOfShapes: MutableList<BaseShape>?, dirtyRect: RectF? = null) {
+    fun recreateBitmapFromShapes(setOfShapes: MutableList<BaseShape>?, dirtyRect: RectF? = null, caller: String = "") {
+        Log.d("RefreshDebug", "BitmapManager.recreateBitmapFromShapes called from=$caller dirtyRect=$dirtyRect shapeCount=${setOfShapes?.size}")
         // Filter shapes to only visible layers
         val filteredShapes = setOfShapes?.filter { viewModel.isLayerVisible(it.layer) }?.toMutableList()
 
@@ -179,7 +180,8 @@ class BitmapManager(
             for (i in 1 until surfacePoints.size) lineTo(surfacePoints[i].x, surfacePoints[i].y)
         }
         canvas.drawPath(path, paint)
-        renderBitmapToScreen()
+        Log.d("RefreshDebug", "BitmapManager.drawGeometryPreview → renderBitmapToScreen")
+        renderBitmapToScreen("drawGeometryPreview")
     }
 
     fun endGeometryDrawing() {
@@ -187,7 +189,8 @@ class BitmapManager(
         geometrySnapshotBitmap = null
     }
 
-    internal fun partialRefresh(dirtyRectNote: RectF, shapes: List<BaseShape>, selectionManager: SelectionManager?) {
+    internal fun partialRefresh(dirtyRectNote: RectF, shapes: List<BaseShape>, selectionManager: SelectionManager?, caller: String = "") {
+        Log.d("RefreshDebug", "BitmapManager.partialRefresh called from=$caller dirtyRect=$dirtyRectNote shapeCount=${shapes.size} hasSelection=${selectionManager != null}")
         val filteredShapesForRefresh = shapes.filter { viewModel.isLayerVisible(it.layer) }
         val bitmap = getBitmap() ?: return
         val canvas = getBitmapCanvas() ?: return
@@ -245,7 +248,8 @@ class BitmapManager(
      * Blits only the specified region of the bitmap to the SurfaceView.
      * More efficient than a full-screen blit for partial updates on e-ink.
      */
-    private fun renderBitmapRegionToScreen(surfaceRect: RectF) {
+    private fun renderBitmapRegionToScreen(surfaceRect: RectF, caller: String = "partialRefresh") {
+        Log.d("RefreshDebug", "BitmapManager.renderBitmapRegionToScreen called from=$caller rect=$surfaceRect")
         val bmp = getBitmap() ?: return
         val intRect = Rect(
             surfaceRect.left.toInt(), surfaceRect.top.toInt(),
@@ -276,9 +280,10 @@ class BitmapManager(
         }
     }
 
-    fun clearDrawing() { getBitmapCanvas()?.drawColor(Color.WHITE); renderBitmapToScreen() }
+    fun clearDrawing() { Log.d("RefreshDebug", "BitmapManager.clearDrawing → renderBitmapToScreen"); getBitmapCanvas()?.drawColor(Color.WHITE); renderBitmapToScreen("clearDrawing") }
 
-    internal fun renderBitmapToScreen() {
+    internal fun renderBitmapToScreen(caller: String = "") {
+        Log.d("RefreshDebug", "BitmapManager.renderBitmapToScreen called from=$caller")
         val bitmap = getBitmap() ?: return
         val request = PaginationRendererToScreenRequest(surfaceView, bitmap, viewModel)
         if (rxManager != null) {

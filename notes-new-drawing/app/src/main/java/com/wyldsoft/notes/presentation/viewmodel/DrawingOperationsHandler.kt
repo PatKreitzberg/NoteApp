@@ -127,7 +127,8 @@ class DrawingOperationsHandler(
                                 )
                             }
 
-                            bm.recreateBitmapFromShapes(sm.shapes())
+                            Log.d("RefreshDebug", "DrawingOperationsHandler.addShape(scribble-to-erase) → recreateBitmapFromShapes")
+                            bm.recreateBitmapFromShapes(sm.shapes(), caller = "DrawingOpsHandler.scribbleToErase")
                             onScreenRefreshNeeded()
                             onUpdateContentBounds()
                             return@launch
@@ -190,7 +191,8 @@ class DrawingOperationsHandler(
                             )
                             addGeometricShape(geometricShape)
                         }
-                        bm.recreateBitmapFromShapes(sm.shapes())
+                        Log.d("RefreshDebug", "DrawingOperationsHandler.addShape(shapeRecognition) → recreateBitmapFromShapes")
+                        bm.recreateBitmapFromShapes(sm.shapes(), caller = "DrawingOpsHandler.shapeRecognition")
                         onScreenRefreshNeeded()
                         return@launch
                     }
@@ -217,7 +219,8 @@ class DrawingOperationsHandler(
                             val boundingBox = calculateShapesBoundingBox(selectedSdkShapes)
 
                             if (boundingBox != null) {
-                                bm.recreateBitmapFromShapes(sm.shapes())
+                                Log.d("RefreshDebug", "DrawingOperationsHandler.addShape(circle-to-select) → recreateBitmapFromShapes")
+                                bm.recreateBitmapFromShapes(sm.shapes(), caller = "DrawingOpsHandler.circleToSelect")
                                 onScreenRefreshNeeded()
                                 onCircleSelect.invoke(selectedIds, boundingBox)
                             }

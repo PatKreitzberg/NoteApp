@@ -125,13 +125,14 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         val session = editorViewModel.getOrCreateSession()
         shapesManager = session.shapesManager
         initializeStylusHandler()
-        editorViewModel.setDrawingManagers(bitmapManager) { forceScreenRefresh() }
+        editorViewModel.setDrawingManagers(bitmapManager) { Log.d("RefreshDebug", "EditorViewModel.onScreenRefreshNeeded → forceScreenRefresh"); forceScreenRefresh() }
         editorViewModel.activateSession(session)
         initializePaint()
         initializeDeviceReceiver()
         initializeSurfaceCallback()
         createTouchHelper()
         setObservers()
+        Log.d("RefreshDebug", "BaseDrawingActivity.handleSurfaceViewCreated → forceScreenRefresh")
         forceScreenRefresh()
         editorViewModel.initNavigationState()
         editorViewModel.onNoteSwitched = { onNoteSwitched() }
@@ -144,6 +145,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             val session = editorViewModel.getOrCreateSession()
             shapesManager = session.shapesManager
             editorViewModel.activateSession(session)
+            Log.d("RefreshDebug", "BaseDrawingActivity.onNoteSwitched → forceScreenRefresh")
             forceScreenRefresh()
         }
     }
@@ -155,7 +157,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             override fun surfaceCreated(holder: SurfaceHolder) {
                 cleanSurfaceView(surfaceView)
                 createDrawingBitmap()
-                bitmapManager.renderBitmapToScreen()
+                Log.d("RefreshDebug", "BaseDrawingActivity.surfaceCreated → renderBitmapToScreen")
+                bitmapManager.renderBitmapToScreen("surfaceCreated")
             }
 
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -167,9 +170,11 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     bitmap = null
                     bitmapCanvas = null
                     createDrawingBitmap()
+                    Log.d("RefreshDebug", "BaseDrawingActivity.surfaceChanged → recreateBitmapFromShapes (bitmap size changed)")
                     recreateBitmapFromShapes()
                 }
-                bitmapManager.renderBitmapToScreen()
+                Log.d("RefreshDebug", "BaseDrawingActivity.surfaceChanged → renderBitmapToScreen")
+                bitmapManager.renderBitmapToScreen("surfaceChanged")
             }
 
             override fun surfaceDestroyed(holder: SurfaceHolder) { holder.removeCallback(this) }
@@ -254,7 +259,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     private fun switchModeFromGesture(block: () -> Unit) {
         block()
         setDrawingEnabled(true)
-        bitmapManager.renderBitmapToScreen()
+        Log.d("RefreshDebug", "BaseDrawingActivity.switchModeFromGesture → renderBitmapToScreen")
+        bitmapManager.renderBitmapToScreen("switchModeFromGesture")
     }
 
     open fun initializeGestureHandler() {
@@ -280,6 +286,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                 GestureAction.RESET_ZOOM_AND_CENTER -> {
                     val vm = editorViewModel
                     vm.viewportManager.resetZoomAndCenter(vm.isPaginationEnabled.value, vm.screenWidth.value.toFloat())
+                    Log.d("RefreshDebug", "BaseDrawingActivity.gesture.RESET_ZOOM_AND_CENTER → forceScreenRefresh")
                     forceScreenRefresh()
                 }
                 GestureAction.TOGGLE_SELECTION_MODE -> switchModeFromGesture {
@@ -304,6 +311,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                 }
                 GestureAction.PASTE_SELECTION -> {
                     editorViewModel.pasteSelection()
+                    Log.d("RefreshDebug", "BaseDrawingActivity.gesture.PASTE_SELECTION → forceScreenRefresh")
                     forceScreenRefresh()
                 }
                 GestureAction.UNDO -> editorViewModel.undo()
@@ -336,7 +344,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
 
     open fun recreateBitmapFromShapes() {
         getOrCreateBitmap()
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes(), caller = "BaseDrawingActivity.recreateBitmapFromShapes")
         val selMgr = editorViewModel.selectionManager
         if (selMgr.hasSelection) {
             bitmapManager.drawSelectionOverlay(selMgr, editorViewModel.viewportManager)
@@ -373,8 +381,9 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     open fun setDrawingEnabled(enabled: Boolean) {}
 
     override fun forceScreenRefresh() {
+        Log.d("RefreshDebug", "BaseDrawingActivity.forceScreenRefresh → recreateBitmapFromShapes + renderBitmapToScreen")
         recreateBitmapFromShapes()
-        bitmapManager.renderBitmapToScreen()
+        bitmapManager.renderBitmapToScreen("BaseDrawingActivity.forceScreenRefresh")
     }
 
     protected abstract fun onResumeDrawing()

@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.presentation.viewmodel
 
+import android.util.Log
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.MoveLayerAction
 import com.wyldsoft.notes.data.repository.NoteRepository
@@ -102,7 +103,8 @@ class LayerManagementHandler(
     private fun refreshAfterLayerChange() {
         val bm = getBitmapManager() ?: return
         val visibleShapes = getVisibleShapes() ?: return
-        bm.recreateBitmapFromShapes(visibleShapes)
+        Log.d("RefreshDebug", "LayerManagementHandler.refreshAfterLayerChange → recreateBitmapFromShapes")
+        bm.recreateBitmapFromShapes(visibleShapes, caller = "LayerManagementHandler.refreshAfterLayerChange")
         onScreenRefreshNeeded()
     }
 }

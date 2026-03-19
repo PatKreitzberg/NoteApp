@@ -2,6 +2,7 @@ package com.wyldsoft.notes.presentation.viewmodel
 
 import android.graphics.Color
 import android.graphics.PointF
+import android.util.Log
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.EditTextAction
 import com.wyldsoft.notes.data.repository.NoteRepository
@@ -93,7 +94,8 @@ class TextInputHandler(
             val sdkShape = sm.findShapeById(shapeId)
             if (sdkShape != null) {
                 sm.removeShape(sdkShape)
-                bm.recreateBitmapFromShapes(sm.shapes())
+                Log.d("RefreshDebug", "TextInputHandler.beginEditingTextShape → recreateBitmapFromShapes")
+                bm.recreateBitmapFromShapes(sm.shapes(), caller = "TextInputHandler.beginEditing")
             }
         }
         onScreenRefreshNeeded()
@@ -126,7 +128,8 @@ class TextInputHandler(
                 val bm = getBitmapManager()
                 val sm = getShapesManager()
                 if (bm != null && sm != null) {
-                    bm.recreateBitmapFromShapes(sm.shapes())
+                    Log.d("RefreshDebug", "TextInputHandler.commitTextInput(blank) → recreateBitmapFromShapes")
+                    bm.recreateBitmapFromShapes(sm.shapes(), caller = "TextInputHandler.commitBlank")
                     onScreenRefreshNeeded()
                     if (oldShape != null) {
                         getActionManager().recordAction(EditTextAction(noteId, oldShape, null, noteRepository, sm))
@@ -150,7 +153,8 @@ class TextInputHandler(
             if (sm != null && bm != null) {
                 val sdkShape = sm.convertDomainShapeToSdkShape(shape)
                 sm.addShape(sdkShape)
-                bm.recreateBitmapFromShapes(sm.shapes())
+                Log.d("RefreshDebug", "TextInputHandler.commitTextInput → recreateBitmapFromShapes")
+                bm.recreateBitmapFromShapes(sm.shapes(), caller = "TextInputHandler.commitText")
                 getActionManager().recordAction(EditTextAction(noteId, oldShape, shape, noteRepository, sm))
                 onScreenRefreshNeeded()
             }

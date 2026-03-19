@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.presentation.viewmodel
 
 import android.graphics.PointF
+import android.util.Log
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.MoveAction
 import com.wyldsoft.notes.actions.TextFormattingAction
@@ -53,9 +54,11 @@ class SelectionTransformHandler(
 
         val bbox = selectionManager.selectionBoundingBox
         if (bbox != null) {
-            bm.partialRefresh(bbox, sm.shapes(), selectionManager)
+            Log.d("RefreshDebug", "SelectionTransformHandler.applyPenProfileToSelection → partialRefresh")
+            bm.partialRefresh(bbox, sm.shapes(), selectionManager, "SelectionTransformHandler.applyPenProfile")
         } else {
-            bm.recreateBitmapFromShapes(sm.shapes())
+            Log.d("RefreshDebug", "SelectionTransformHandler.applyPenProfileToSelection → recreateBitmapFromShapes")
+            bm.recreateBitmapFromShapes(sm.shapes(), caller = "SelectionTransformHandler.applyPenProfile")
             onScreenRefreshNeeded()
         }
 
@@ -97,9 +100,11 @@ class SelectionTransformHandler(
 
         val bbox = selectionManager.selectionBoundingBox
         if (bbox != null) {
-            bm.partialRefresh(bbox, sm.shapes(), selectionManager)
+            Log.d("RefreshDebug", "SelectionTransformHandler.applyTextFormatting → partialRefresh")
+            bm.partialRefresh(bbox, sm.shapes(), selectionManager, "SelectionTransformHandler.applyTextFormatting")
         } else {
-            bm.recreateBitmapFromShapes(sm.shapes())
+            Log.d("RefreshDebug", "SelectionTransformHandler.applyTextFormatting → recreateBitmapFromShapes")
+            bm.recreateBitmapFromShapes(sm.shapes(), caller = "SelectionTransformHandler.applyTextFormatting")
             onScreenRefreshNeeded()
         }
 

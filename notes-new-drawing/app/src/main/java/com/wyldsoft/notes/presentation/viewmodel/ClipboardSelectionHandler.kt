@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.presentation.viewmodel
 
 import android.graphics.RectF
+import android.util.Log
 import com.wyldsoft.notes.actions.ActionManager
 import com.wyldsoft.notes.actions.ActionUtils
 import com.wyldsoft.notes.actions.ConvertToTextAction
@@ -94,7 +95,8 @@ class ClipboardSelectionHandler(
             selectionManager.setSelection(newShapes.map { it.id }.toSet(), newBox)
             onNotifySelectionChanged()
 
-            bm.recreateBitmapFromShapes(sm.shapes())
+            Log.d("RefreshDebug", "ClipboardSelectionHandler.pasteSelection → recreateBitmapFromShapes")
+            bm.recreateBitmapFromShapes(sm.shapes(), caller = "ClipboardSelectionHandler.paste")
             onScreenRefreshNeeded()
             onUpdateContentBounds()
             onSwitchToSelectMode()
@@ -132,7 +134,8 @@ class ClipboardSelectionHandler(
                 )
                 ActionUtils.addShapeToNoteAndMemory(note.id, textShape, noteRepository, sm)
                 getActionManager().recordAction(ConvertToTextAction(note.id, selectedShapes, textShape, noteRepository, sm))
-                bm.recreateBitmapFromShapes(sm.shapes())
+                Log.d("RefreshDebug", "ClipboardSelectionHandler.convertSelectionToText → recreateBitmapFromShapes")
+                bm.recreateBitmapFromShapes(sm.shapes(), caller = "ClipboardSelectionHandler.convertToText")
                 selectionManager.clearSelection()
                 onNotifySelectionChanged()
                 onScreenRefreshNeeded()

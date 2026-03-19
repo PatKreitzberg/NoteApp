@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.sdkintegration
 
+import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.domain.models.Shape
@@ -90,8 +91,13 @@ class GeometryDrawingHandler(
             viewModel.addGeometricShape(domainShape)
 
             val noteBounds = baseShape.boundingRect
-            if (noteBounds != null) bitmapManager.partialRefresh(noteBounds, shapesManager.shapes(), null)
-            else onForceScreenRefresh()
+            if (noteBounds != null) {
+                Log.d("RefreshDebug", "GeometryDrawingHandler.finalize → partialRefresh rect=$noteBounds")
+                bitmapManager.partialRefresh(noteBounds, shapesManager.shapes(), null, "GeometryDrawingHandler.finalize")
+            } else {
+                Log.d("RefreshDebug", "GeometryDrawingHandler.finalize → forceScreenRefresh (no bounds)")
+                onForceScreenRefresh()
+            }
         } else {
             onForceScreenRefresh()
         }

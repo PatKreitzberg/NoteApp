@@ -39,7 +39,8 @@ class DrawManager(
 
         // Render the new shape to the bitmap
         bitmapManager.renderShapeToBitmap(shape)
-        bitmapManager.renderBitmapToScreen()
+        Log.d("RefreshDebug", "DrawManager.newShape → renderBitmapToScreen for shape id=${shape.id}")
+        bitmapManager.renderBitmapToScreen("DrawManager.newShape")
         Log.d("DROPSTROKEBUG", "DrawManager.newShape: rendered to bitmap and screen, returning shape id=${shape.id}")
 
         // return to OnyxStylusHandler so it can put in drawnShapes

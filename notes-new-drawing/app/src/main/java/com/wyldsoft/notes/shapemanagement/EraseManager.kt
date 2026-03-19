@@ -62,14 +62,19 @@ class EraseManager(
             // correctly transforms coordinates and redraws non-erased shapes in the region
             if (rxManager != null) {
                 refreshRect?.let { rect: RectF ->
-                    bitmapManager.partialRefresh(rect, shapesManager.shapes(), null)
-                } ?: bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
+                    Log.d("RefreshDebug", "EraseManager.handleErasing → partialRefresh rect=$rect")
+                    bitmapManager.partialRefresh(rect, shapesManager.shapes(), null, "EraseManager.handleErasing")
+                } ?: run {
+                    Log.d("RefreshDebug", "EraseManager.handleErasing → recreateBitmapFromShapes (no refreshRect)")
+                    bitmapManager.recreateBitmapFromShapes(shapesManager.shapes(), caller = "EraseManager.handleErasing")
+                }
                 return true
             }
 
             // Non-Onyx path: update bitmap only (caller does the screen render).
             // Pass refreshRect so only the dirty region is redrawn.
-            bitmapManager.recreateBitmapFromShapes(shapesManager.shapes(), refreshRect)
+            Log.d("RefreshDebug", "EraseManager.handleErasing(non-Onyx) → recreateBitmapFromShapes dirtyRect=$refreshRect")
+            bitmapManager.recreateBitmapFromShapes(shapesManager.shapes(), refreshRect, "EraseManager.handleErasing(non-Onyx)")
         }
         return false
     }

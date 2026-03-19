@@ -419,7 +419,10 @@ class EditorViewModel(
                 if (hadSelection) {
                     val bm = bitmapManager
                     val sm = shapesManager
-                    if (bm != null && sm != null) bm.recreateBitmapFromShapes(sm.shapes())
+                    if (bm != null && sm != null) {
+                        Log.d("RefreshDebug", "EditorViewModel.exitMode(Select) → recreateBitmapFromShapes")
+                        bm.recreateBitmapFromShapes(sm.shapes(), caller = "EditorViewModel.exitSelectMode")
+                    }
                 }
             }
             is EditorMode.Text -> {

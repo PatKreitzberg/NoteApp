@@ -171,7 +171,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         // Re-render bitmap after closeRawDrawing()/openRawDrawing() to prevent recent strokes
         // from disappearing: the Onyx display refresh from openRawDrawing() can race with the
         // async RendererToScreenRequest queued by renderBitmapToScreen().
-        bitmapManager.renderBitmapToScreen()
+        Log.d("RefreshDebug", "OnyxDrawingActivity.updateTouchHelperWithProfile → renderBitmapToScreen")
+        bitmapManager.renderBitmapToScreen("OnyxDrawingActivity.updateTouchHelperWithProfile")
     }
 
     override fun updateTouchHelperExclusionZones(excludeRects: List<Rect>) {
@@ -232,9 +233,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         deviceReceiver.enable(this, true)
         deviceReceiver.setSystemNotificationPanelChangeListener { open ->
             onyxTouchHelper?.setRawDrawingEnabled(!open)
-            bitmapManager.renderBitmapToScreen()
+            Log.d("RefreshDebug", "OnyxDrawingActivity.notificationPanelChange(open=$open) → renderBitmapToScreen")
+            bitmapManager.renderBitmapToScreen("OnyxDrawingActivity.notificationPanelChange")
         }.setSystemScreenOnListener {
-            bitmapManager.renderBitmapToScreen()
+            Log.d("RefreshDebug", "OnyxDrawingActivity.screenOn → renderBitmapToScreen")
+            bitmapManager.renderBitmapToScreen("OnyxDrawingActivity.screenOn")
         }
     }
 
@@ -250,11 +253,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun onViewportChanged() {
         Log.d(TAG, "Viewport changed, refreshing")
+        Log.d("RefreshDebug", "OnyxDrawingActivity.onViewportChanged → forceScreenRefresh")
         // Recreate bitmap with new viewport transformation (includes selection overlay via recreateBitmapFromShapes)
         forceScreenRefresh()
     }
 
     override fun forceScreenRefresh() {
+        Log.d("RefreshDebug", "OnyxDrawingActivity.forceScreenRefresh → enableScreenPost + super.forceScreenRefresh")
         RenderingUtils.enableScreenPost(surfaceView)
         super.forceScreenRefresh()
     }

@@ -2,6 +2,7 @@ package com.wyldsoft.notes.sdkintegration
 
 import android.graphics.PointF
 import android.graphics.RectF
+import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.actions.TransformType
@@ -183,9 +184,10 @@ class SelectionInputHandler(
             oldBBoxNote != null && newBBoxNote != null -> RectF(oldBBoxNote).apply { union(newBBoxNote) }
             oldBBoxNote != null -> RectF(oldBBoxNote)
             newBBoxNote != null -> RectF(newBBoxNote)
-            else -> { onForceScreenRefresh(); return }
+            else -> { Log.d("RefreshDebug", "SelectionInputHandler.doPartialRefresh → forceScreenRefresh (no bbox)"); onForceScreenRefresh(); return }
         }
-        bitmapManager.partialRefresh(dirtyNote, shapesManager.shapes(), if (drawOverlay) selectionManager else null)
+        Log.d("RefreshDebug", "SelectionInputHandler.doPartialRefresh → partialRefresh dirtyRect=$dirtyNote drawOverlay=$drawOverlay")
+        bitmapManager.partialRefresh(dirtyNote, shapesManager.shapes(), if (drawOverlay) selectionManager else null, "SelectionInputHandler.doPartialRefresh")
     }
 
     private fun startTransform() {

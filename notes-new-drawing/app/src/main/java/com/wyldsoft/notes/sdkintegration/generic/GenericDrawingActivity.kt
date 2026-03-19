@@ -140,7 +140,8 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
         val receiver = createDeviceReceiver() as GenericDeviceReceiverWrapper
         receiver.enable(this, true)
         receiver.setSystemScreenOnListener {
-            bitmapManager.renderBitmapToScreen()
+            Log.d("RefreshDebug", "GenericDrawingActivity.screenOn → renderBitmapToScreen")
+            bitmapManager.renderBitmapToScreen("GenericDrawingActivity.screenOn")
         }
     }
 
@@ -149,6 +150,7 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun onViewportChanged() {
+        Log.d("RefreshDebug", "GenericDrawingActivity.onViewportChanged → forceScreenRefresh")
         forceScreenRefresh()
     }
 

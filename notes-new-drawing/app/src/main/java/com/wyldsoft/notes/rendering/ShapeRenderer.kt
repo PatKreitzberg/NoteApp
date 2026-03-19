@@ -3,6 +3,7 @@ package com.wyldsoft.notes.rendering
 import android.graphics.Canvas
 import android.graphics.Path
 import android.graphics.Bitmap
+import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.shapemanagement.SelectionManager
@@ -20,7 +21,7 @@ class ShapeRenderer(
     private val rendererHelper: RendererHelper,
     private val getBitmap: () -> Bitmap?,
     private val getBitmapCanvas: () -> Canvas?,
-    private val renderBitmapToScreen: () -> Unit
+    private val renderBitmapToScreen: (String) -> Unit
 ) {
     fun initRenderContext(renderContext: RendererHelper.RenderContext, canvas: Canvas) {
         renderContext.canvas = canvas
@@ -55,7 +56,8 @@ class ShapeRenderer(
                 SelectionRenderer.drawHandles(canvas, handles, viewportManager)
             }
         }
-        renderBitmapToScreen()
+        Log.d("RefreshDebug", "ShapeRenderer.drawSelectionOverlay → renderBitmapToScreen")
+        renderBitmapToScreen("ShapeRenderer.drawSelectionOverlay")
     }
 
     fun drawSegmentsToScreen(points: List<TouchPoint>, startIdx: Int, penProfile: PenProfile) {
@@ -71,6 +73,7 @@ class ShapeRenderer(
             paint.strokeWidth = maxOf(penProfile.strokeWidth * (pressure / maxPressure) * 2.5f, 1f)
             canvas.drawLine(p1.x, p1.y, p2.x, p2.y, paint)
         }
-        renderBitmapToScreen()
+        Log.d("RefreshDebug", "ShapeRenderer.drawSegmentsToScreen → renderBitmapToScreen")
+        renderBitmapToScreen("ShapeRenderer.drawSegmentsToScreen")
     }
 }

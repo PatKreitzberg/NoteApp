@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.rendering
 
 import android.graphics.Bitmap
+import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
@@ -20,6 +21,7 @@ class PaginationRendererToScreenRequest(
 ) : RxRequest() {
 
     override fun execute() {
+        Log.d("RefreshDebug", "PaginationRendererToScreenRequest.execute → lockCanvas + blit bitmap to SurfaceView")
         val viewRect = RenderingUtils.checkSurfaceView(surfaceView)
         RenderingUtils.enableScreenPost(surfaceView)
         if (DeviceHelper.isOnyxDevice) {

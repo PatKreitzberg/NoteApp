@@ -2,6 +2,7 @@ package com.wyldsoft.notes.sdkintegration
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.domain.models.Shape
@@ -166,8 +167,13 @@ class LineSnapHandler(
         viewModel.addSnapToLineAction(originalShape, domainShape)
 
         val noteBounds = baseShape.boundingRect
-        if (noteBounds != null) bitmapManager.partialRefresh(noteBounds, shapesManager.shapes(), null)
-        else onForceScreenRefresh()
+        if (noteBounds != null) {
+            Log.d("RefreshDebug", "LineSnapHandler.finalizeAsLine → partialRefresh rect=$noteBounds")
+            bitmapManager.partialRefresh(noteBounds, shapesManager.shapes(), null, "LineSnapHandler.finalizeAsLine")
+        } else {
+            Log.d("RefreshDebug", "LineSnapHandler.finalizeAsLine → forceScreenRefresh (no bounds)")
+            onForceScreenRefresh()
+        }
 
         bitmapManager.endGeometryDrawing()
         isSnapped = false
