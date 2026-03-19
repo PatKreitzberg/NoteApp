@@ -5,12 +5,14 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Path
 import android.graphics.PointF
+import android.graphics.Rect
 import android.graphics.RectF
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.rx.RxManager
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.wyldsoft.notes.domain.models.PaperTemplate
+import com.wyldsoft.notes.drawing.DrawingManager
 import com.wyldsoft.notes.pdf.PdfPageRenderer
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
@@ -236,7 +238,42 @@ class BitmapManager(
         }
 
         canvas.restore()
-        renderBitmapToScreen()
+        renderBitmapRegionToScreen(dirtyRectSurface)
+    }
+
+    /**
+     * Blits only the specified region of the bitmap to the SurfaceView.
+     * More efficient than a full-screen blit for partial updates on e-ink.
+     */
+    private fun renderBitmapRegionToScreen(surfaceRect: RectF) {
+        val bmp = getBitmap() ?: return
+        val intRect = Rect(
+            surfaceRect.left.toInt(), surfaceRect.top.toInt(),
+            surfaceRect.right.toInt(), surfaceRect.bottom.toInt()
+        )
+        RenderingUtils.enableScreenPost(surfaceView)
+        val holder = surfaceView.holder
+        val screenCanvas = holder.lockCanvas(intRect) ?: return
+        try {
+            screenCanvas.clipRect(intRect)
+            screenCanvas.drawBitmap(bmp, 0f, 0f, null)
+            // Draw page separators if pagination is enabled
+            viewModel.let { vm ->
+                if (vm.isPaginationEnabled.value) {
+                    DrawingManager.drawPageSeparators(
+                        canvas = screenCanvas,
+                        screenWidth = vm.screenWidth.value,
+                        pageHeight = vm.pageHeight.value,
+                        isPaginationEnabled = true,
+                        viewportManager = vm.viewportManager
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            holder.unlockCanvasAndPost(screenCanvas)
+        }
     }
 
     fun clearDrawing() { getBitmapCanvas()?.drawColor(Color.WHITE); renderBitmapToScreen() }
