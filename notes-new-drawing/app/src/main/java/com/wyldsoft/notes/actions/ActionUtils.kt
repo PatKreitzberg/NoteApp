@@ -3,7 +3,6 @@ package com.wyldsoft.notes.actions
 import android.graphics.PointF
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Shape
-import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.utils.domainPointsToTouchPointList
 
@@ -19,9 +18,6 @@ object ActionUtils {
         sdkShape.updateShapeRect()
     }
 
-    fun refreshBitmap(shapesManager: ShapesManager, bitmapManager: BitmapManager) {
-        bitmapManager.recreateBitmapFromShapes(shapesManager.shapes())
-    }
     suspend fun addShapeToNoteAndMemory(
         noteId: String,
         shape: Shape,

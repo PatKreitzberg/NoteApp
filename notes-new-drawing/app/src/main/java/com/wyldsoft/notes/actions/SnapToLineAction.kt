@@ -2,7 +2,6 @@ package com.wyldsoft.notes.actions
 
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Shape
-import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 /**
@@ -18,19 +17,16 @@ class SnapToLineAction(
     internal val originalShape: Shape,
     internal val lineShape: Shape,
     private val noteRepository: NoteRepository,
-    private val shapesManager: ShapesManager,
-    private val bitmapManager: BitmapManager
+    private val shapesManager: ShapesManager
 ) : ActionInterface {
 
     override suspend fun undo() {
         ActionUtils.removeShapeFromNoteAndMemory(noteId, lineShape, noteRepository, shapesManager)
         ActionUtils.addShapeToNoteAndMemory(noteId, originalShape, noteRepository, shapesManager)
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 
     override suspend fun redo() {
         ActionUtils.removeShapeFromNoteAndMemory(noteId, originalShape, noteRepository, shapesManager)
         ActionUtils.addShapeToNoteAndMemory(noteId, lineShape, noteRepository, shapesManager)
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 }

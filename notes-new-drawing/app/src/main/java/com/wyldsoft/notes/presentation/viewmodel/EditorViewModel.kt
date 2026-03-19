@@ -329,13 +329,12 @@ class EditorViewModel(
         // Load persisted action history if the session's ActionManager is empty
         val repo = actionHistoryRepository
         val sm = shapesManager
-        val bm = bitmapManager
-        if (repo != null && sm != null && bm != null &&
+        if (repo != null && sm != null &&
             !session.actionManager.canUndo.value && !session.actionManager.canRedo.value
         ) {
             viewModelScope.launch {
                 val (undoActions, redoActions) = repo.loadActions(
-                    session.noteId, noteRepository, sm, bm
+                    session.noteId, noteRepository, sm
                 )
                 if (undoActions.isNotEmpty() || redoActions.isNotEmpty()) {
                     session.actionManager.loadActions(undoActions, redoActions)

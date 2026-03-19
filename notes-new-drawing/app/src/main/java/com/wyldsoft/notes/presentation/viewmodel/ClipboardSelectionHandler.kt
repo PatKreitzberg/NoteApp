@@ -83,7 +83,7 @@ class ClipboardSelectionHandler(
 
             for (newShape in newShapes) {
                 ActionUtils.addShapeToNoteAndMemory(note.id, newShape, noteRepository, sm)
-                getActionManager().recordAction(DrawAction(note.id, newShape, noteRepository, sm, bm))
+                getActionManager().recordAction(DrawAction(note.id, newShape, noteRepository, sm))
             }
 
             val newPoints = newShapes.flatMap { it.points }
@@ -131,7 +131,7 @@ class ClipboardSelectionHandler(
                     fontFamily = "sans-serif"
                 )
                 ActionUtils.addShapeToNoteAndMemory(note.id, textShape, noteRepository, sm)
-                getActionManager().recordAction(ConvertToTextAction(note.id, selectedShapes, textShape, noteRepository, sm, bm))
+                getActionManager().recordAction(ConvertToTextAction(note.id, selectedShapes, textShape, noteRepository, sm))
                 bm.recreateBitmapFromShapes(sm.shapes())
                 selectionManager.clearSelection()
                 onNotifySelectionChanged()

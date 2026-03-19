@@ -3,7 +3,6 @@ package com.wyldsoft.notes.actions
 import android.graphics.PointF
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Shape
-import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import kotlin.math.cos
 import kotlin.math.sin
@@ -22,8 +21,7 @@ class TransformAction(
     internal val centerX: Float,
     internal val centerY: Float,
     private val noteRepository: NoteRepository,
-    private val shapesManager: ShapesManager,
-    private val bitmapManager: BitmapManager
+    private val shapesManager: ShapesManager
 ) : ActionInterface {
 
     override suspend fun undo() {
@@ -31,7 +29,6 @@ class TransformAction(
             noteRepository.updateShape(noteId, original)
             ActionUtils.updateSdkShapePoints(original, original.points, shapesManager)
         }
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 
     override suspend fun redo() {
@@ -60,6 +57,5 @@ class TransformAction(
             noteRepository.updateShape(noteId, transformedShape)
             ActionUtils.updateSdkShapePoints(original, transformedPoints, shapesManager)
         }
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 }

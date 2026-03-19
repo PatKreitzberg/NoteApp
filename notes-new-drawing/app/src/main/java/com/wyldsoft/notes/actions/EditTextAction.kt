@@ -2,7 +2,6 @@ package com.wyldsoft.notes.actions
 
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Shape
-import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 /**
@@ -15,8 +14,7 @@ class EditTextAction(
     internal val oldShape: Shape?,
     internal val newShape: Shape?,
     private val noteRepository: NoteRepository,
-    private val shapesManager: ShapesManager,
-    private val bitmapManager: BitmapManager
+    private val shapesManager: ShapesManager
 ) : ActionInterface {
 
     override suspend fun undo() {
@@ -26,7 +24,6 @@ class EditTextAction(
         if (oldShape != null) {
             ActionUtils.addShapeToNoteAndMemory(noteId, oldShape, noteRepository, shapesManager)
         }
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 
     override suspend fun redo() {
@@ -36,6 +33,5 @@ class EditTextAction(
         if (newShape != null) {
             ActionUtils.addShapeToNoteAndMemory(noteId, newShape, noteRepository, shapesManager)
         }
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 }

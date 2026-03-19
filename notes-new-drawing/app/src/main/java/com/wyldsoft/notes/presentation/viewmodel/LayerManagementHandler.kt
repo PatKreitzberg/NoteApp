@@ -90,10 +90,9 @@ class LayerManagementHandler(
     fun moveLayerStrokes(fromLayer: Int, toLayer: Int) {
         scope.launch {
             val sm = getShapesManager() ?: return@launch
-            val bm = getBitmapManager() ?: return@launch
             val shapeIds = sm.shapes().filter { it.layer == fromLayer }.map { it.id }
             if (shapeIds.isEmpty()) return@launch
-            val action = MoveLayerAction(shapeIds, fromLayer, toLayer, noteRepository, sm, bm)
+            val action = MoveLayerAction(shapeIds, fromLayer, toLayer, noteRepository, sm)
             action.redo()
             getActionManager().recordAction(action)
             onScreenRefreshNeeded()

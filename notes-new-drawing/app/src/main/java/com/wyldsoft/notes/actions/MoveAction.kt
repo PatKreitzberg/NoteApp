@@ -3,7 +3,6 @@ package com.wyldsoft.notes.actions
 import android.graphics.PointF
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Shape
-import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 /**
@@ -16,8 +15,7 @@ class MoveAction(
     internal val dx: Float,
     internal val dy: Float,
     private val noteRepository: NoteRepository,
-    private val shapesManager: ShapesManager,
-    private val bitmapManager: BitmapManager
+    private val shapesManager: ShapesManager
 ) : ActionInterface {
 
     override suspend fun undo() {
@@ -25,7 +23,6 @@ class MoveAction(
             noteRepository.updateShape(noteId, original)
             ActionUtils.updateSdkShapePoints(original, original.points, shapesManager)
         }
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 
     override suspend fun redo() {
@@ -35,6 +32,5 @@ class MoveAction(
             noteRepository.updateShape(noteId, movedShape)
             ActionUtils.updateSdkShapePoints(original, movedPoints, shapesManager)
         }
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 }

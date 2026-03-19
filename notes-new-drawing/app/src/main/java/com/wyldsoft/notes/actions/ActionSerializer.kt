@@ -5,7 +5,6 @@ import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Shape
 import com.wyldsoft.notes.domain.models.ShapeType
 import com.wyldsoft.notes.pen.PenType
-import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -118,8 +117,7 @@ object ActionSerializer {
     fun deserialize(
         dataJson: String,
         noteRepository: NoteRepository,
-        shapesManager: ShapesManager,
-        bitmapManager: BitmapManager
+        shapesManager: ShapesManager
     ): ActionInterface? {
         val record = try {
             json.decodeFromString<ActionRecord>(dataJson)
@@ -129,43 +127,43 @@ object ActionSerializer {
         return when (record.actionType) {
             "DRAW" -> {
                 val shape = record.shapes.firstOrNull()?.toDomain() ?: return null
-                DrawAction(record.noteId, shape, noteRepository, shapesManager, bitmapManager)
+                DrawAction(record.noteId, shape, noteRepository, shapesManager)
             }
             "ERASE" -> {
                 val shapes = record.shapes.map { it.toDomain() }
-                EraseAction(record.noteId, shapes, noteRepository, shapesManager, bitmapManager)
+                EraseAction(record.noteId, shapes, noteRepository, shapesManager)
             }
             "MOVE" -> {
                 val shapes = record.shapes.map { it.toDomain() }
-                MoveAction(record.noteId, shapes, record.dx, record.dy, noteRepository, shapesManager, bitmapManager)
+                MoveAction(record.noteId, shapes, record.dx, record.dy, noteRepository, shapesManager)
             }
             "TRANSFORM" -> {
                 val shapes = record.shapes.map { it.toDomain() }
                 val transformType = TransformType.valueOf(record.transformType ?: return null)
-                TransformAction(record.noteId, shapes, transformType, record.param, record.centerX, record.centerY, noteRepository, shapesManager, bitmapManager)
+                TransformAction(record.noteId, shapes, transformType, record.param, record.centerX, record.centerY, noteRepository, shapesManager)
             }
             "EDIT_TEXT" -> {
                 val oldShape = record.shapes.firstOrNull()?.toDomain()
                 val newShape = record.secondaryShapes.firstOrNull()?.toDomain()
-                EditTextAction(record.noteId, oldShape, newShape, noteRepository, shapesManager, bitmapManager)
+                EditTextAction(record.noteId, oldShape, newShape, noteRepository, shapesManager)
             }
             "TEXT_FORMATTING" -> {
                 val before = record.shapes.map { it.toDomain() }
                 val after = record.secondaryShapes.map { it.toDomain() }
-                TextFormattingAction(record.noteId, before, after, noteRepository, shapesManager, bitmapManager)
+                TextFormattingAction(record.noteId, before, after, noteRepository, shapesManager)
             }
             "CONVERT_TO_TEXT" -> {
                 val originals = record.shapes.map { it.toDomain() }
                 val textShape = record.secondaryShapes.firstOrNull()?.toDomain() ?: return null
-                ConvertToTextAction(record.noteId, originals, textShape, noteRepository, shapesManager, bitmapManager)
+                ConvertToTextAction(record.noteId, originals, textShape, noteRepository, shapesManager)
             }
             "MOVE_LAYER" -> {
-                MoveLayerAction(record.shapeIds, record.fromLayer, record.toLayer, noteRepository, shapesManager, bitmapManager)
+                MoveLayerAction(record.shapeIds, record.fromLayer, record.toLayer, noteRepository, shapesManager)
             }
             "SNAP_TO_LINE" -> {
                 val original = record.shapes.firstOrNull()?.toDomain() ?: return null
                 val line = record.secondaryShapes.firstOrNull()?.toDomain() ?: return null
-                SnapToLineAction(record.noteId, original, line, noteRepository, shapesManager, bitmapManager)
+                SnapToLineAction(record.noteId, original, line, noteRepository, shapesManager)
             }
             else -> null
         }

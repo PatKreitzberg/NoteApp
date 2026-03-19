@@ -129,7 +129,7 @@ class TextInputHandler(
                     bm.recreateBitmapFromShapes(sm.shapes())
                     onScreenRefreshNeeded()
                     if (oldShape != null) {
-                        getActionManager().recordAction(EditTextAction(noteId, oldShape, null, noteRepository, sm, bm))
+                        getActionManager().recordAction(EditTextAction(noteId, oldShape, null, noteRepository, sm))
                     }
                 }
                 return@launch
@@ -151,7 +151,7 @@ class TextInputHandler(
                 val sdkShape = sm.convertDomainShapeToSdkShape(shape)
                 sm.addShape(sdkShape)
                 bm.recreateBitmapFromShapes(sm.shapes())
-                getActionManager().recordAction(EditTextAction(noteId, oldShape, shape, noteRepository, sm, bm))
+                getActionManager().recordAction(EditTextAction(noteId, oldShape, shape, noteRepository, sm))
                 onScreenRefreshNeeded()
             }
             onUpdateContentBounds()

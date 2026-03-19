@@ -2,7 +2,6 @@ package com.wyldsoft.notes.actions
 
 import com.wyldsoft.notes.data.repository.NoteRepository
 import com.wyldsoft.notes.domain.models.Shape
-import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 class ConvertToTextAction(
@@ -10,8 +9,7 @@ class ConvertToTextAction(
     internal val originalShapes: List<Shape>,
     internal val textShape: Shape,
     private val noteRepository: NoteRepository,
-    private val shapesManager: ShapesManager,
-    private val bitmapManager: BitmapManager
+    private val shapesManager: ShapesManager
 ) : ActionInterface {
 
     override suspend fun undo() {
@@ -19,7 +17,6 @@ class ConvertToTextAction(
         for (shape in originalShapes) {
             ActionUtils.addShapeToNoteAndMemory(noteId, shape, noteRepository, shapesManager)
         }
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 
     override suspend fun redo() {
@@ -27,6 +24,5 @@ class ConvertToTextAction(
             ActionUtils.removeShapeFromNoteAndMemory(noteId, shape, noteRepository, shapesManager)
         }
         ActionUtils.addShapeToNoteAndMemory(noteId, textShape, noteRepository, shapesManager)
-        ActionUtils.refreshBitmap(shapesManager, bitmapManager)
     }
 }

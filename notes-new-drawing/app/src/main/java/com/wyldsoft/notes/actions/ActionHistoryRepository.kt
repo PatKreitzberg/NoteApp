@@ -4,7 +4,6 @@ import android.util.Log
 import com.wyldsoft.notes.data.database.dao.ActionHistoryDao
 import com.wyldsoft.notes.data.database.entities.ActionHistoryEntity
 import com.wyldsoft.notes.data.repository.NoteRepository
-import com.wyldsoft.notes.rendering.BitmapManager
 import com.wyldsoft.notes.shapemanagement.ShapesManager
 
 class ActionHistoryRepository(private val dao: ActionHistoryDao) {
@@ -50,8 +49,7 @@ class ActionHistoryRepository(private val dao: ActionHistoryDao) {
     suspend fun loadActions(
         noteId: String,
         noteRepository: NoteRepository,
-        shapesManager: ShapesManager,
-        bitmapManager: BitmapManager
+        shapesManager: ShapesManager
     ): Pair<List<ActionInterface>, List<ActionInterface>> {
         val entities = dao.getActionsForNote(noteId)
         val undoActions = mutableListOf<ActionInterface>()
@@ -59,7 +57,7 @@ class ActionHistoryRepository(private val dao: ActionHistoryDao) {
 
         for (entity in entities) {
             val action = ActionSerializer.deserialize(
-                entity.dataJson, noteRepository, shapesManager, bitmapManager
+                entity.dataJson, noteRepository, shapesManager
             )
             if (action != null) {
                 if (entity.onUndoStack) undoActions.add(action)

@@ -119,7 +119,7 @@ class DrawingOperationsHandler(
 
                             if (coveredDomainShapes.isNotEmpty()) {
                                 getActionManager().recordAction(
-                                    EraseAction(getCurrentNote().id, coveredDomainShapes, noteRepository, sm, bm)
+                                    EraseAction(getCurrentNote().id, coveredDomainShapes, noteRepository, sm)
                                 )
                                 htrRunManager.onShapesDeleted(
                                     getCurrentNote().id,
@@ -230,10 +230,10 @@ class DrawingOperationsHandler(
 
                 // Normal shape — record DrawAction
                 Log.d("DROPSTROKEBUG", "addShape: recording DrawAction for shape id=$id")
-                if (sm != null && bm != null) {
-                    getActionManager().recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
+                if (sm != null) {
+                    getActionManager().recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm))
                 } else {
-                    Log.w("DROPSTROKEBUG", "addShape: sm=$sm, bm=$bm — cannot record DrawAction!")
+                    Log.w("DROPSTROKEBUG", "addShape: sm=$sm — cannot record DrawAction!")
                 }
 
                 htrRunManager?.addShapesForRecognition(getCurrentNote().id, listOf(shape))
@@ -263,10 +263,9 @@ class DrawingOperationsHandler(
         onUpdateContentBounds()
         if (pendingErasedShapes.isNotEmpty()) {
             val sm = getShapesManager()
-            val bm = getBitmapManager()
-            if (sm != null && bm != null) {
+            if (sm != null) {
                 getActionManager().recordAction(
-                    EraseAction(getCurrentNote().id, pendingErasedShapes.toList(), noteRepository, sm, bm)
+                    EraseAction(getCurrentNote().id, pendingErasedShapes.toList(), noteRepository, sm)
                 )
             }
             htrRunManager?.onShapesDeleted(getCurrentNote().id, pendingErasedShapes.map { it.id }.toSet())
@@ -278,9 +277,8 @@ class DrawingOperationsHandler(
         scope.launch {
             noteRepository.addShape(getCurrentNote().id, shape)
             val sm = getShapesManager()
-            val bm = getBitmapManager()
-            if (sm != null && bm != null) {
-                getActionManager().recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm, bm))
+            if (sm != null) {
+                getActionManager().recordAction(DrawAction(getCurrentNote().id, shape, noteRepository, sm))
             }
             onUpdateContentBounds()
         }
@@ -296,9 +294,8 @@ class DrawingOperationsHandler(
             val noteId = getCurrentNote().id
             noteRepository.addShape(noteId, lineShape)
             val sm = getShapesManager() ?: return@launch
-            val bm = getBitmapManager() ?: return@launch
-            getActionManager().recordAction(DrawAction(noteId, originalShape, noteRepository, sm, bm))
-            getActionManager().recordAction(SnapToLineAction(noteId, originalShape, lineShape, noteRepository, sm, bm))
+            getActionManager().recordAction(DrawAction(noteId, originalShape, noteRepository, sm))
+            getActionManager().recordAction(SnapToLineAction(noteId, originalShape, lineShape, noteRepository, sm))
             onUpdateContentBounds()
         }
     }
