@@ -9,7 +9,6 @@ import android.view.SurfaceView
 import com.onyx.android.sdk.pen.TouchHelper
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
-import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.touchhandling.TouchUtils
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
@@ -138,17 +137,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         TouchUtils.disableFingerTouch(applicationContext)
     }
 
-    override fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
-        if (bitmap != null) {
-            getRxManager().enqueue(
-                PaginationRendererToScreenRequest(
-                    surfaceView,
-                    bitmap,
-                    editorViewModel
-                ), null)
-        }
-    }
-
     override fun onResumeDrawing() {
         Log.d(TAG, "onResumeDrawing")
         if (!editorViewModel.isDrawingBlocked.value) {
@@ -183,7 +171,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         // Re-render bitmap after closeRawDrawing()/openRawDrawing() to prevent recent strokes
         // from disappearing: the Onyx display refresh from openRawDrawing() can race with the
         // async RendererToScreenRequest queued by renderBitmapToScreen().
-        bitmap?.let { renderToScreen(surfaceView, it) }
+        bitmapManager.renderBitmapToScreen()
     }
 
     override fun updateTouchHelperExclusionZones(excludeRects: List<Rect>) {
@@ -244,9 +232,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         deviceReceiver.enable(this, true)
         deviceReceiver.setSystemNotificationPanelChangeListener { open ->
             onyxTouchHelper?.setRawDrawingEnabled(!open)
-            renderToScreen(surfaceView, bitmap)
+            bitmapManager.renderBitmapToScreen()
         }.setSystemScreenOnListener {
-            renderToScreen(surfaceView, bitmap)
+            bitmapManager.renderBitmapToScreen()
         }
     }
 

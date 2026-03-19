@@ -70,8 +70,6 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         holder.unlockCanvasAndPost(canvas)
         return true
     }
-    abstract fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val app = application as com.wyldsoft.notes.ScrotesApp
@@ -157,7 +155,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
             override fun surfaceCreated(holder: SurfaceHolder) {
                 cleanSurfaceView(surfaceView)
                 createDrawingBitmap()
-                bitmap?.let { renderToScreen(surfaceView, it) }
+                bitmapManager.renderBitmapToScreen()
             }
 
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -171,7 +169,7 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
                     createDrawingBitmap()
                     recreateBitmapFromShapes()
                 }
-                bitmap?.let { renderToScreen(surfaceView, it) }
+                bitmapManager.renderBitmapToScreen()
             }
 
             override fun surfaceDestroyed(holder: SurfaceHolder) { holder.removeCallback(this) }
@@ -375,10 +373,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
     open fun setDrawingEnabled(enabled: Boolean) {}
 
     override fun forceScreenRefresh() {
-        surfaceView.let { sv ->
-            recreateBitmapFromShapes()
-            bitmap?.let { renderToScreen(sv, it) }
-        }
+        recreateBitmapFromShapes()
+        bitmapManager.renderBitmapToScreen()
     }
 
     protected abstract fun onResumeDrawing()

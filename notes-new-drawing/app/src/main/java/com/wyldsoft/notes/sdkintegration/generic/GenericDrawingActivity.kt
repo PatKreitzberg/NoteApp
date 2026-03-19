@@ -11,7 +11,6 @@ import com.wyldsoft.notes.presentation.viewmodel.DrawTool
 import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.rendering.BitmapManager
-import com.wyldsoft.notes.rendering.PaginationRendererToScreenRequest
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 
@@ -110,15 +109,6 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
         // No-op on generic devices
     }
 
-    override fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
-        if (bitmap == null) return
-        try {
-            PaginationRendererToScreenRequest(surfaceView, bitmap, editorViewModel).execute()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
     override fun onResumeDrawing() {
         Log.d(TAG, "onResumeDrawing (generic)")
     }
@@ -150,7 +140,7 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
         val receiver = createDeviceReceiver() as GenericDeviceReceiverWrapper
         receiver.enable(this, true)
         receiver.setSystemScreenOnListener {
-            renderToScreen(surfaceView, bitmap)
+            bitmapManager.renderBitmapToScreen()
         }
     }
 
