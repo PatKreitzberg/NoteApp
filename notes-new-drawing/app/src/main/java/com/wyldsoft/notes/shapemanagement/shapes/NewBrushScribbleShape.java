@@ -6,8 +6,7 @@ import android.graphics.Paint;
 import com.wyldsoft.notes.rendering.RendererHelper;
 import com.wyldsoft.notes.sdkintegration.DeviceHelper;
 import com.onyx.android.sdk.data.note.TouchPoint;
-import com.onyx.android.sdk.pen.NeoBrushPen;
-import com.onyx.android.sdk.pen.PenUtils;
+import com.onyx.android.sdk.pen.NeoBrushPenWrapper;
 
 import java.util.List;
 import android.util.Log;
@@ -26,9 +25,8 @@ public class NewBrushScribbleShape extends BaseShape {
     private void renderOnyx(RendererHelper.RenderContext renderContext) {
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
-        List<TouchPoint> neoBrushPoints = NeoBrushPen.computeStrokePoints(points,
-                strokeWidth, getMaxTouchPressure());
-        PenUtils.drawStrokeByPointSize(renderContext.canvas, renderContext.paint, neoBrushPoints, isTransparent());
+        NeoBrushPenWrapper.drawStroke(renderContext.canvas, renderContext.paint, points,
+                strokeWidth, getMaxTouchPressure(), isTransparent());
     }
 
     /** Variable-width path based on pressure for non-Onyx devices */

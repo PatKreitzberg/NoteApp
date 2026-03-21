@@ -6,7 +6,7 @@ import android.graphics.Path;
 import android.graphics.PointF;
 
 import com.onyx.android.sdk.data.note.TouchPoint;
-import com.onyx.android.sdk.pen.NeoMarkerPen;
+import com.onyx.android.sdk.pen.NeoMarkerPenWrapper;
 import com.wyldsoft.notes.rendering.RendererHelper;
 import com.wyldsoft.notes.sdkintegration.DeviceHelper;
 import android.util.Log;
@@ -26,9 +26,7 @@ public class MarkerScribbleShape extends BaseShape {
     private void renderOnyx(RendererHelper.RenderContext renderContext) {
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
-        List<TouchPoint> markerPoints = NeoMarkerPen.computeStrokePoints(points, strokeWidth,
-                getMaxTouchPressure());
-        NeoMarkerPen.drawStroke(renderContext.canvas, renderContext.paint, markerPoints, strokeWidth, isTransparent());
+        NeoMarkerPenWrapper.drawStroke(renderContext.canvas, renderContext.paint, points, strokeWidth, isTransparent());
     }
 
     /** Wide semi-transparent stroke for non-Onyx devices */

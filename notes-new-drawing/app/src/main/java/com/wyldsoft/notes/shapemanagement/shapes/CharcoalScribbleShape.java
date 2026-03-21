@@ -13,7 +13,7 @@ import com.wyldsoft.notes.sdkintegration.DeviceHelper;
 import com.onyx.android.sdk.data.PenConstant;
 import com.onyx.android.sdk.data.note.ShapeCreateArgs;
 import com.onyx.android.sdk.data.note.TouchPoint;
-import com.onyx.android.sdk.pen.NeoCharcoalPenV2;
+import com.onyx.android.sdk.pen.NeoCharcoalPenV2Wrapper;
 import com.onyx.android.sdk.pen.PenRenderArgs;
 
 import java.util.List;
@@ -45,12 +45,12 @@ public class CharcoalScribbleShape extends BaseShape {
         if (strokeWidth <= PenConstant.CHARCOAL_SHAPE_DRAW_NORMAL_SCALE_WIDTH_THRESHOLD) {
             renderArgs.setStrokeWidth(strokeWidth)
                     .setPoints(points);
-            NeoCharcoalPenV2.drawNormalStroke(renderArgs);
+            NeoCharcoalPenV2Wrapper.drawNormalStroke(renderArgs);
         } else {
             renderArgs.setStrokeWidth(strokeWidth)
                     .setPoints(points)
                     .setRenderMatrix(RenderingUtils.getPointMatrix(renderContext));
-            NeoCharcoalPenV2.drawBigStroke(renderArgs);
+            NeoCharcoalPenV2Wrapper.drawBigStroke(renderArgs);
         }
     }
 

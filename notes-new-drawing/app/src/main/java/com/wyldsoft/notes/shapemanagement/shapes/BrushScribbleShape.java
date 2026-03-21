@@ -2,13 +2,10 @@ package com.wyldsoft.notes.shapemanagement.shapes;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.util.Log;
 
 import com.onyx.android.sdk.data.note.TouchPoint;
-import com.onyx.android.sdk.pen.NeoFountainPen;
-import com.onyx.android.sdk.pen.PenUtils;
-import com.onyx.android.sdk.utils.NumberUtils;
+import com.onyx.android.sdk.pen.NeoFountainPenWrapper;
 import com.wyldsoft.notes.rendering.RendererHelper;
 import com.wyldsoft.notes.sdkintegration.DeviceHelper;
 
@@ -28,9 +25,8 @@ public class BrushScribbleShape extends BaseShape {
     private void renderOnyx(RendererHelper.RenderContext renderContext) {
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
-        List<TouchPoint> brushPoints = NeoFountainPen.computeStrokePoints(points,
-                NumberUtils.FLOAT_ONE, strokeWidth, getMaxTouchPressure());
-        PenUtils.drawStrokeByPointSize(renderContext.canvas, renderContext.paint, brushPoints, isTransparent());
+        NeoFountainPenWrapper.drawStroke(renderContext.canvas, renderContext.paint, points,
+                1.0f, strokeWidth, getMaxTouchPressure(), isTransparent());
     }
 
     /** Variable-width path based on pressure for non-Onyx devices */
