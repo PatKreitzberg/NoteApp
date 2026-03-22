@@ -18,7 +18,7 @@ This class is responsible for:
  */
 class DrawManager(
     private var bitmapManager: BitmapManager,
-    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
+    private val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>, tiltX: List<Int>, tiltY: List<Int>) -> Unit,
     private val getActiveLayer: () -> Int = { 1 }
 ) {
     private var currentPenProfile: PenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
@@ -34,7 +34,7 @@ class DrawManager(
         Log.d("DROPSTROKEBUG", "DrawManager.newShape: shape created id=${shape.id}, calling onShapeCompleted")
         // Convert TouchPointList to domain data for ViewModel (in NoteCoordinates)
         val touchData = extractTouchData(noteCoordinateTouchPointList)
-        onShapeCompleted(shape.id, touchData.points, touchData.pressures, touchData.timestamps)
+        onShapeCompleted(shape.id, touchData.points, touchData.pressures, touchData.timestamps, touchData.tiltXValues, touchData.tiltYValues)
         Log.d("DROPSTROKEBUG", "DrawManager.newShape: onShapeCompleted fired, rendering to bitmap")
 
         // Render the new shape to the bitmap

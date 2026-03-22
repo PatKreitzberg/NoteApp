@@ -110,7 +110,7 @@ class SelectionScaleHandler {
             newList.add(TouchPoint(
                 centerX + (tp.x - centerX) * scaleFactor,
                 centerY + (tp.y - centerY) * scaleFactor,
-                tp.pressure, tp.size, tp.timestamp
+                tp.pressure, tp.size, tp.tiltX, tp.tiltY, tp.timestamp
             ))
         }
         shape.touchPointList = newList

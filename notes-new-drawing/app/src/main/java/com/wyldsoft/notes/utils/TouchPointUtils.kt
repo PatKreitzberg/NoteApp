@@ -13,7 +13,8 @@ fun transformTouchPointList(
     for (i in 0 until touchPointList.size()) {
         val tp = touchPointList.get(i)
         val transformed = transformXY(tp.x, tp.y)
-        result.add(TouchPoint(transformed.x, transformed.y, tp.pressure, tp.size, tp.timestamp))
+        val newTp = TouchPoint(transformed.x, transformed.y, tp.pressure, tp.size, tp.tiltX, tp.tiltY, tp.timestamp)
+        result.add(newTp)
     }
     return result
 }
@@ -39,20 +40,26 @@ fun surfacePointsToNoteTouchPoints(
 data class ExtractedTouchData(
     val points: List<PointF>,
     val pressures: List<Float>,
-    val timestamps: List<Long>
+    val timestamps: List<Long>,
+    val tiltXValues: List<Int> = emptyList(),
+    val tiltYValues: List<Int> = emptyList()
 )
 
 fun extractTouchData(touchPointList: TouchPointList): ExtractedTouchData {
     val points = mutableListOf<PointF>()
     val pressures = mutableListOf<Float>()
     val timestamps = mutableListOf<Long>()
+    val tiltXValues = mutableListOf<Int>()
+    val tiltYValues = mutableListOf<Int>()
     for (i in 0 until touchPointList.size()) {
         val tp = touchPointList.get(i)
         points.add(PointF(tp.x, tp.y))
         pressures.add(tp.pressure)
         timestamps.add(tp.timestamp)
+        tiltXValues.add(tp.tiltX)
+        tiltYValues.add(tp.tiltY)
     }
-    return ExtractedTouchData(points, pressures, timestamps)
+    return ExtractedTouchData(points, pressures, timestamps, tiltXValues, tiltYValues)
 }
 
 fun touchPointListToPoints(touchPointList: TouchPointList): List<PointF> {
@@ -66,13 +73,17 @@ fun touchPointListToPoints(touchPointList: TouchPointList): List<PointF> {
 
 fun domainPointsToTouchPointList(
     points: List<PointF>,
-    pressure: List<Float>
+    pressure: List<Float>,
+    tiltX: List<Int> = emptyList(),
+    tiltY: List<Int> = emptyList()
 ): TouchPointList {
     val touchPointList = TouchPointList()
     for (i in points.indices) {
         val point = points[i]
         val p = if (i < pressure.size) pressure[i] else 0.5f
-        touchPointList.add(TouchPoint(point.x, point.y, p, 1f, System.currentTimeMillis()))
+        val tx = if (i < tiltX.size) tiltX[i] else 0
+        val ty = if (i < tiltY.size) tiltY[i] else 0
+        touchPointList.add(TouchPoint(point.x, point.y, p, 1f, tx, ty, System.currentTimeMillis()))
     }
     return touchPointList
 }

@@ -323,8 +323,8 @@ abstract class BaseDrawingActivity : ComponentActivity(), DrawingActivityInterfa
         }
     }
 
-    override fun onShapeCompleted(id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) {
-        editorViewModel.addShape(id, points, pressures, timestamps)
+    override fun onShapeCompleted(id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>, tiltX: List<Int>, tiltY: List<Int>) {
+        editorViewModel.addShape(id, points, pressures, timestamps, tiltX, tiltY)
     }
 
     override fun onShapeRemoved(shapeId: String) {

@@ -14,7 +14,7 @@ object ActionUtils {
         shapesManager: ShapesManager
     ) {
         val sdkShape = shapesManager.shapes().find { it.id == shape.id } ?: return
-        sdkShape.touchPointList = domainPointsToTouchPointList(points, shape.pressure)
+        sdkShape.touchPointList = domainPointsToTouchPointList(points, shape.pressure, shape.tiltX, shape.tiltY)
         sdkShape.updateShapeRect()
     }
 

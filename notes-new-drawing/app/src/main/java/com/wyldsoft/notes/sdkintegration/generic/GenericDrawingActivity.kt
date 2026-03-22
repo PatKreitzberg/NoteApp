@@ -40,8 +40,8 @@ open class GenericDrawingActivity : BaseDrawingActivity() {
             onDrawingStateChanged = { isDrawing ->
                 // No finger touch enable/disable needed on generic devices
             },
-            onShapeCompleted = { id, points, pressures, timestamps ->
-                onShapeCompleted(id, points, pressures, timestamps)
+            onShapeCompleted = { id, points, pressures, timestamps, tiltX, tiltY ->
+                onShapeCompleted(id, points, pressures, timestamps, tiltX, tiltY)
             },
             onShapeRemoved = { shapeId -> onShapeRemoved(shapeId) },
             onForceScreenRefresh = { forceScreenRefresh() }

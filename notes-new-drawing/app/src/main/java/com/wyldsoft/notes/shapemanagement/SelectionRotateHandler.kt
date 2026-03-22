@@ -113,7 +113,7 @@ class SelectionRotateHandler {
             newList.add(TouchPoint(
                 centerX + dx * cosA - dy * sinA,
                 centerY + dx * sinA + dy * cosA,
-                tp.pressure, tp.size, tp.timestamp
+                tp.pressure, tp.size, tp.tiltX, tp.tiltY, tp.timestamp
             ))
         }
         shape.touchPointList = newList

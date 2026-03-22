@@ -161,7 +161,7 @@ class SelectionManager {
         val newList = TouchPointList()
         for (i in 0 until oldList.size()) {
             val tp = oldList.get(i)
-            newList.add(TouchPoint(tp.x + dx, tp.y + dy, tp.pressure, tp.size, tp.timestamp))
+            newList.add(TouchPoint(tp.x + dx, tp.y + dy, tp.pressure, tp.size, tp.tiltX, tp.tiltY, tp.timestamp))
         }
         shape.touchPointList = newList
         shape.updateShapeRect()

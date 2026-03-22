@@ -71,7 +71,9 @@ class DrawingOperationsHandler(
         id: String,
         points: List<android.graphics.PointF>,
         pressures: List<Float> = emptyList(),
-        timestamps: List<Long> = emptyList()
+        timestamps: List<Long> = emptyList(),
+        tiltX: List<Int> = emptyList(),
+        tiltY: List<Int> = emptyList()
     ) {
         Log.d("DROPSTROKEBUG", "addShape: id=$id, points=${points.size}, pressures=${pressures.size}, timestamps=${timestamps.size}")
         scope.launch {
@@ -85,6 +87,8 @@ class DrawingOperationsHandler(
                     strokeColor = profile.getColorAsInt(),
                     penType = profile.penType,
                     pressure = pressures,
+                    tiltX = tiltX,
+                    tiltY = tiltY,
                     pointTimestamps = timestamps,
                     layer = getActiveLayer()
                 )

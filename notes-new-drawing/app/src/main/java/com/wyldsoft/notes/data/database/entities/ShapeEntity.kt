@@ -33,6 +33,8 @@ data class ShapeEntity(
     val strokeColor: Int,
     val penType: PenType = PenType.BALLPEN,
     val pressure: List<Float> = emptyList(),
+    val tiltX: List<Int> = emptyList(),
+    val tiltY: List<Int> = emptyList(),
     val pointTimestamps: List<Long> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
     val text: String? = null,

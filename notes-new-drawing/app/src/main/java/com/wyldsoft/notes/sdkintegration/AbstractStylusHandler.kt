@@ -32,7 +32,7 @@ abstract class AbstractStylusHandler(
     private val getShapesManager: () -> ShapesManager,
     protected val displaySettingsRepository: DisplaySettingsRepository,
     protected val onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
-    protected val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
+    protected val onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>, tiltX: List<Int>, tiltY: List<Int>) -> Unit,
     protected val onShapeRemoved: (shapeId: String) -> Unit,
     protected val onForceScreenRefresh: () -> Unit,
     rxManager: RxManager? = null

@@ -465,8 +465,8 @@ class EditorViewModel(
 
     fun startDrawing() = drawingOperationsHandler.startDrawing()
     fun endDrawing() = drawingOperationsHandler.endDrawing()
-    fun addShape(id: String, points: List<android.graphics.PointF>, pressures: List<Float> = emptyList(), timestamps: List<Long> = emptyList()) =
-        drawingOperationsHandler.addShape(id, points, pressures, timestamps)
+    fun addShape(id: String, points: List<android.graphics.PointF>, pressures: List<Float> = emptyList(), timestamps: List<Long> = emptyList(), tiltX: List<Int> = emptyList(), tiltY: List<Int> = emptyList()) =
+        drawingOperationsHandler.addShape(id, points, pressures, timestamps, tiltX, tiltY)
     fun removeShape(shapeId: String) = drawingOperationsHandler.removeShape(shapeId)
     fun startErasing() = drawingOperationsHandler.startErasing()
     fun endErasing() = drawingOperationsHandler.endErasing()

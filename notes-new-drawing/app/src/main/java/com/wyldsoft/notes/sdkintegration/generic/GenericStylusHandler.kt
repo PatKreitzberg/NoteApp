@@ -24,7 +24,7 @@ class GenericStylusHandler(
     getShapesManager: () -> ShapesManager,
     displaySettingsRepository: DisplaySettingsRepository,
     onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
-    onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
+    onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>, tiltX: List<Int>, tiltY: List<Int>) -> Unit,
     onShapeRemoved: (shapeId: String) -> Unit,
     onForceScreenRefresh: () -> Unit
 ) : AbstractStylusHandler(
@@ -145,11 +145,16 @@ class GenericStylusHandler(
 
     private fun addPointsFromEvent(event: MotionEvent) {
         for (h in 0 until event.historySize) {
+            val tiltAngle = event.getHistoricalAxisValue(MotionEvent.AXIS_TILT, h)
+            val orientation = event.getHistoricalAxisValue(MotionEvent.AXIS_ORIENTATION, h)
+            val tx = (Math.sin(orientation.toDouble()) * Math.sin(tiltAngle.toDouble()) * 1000).toInt()
+            val ty = (Math.cos(orientation.toDouble()) * Math.sin(tiltAngle.toDouble()) * 1000).toInt()
             val tp = TouchPoint(
                 event.getHistoricalX(h),
                 event.getHistoricalY(h),
                 event.getHistoricalPressure(h),
                 event.getHistoricalSize(h),
+                tx, ty,
                 event.getHistoricalEventTime(h)
             )
             currentPoints.add(tp)
@@ -159,11 +164,16 @@ class GenericStylusHandler(
     }
 
     private fun motionEventToTouchPoint(event: MotionEvent, pointerIndex: Int): TouchPoint {
+        val tiltAngle = event.getAxisValue(MotionEvent.AXIS_TILT, pointerIndex)
+        val orientation = event.getAxisValue(MotionEvent.AXIS_ORIENTATION, pointerIndex)
+        val tx = (Math.sin(orientation.toDouble()) * Math.sin(tiltAngle.toDouble()) * 1000).toInt()
+        val ty = (Math.cos(orientation.toDouble()) * Math.sin(tiltAngle.toDouble()) * 1000).toInt()
         return TouchPoint(
             event.getX(pointerIndex),
             event.getY(pointerIndex),
             event.getPressure(pointerIndex),
             event.getSize(pointerIndex),
+            tx, ty,
             event.eventTime
         )
     }

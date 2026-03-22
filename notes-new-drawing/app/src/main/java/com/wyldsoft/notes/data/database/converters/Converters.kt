@@ -53,6 +53,16 @@ class Converters {
     }
 
     @TypeConverter
+    fun fromIntList(ints: List<Int>): String {
+        return Json.encodeToString(ints)
+    }
+
+    @TypeConverter
+    fun toIntList(intsJson: String): List<Int> {
+        return Json.decodeFromString(intsJson)
+    }
+
+    @TypeConverter
     fun fromStringList(strings: List<String>): String {
         return Json.encodeToString(strings)
     }

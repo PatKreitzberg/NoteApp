@@ -25,7 +25,7 @@ class OnyxStylusHandler(
     getShapesManager: () -> ShapesManager,
     displaySettingsRepository: DisplaySettingsRepository,
     onDrawingStateChanged: (isDrawing: Boolean) -> Unit,
-    onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>) -> Unit,
+    onShapeCompleted: (id: String, points: List<PointF>, pressures: List<Float>, timestamps: List<Long>, tiltX: List<Int>, tiltY: List<Int>) -> Unit,
     onShapeRemoved: (shapeId: String) -> Unit,
     private val onSetRawDrawingRenderEnabled: (Boolean) -> Unit,
     onForceScreenRefresh: () -> Unit
