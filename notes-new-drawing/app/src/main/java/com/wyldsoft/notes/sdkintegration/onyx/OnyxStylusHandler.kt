@@ -99,6 +99,8 @@ class OnyxStylusHandler(
                 "size=${touchPointList?.size() ?: "null"}, " +
                 "points=${touchPointList?.points?.size ?: "null"}")
 
+
+
             modeRouter.routeEnd(touchPointList)
         }
 

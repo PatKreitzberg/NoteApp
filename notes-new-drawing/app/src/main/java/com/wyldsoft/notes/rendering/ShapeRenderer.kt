@@ -40,7 +40,11 @@ class ShapeRenderer(
         shape.touchPointList = surfaceTouchPoints
         canvas.withSave {
             initRenderContext(renderContext, this)
+
+            Log.d("ColorDebug", "ShapeRenderer color 1: ${renderContext.paint.color}")
             shape.render(renderContext)
+
+            Log.d("ColorDebug", "ShapeRenderer color 2: ${renderContext.paint.color}")
         }
         shape.touchPointList = originalTouchPoints
     }
