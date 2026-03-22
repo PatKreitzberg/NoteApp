@@ -41,9 +41,11 @@ class DrawManager(
         bitmapManager.renderShapeToBitmap(shape)
         Log.d("RefreshDebug", "DrawManager.newShape → renderBitmapToScreen for shape id=${shape.id}")
 
-        // As of note there is no need to render bitmap to screen when adding new shape
-        bitmapManager.renderBitmapToScreen("DrawManager.newShape")
-        Log.d("DROPSTROKEBUG", "DrawManager.newShape: rendered to bitmap and screen, returning shape id=${shape.id}")
+
+        if (true) { //fixme renderbitmaptoscreen not needed unless debugging
+            bitmapManager.renderBitmapToScreen("DrawManager.newShape")
+            Log.d("DROPSTROKEBUG", "DrawManager.newShape: rendered to bitmap and screen, returning shape id=${shape.id}")
+        }
 
         // return to OnyxStylusHandler so it can put in drawnShapes
         return shape

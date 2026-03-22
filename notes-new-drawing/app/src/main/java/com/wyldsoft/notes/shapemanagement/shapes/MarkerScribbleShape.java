@@ -24,8 +24,24 @@ public class MarkerScribbleShape extends BaseShape {
     }
 
     private void renderOnyx(RendererHelper.RenderContext renderContext) {
-        Log.d("MarkerScribbleShape", "renderOnyx");
+        Log.d("MarkerScribbleShape", "renderOnyx MarkerScribbleShape");
         List<TouchPoint> points = touchPointList.getPoints();
+
+        for (int i = 0; i < points.size(); i++) {
+            TouchPoint point = points.get(i);
+
+            // Extract common data points
+            float x = point.getX();
+            float y = point.getY();
+            float pressure = point.getPressure();
+            long timestamp = point.getTimestamp();
+            float tiltX = point.getTiltX();
+            float tiltY = point.getTiltY();
+
+            Log.d("MarkerScribbleShape", String.format("Point [%d]: tiltX=%.2f, tiltY=%.2f, pressure=%.2f, time=%d",
+                    i, tiltX, tiltY, pressure, timestamp));
+        }
+
         applyStrokeStyle(renderContext);
         NeoMarkerPenWrapper.drawStroke(renderContext.canvas, renderContext.paint, points, strokeWidth, isTransparent());
     }

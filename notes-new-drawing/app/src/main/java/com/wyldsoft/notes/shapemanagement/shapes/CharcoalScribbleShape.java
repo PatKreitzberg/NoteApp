@@ -14,6 +14,7 @@ import com.onyx.android.sdk.data.PenConstant;
 import com.onyx.android.sdk.data.note.ShapeCreateArgs;
 import com.onyx.android.sdk.data.note.TouchPoint;
 import com.onyx.android.sdk.pen.NeoCharcoalPenV2Wrapper;
+import com.onyx.android.sdk.pen.NeoCharcoalPenWrapper;
 import com.onyx.android.sdk.pen.PenRenderArgs;
 
 import java.util.List;
@@ -30,28 +31,32 @@ public class CharcoalScribbleShape extends BaseShape {
     }
 
     private void renderOnyx(RendererHelper.RenderContext renderContext) {
-        Log.d("CharcoalScribbleShape", "renderOnyx");
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
 
+        ShapeCreateArgs createArgs = new ShapeCreateArgs();
+        createArgs.setMaxPressure(getMaxTouchPressure());
+
         PenRenderArgs renderArgs = new PenRenderArgs()
-                .setCreateArgs(new ShapeCreateArgs())
                 .setCanvas(renderContext.canvas)
+                .setPaint(renderContext.paint)
+                .setCreateArgs(createArgs)
                 .setPenType(ShapeFactory.getCharcoalPenType(texture))
                 .setColor(strokeColor)
                 .setErase(isTransparent())
-                .setPaint(renderContext.paint)
+                .setTiltEnabled(true)
                 .setScreenMatrix(RenderingUtils.getPointMatrix(renderContext));
+
 
         if (strokeWidth <= PenConstant.CHARCOAL_SHAPE_DRAW_NORMAL_SCALE_WIDTH_THRESHOLD) {
             renderArgs.setStrokeWidth(strokeWidth)
                     .setPoints(points);
-            NeoCharcoalPenV2Wrapper.drawNormalStroke(renderArgs);
+            NeoCharcoalPenWrapper.drawNormalStroke(renderArgs);
         } else {
             renderArgs.setStrokeWidth(strokeWidth)
                     .setPoints(points)
                     .setRenderMatrix(RenderingUtils.getPointMatrix(renderContext));
-            NeoCharcoalPenV2Wrapper.drawBigStroke(renderArgs);
+            NeoCharcoalPenWrapper.drawBigStroke(renderArgs);
         }
     }
 
