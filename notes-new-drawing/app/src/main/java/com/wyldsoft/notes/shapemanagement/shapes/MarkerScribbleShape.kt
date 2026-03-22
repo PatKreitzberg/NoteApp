@@ -35,7 +35,7 @@ class MarkerScribbleShape : BaseShape() {
                 "MarkerScribbleShape",
                 String.format(
                     "Point [%d]: tiltX=%.2f, tiltY=%.2f, pressure=%.2f, time=%d",
-                    i, tiltX, tiltY, pressure, timestamp
+                    i, tiltX.toFloat(), tiltY.toFloat(), pressure, timestamp
                 )
             )
         }
