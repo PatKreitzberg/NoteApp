@@ -30,6 +30,7 @@ public class CharcoalScribbleShape extends BaseShape {
     }
 
     private void renderOnyx(RendererHelper.RenderContext renderContext) {
+        Log.d("CharcoalScribbleShape", "renderOnyx");
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
 

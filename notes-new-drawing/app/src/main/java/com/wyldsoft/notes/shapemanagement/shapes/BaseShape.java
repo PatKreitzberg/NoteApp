@@ -141,7 +141,7 @@ public class BaseShape {
         paint.setStrokeWidth(getRenderStrokeWidth());
         paint.setColor(strokeColor);
         paint.setAntiAlias(true);
-        paint.setDither(true);
+        paint.setDither(false);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);

@@ -24,6 +24,7 @@ public class MarkerScribbleShape extends BaseShape {
     }
 
     private void renderOnyx(RendererHelper.RenderContext renderContext) {
+        Log.d("MarkerScribbleShape", "renderOnyx");
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
         NeoMarkerPenWrapper.drawStroke(renderContext.canvas, renderContext.paint, points, strokeWidth, isTransparent());

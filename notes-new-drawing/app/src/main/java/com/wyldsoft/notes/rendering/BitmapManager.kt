@@ -103,6 +103,7 @@ class BitmapManager(
             )
             surfaceRect.intersect(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat())
             if (surfaceRect.isEmpty) return
+
             canvas.save()
             canvas.clipRect(surfaceRect)
             canvas.drawColor(Color.WHITE)
@@ -110,6 +111,7 @@ class BitmapManager(
             val renderContext = rendererHelper.getRenderContext() ?: run { canvas.restore(); return }
             renderContext.bitmap = bitmap
             renderContext.viewportScale = viewportManager.viewportState.value.scale
+
             filteredShapes?.forEach { shape ->
                 shape.updateShapeRect()
                 val noteBounds = shape.boundingRect ?: return@forEach

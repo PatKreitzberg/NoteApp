@@ -1,7 +1,6 @@
 package com.wyldsoft.notes.sdkintegration.onyx
 
 import android.annotation.SuppressLint
-import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
@@ -208,10 +207,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
             helper.closeRawDrawing()
-
             val limit = Rect()
             surfaceView.getLocalVisibleRect(limit)
 
+            // setting stroke width
             val strokeConfig = helper.setStrokeWidth(currentPenProfile.strokeWidth)
             if (applyColor) {
                 strokeConfig.setStrokeColor(currentPenProfile.getColorAsInt())
@@ -219,7 +218,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             strokeConfig.setLimitRect(limit, ArrayList(excludeRects))
                 .openRawDrawing()
 
+            // Where the stroke style is set
             helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
+
+            Log.d("DebugDifferentStroke", "Setting stroke to ${currentPenProfile.strokeWidth} and style to ${currentPenProfile.getOnyxStrokeStyleInternal()}")
+
             if (!editorViewModel.isDrawingBlocked.value) {
                 helper.setRawDrawingEnabled(true)
                 helper.setRawDrawingRenderEnabled(true)

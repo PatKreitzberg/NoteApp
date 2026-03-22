@@ -23,6 +23,7 @@ public class NewBrushScribbleShape extends BaseShape {
     }
 
     private void renderOnyx(RendererHelper.RenderContext renderContext) {
+        Log.d("NewBrushScribbleShape", "renderOnyx");
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
         NeoBrushPenWrapper.drawStroke(renderContext.canvas, renderContext.paint, points,

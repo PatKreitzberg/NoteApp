@@ -136,7 +136,7 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-compat'
     }
 
-    implementation('com.onyx.android.sdk:onyxsdk-pen:1.5.1') {
+    implementation('com.onyx.android.sdk:onyxsdk-pen:1.5.2') {
         exclude group: 'com.android.support', module: 'support-compat'
         exclude group: 'com.android.support', module: 'appcompat-v7'
         exclude group: "com.onyx.android.sdk", module: "onyxsdk-geometry"
@@ -149,7 +149,6 @@ dependencies {
 
     // ML Kit dependencies
     implementation 'com.google.mlkit:digital-ink-recognition:18.1.0'
-
 
     // Temporary (?) fix for https://github.com/gaborauth/toolsboox-android/issues/305
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3") // required by onyx sdk
