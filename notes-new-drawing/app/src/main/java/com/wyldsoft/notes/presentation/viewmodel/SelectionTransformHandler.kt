@@ -87,9 +87,9 @@ class SelectionTransformHandler(
 
         for (shape in sm.shapes()) {
             if (shape.id in selectedIds && shape is TextShape) {
-                shape.setFontSize(fontSize)
-                shape.setFontFamily(fontFamily)
-                shape.setStrokeColor(color)
+                shape.fontSize = fontSize
+                shape.fontFamily = fontFamily
+                shape.strokeColor = color
                 shape.updateShapeRect()
             }
         }

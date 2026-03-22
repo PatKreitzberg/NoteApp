@@ -120,7 +120,7 @@ class BitmapManager(
                 val shapeSurface = RectF(minOf(sTl.x, sBr.x), minOf(sTl.y, sBr.y), maxOf(sTl.x, sBr.x), maxOf(sTl.y, sBr.y))
                 if (!RectF.intersects(shapeSurface, surfaceRect)) return@forEach
                 canvas.withSave {
-                    val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
+                    val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList!!, viewportManager)
                     val originalTouchPoints = shape.touchPointList
                     shape.touchPointList = surfaceTouchPoints
                     shapeRenderer.initRenderContext(renderContext, this)
@@ -141,7 +141,7 @@ class BitmapManager(
         filteredShapes?.forEach { shape ->
             if (!isShapeVisible(shape, viewportManager, screenWidth, screenHeight)) return@forEach
             canvas.withSave {
-                val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
+                val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList!!, viewportManager)
                 val originalTouchPoints = shape.touchPointList
                 shape.touchPointList = surfaceTouchPoints
                 shapeRenderer.initRenderContext(renderContext, this)
@@ -228,7 +228,7 @@ class BitmapManager(
             val shapeSurface = RectF(minOf(sTl.x, sBr.x), minOf(sTl.y, sBr.y), maxOf(sTl.x, sBr.x), maxOf(sTl.y, sBr.y))
             if (!RectF.intersects(shapeSurface, dirtyRectSurface)) continue
             canvas.withSave {
-                val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
+                val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList!!, viewportManager)
                 val originalTouchPoints = shape.touchPointList
                 shape.touchPointList = surfaceTouchPoints
                 shapeRenderer.initRenderContext(renderContext, this)

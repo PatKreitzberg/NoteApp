@@ -29,9 +29,9 @@ class TextFormattingAction(
 
     private fun applyToSdkShape(shape: Shape) {
         val sdkShape = shapesManager.shapes().find { it.id == shape.id } as? TextShape ?: return
-        sdkShape.setFontSize(shape.fontSize)
-        sdkShape.setFontFamily(shape.fontFamily)
-        sdkShape.setStrokeColor(shape.strokeColor)
+        sdkShape.fontSize = shape.fontSize
+        sdkShape.fontFamily = shape.fontFamily
+        sdkShape.strokeColor = shape.strokeColor
         sdkShape.updateShapeRect()
     }
 }

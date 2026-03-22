@@ -61,10 +61,10 @@ class ShapesManager private constructor(note: Note) {
 
         if (domainShape.type == ShapeType.TEXT) {
             val textShape = TextShape()
-            textShape.setId(domainShape.id)
-            textShape.setText(domainShape.text ?: "")
-            textShape.setFontSize(domainShape.fontSize)
-            textShape.setFontFamily(domainShape.fontFamily)
+            textShape.id = domainShape.id
+            textShape.text = domainShape.text ?: ""
+            textShape.fontSize = domainShape.fontSize
+            textShape.fontFamily = domainShape.fontFamily
             textShape.setTouchPointList(touchPointList)
                 .setStrokeColor(domainShape.strokeColor)
                 .setStrokeWidth(domainShape.strokeWidth)
@@ -78,7 +78,7 @@ class ShapesManager private constructor(note: Note) {
         val shapeType = penTypeToShapeType(domainShape.penType)
 
         val shape = ShapeFactory.createShape(shapeType)
-        shape.setId(domainShape.id)
+        shape.id = domainShape.id
         shape.setTouchPointList(touchPointList)
             .setStrokeColor(domainShape.strokeColor)
             .setStrokeWidth(domainShape.strokeWidth)

@@ -35,7 +35,7 @@ class ShapeRenderer(
         val canvas = getBitmapCanvas() ?: return
 
         renderContext.bitmap = bmp
-        val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList, viewportManager)
+        val surfaceTouchPoints = notePointsToSurfaceTouchPoints(shape.touchPointList!!, viewportManager)
         val originalTouchPoints = shape.touchPointList
         shape.touchPointList = surfaceTouchPoints
         canvas.withSave {
