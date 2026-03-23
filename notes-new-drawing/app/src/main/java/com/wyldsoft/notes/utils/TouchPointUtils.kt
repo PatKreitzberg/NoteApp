@@ -75,7 +75,8 @@ fun domainPointsToTouchPointList(
     points: List<PointF>,
     pressure: List<Float>,
     tiltX: List<Int> = emptyList(),
-    tiltY: List<Int> = emptyList()
+    tiltY: List<Int> = emptyList(),
+    strokeWidth: Float = 500f
 ): TouchPointList {
     val touchPointList = TouchPointList()
     for (i in points.indices) {
@@ -83,7 +84,7 @@ fun domainPointsToTouchPointList(
         val p = if (i < pressure.size) pressure[i] else 0.5f
         val tx = if (i < tiltX.size) tiltX[i] else 0
         val ty = if (i < tiltY.size) tiltY[i] else 0
-        touchPointList.add(TouchPoint(point.x, point.y, p, 1f, tx, ty, System.currentTimeMillis()))
+        touchPointList.add(TouchPoint(point.x, point.y, p, strokeWidth, tx, ty, System.currentTimeMillis()))
     }
     return touchPointList
 }

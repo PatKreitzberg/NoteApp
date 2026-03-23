@@ -8,6 +8,7 @@ import com.wyldsoft.notes.presentation.viewmodel.EditorMode
 import com.wyldsoft.notes.presentation.viewmodel.EditorViewModel
 import com.wyldsoft.notes.shapemanagement.SelectionManager
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
+import kotlin.collections.get
 
 /**
  * Routes stylus input to the correct handler based on the current EditorMode.
@@ -89,6 +90,13 @@ class ModeInputRouter(
             beginMode = null
             return
         }
+
+//        val points= touchPointList.points
+//        for (i in 0 until points.size - 1) {
+//            val pt = points[i]
+//            Log.d("ColorDebug", "ModelInputRouter.routeEnd: point ${i} is size=${pt.size}  tilte(${pt.tiltX}, ${pt.tiltY}) pressure${pt.pressure}")
+//        }
+
 
         val currentMode = viewModel.uiState.value.mode
         val capturedMode = beginMode

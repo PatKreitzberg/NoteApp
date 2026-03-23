@@ -17,6 +17,7 @@ import com.wyldsoft.notes.shapemanagement.ShapesManager
 import com.wyldsoft.notes.settings.DisplaySettingsRepository
 import android.util.Log
 import com.wyldsoft.notes.utils.surfacePointsToNoteTouchPoints
+import kotlin.collections.get
 
 /**
  * Base class for stylus handlers. Coordinates drawing, erasing, geometry, and selection.
@@ -176,8 +177,15 @@ abstract class AbstractStylusHandler(
 
     protected fun finalizeStroke(touchPointList: TouchPointList) {
         val points = touchPointList.points
+
+        // Assign strokeWidth as the size for each point — some SDKs (e.g. Onyx) leave size=0.0
+        val strokeWidth = currentPenProfile.strokeWidth
+        for (i in 0 until points.size) {
+            points[i].size = strokeWidth
+        }
+
         if (points == null) {
-            Log.w("DROPSTROKEBUG", "finalizeStroke: touchPointList.points is NULL — stroke silently dropped! " +
+            Log.w("ColorBug", "finalizeStroke: touchPointList.points is NULL — stroke silently dropped! " +
                 "touchPointList.size=${touchPointList.size()}")
             isDrawingInProgress = false
             onDrawingStateChanged(false)
@@ -185,19 +193,19 @@ abstract class AbstractStylusHandler(
             return
         }
         if (points.isEmpty()) {
-            Log.w("DROPSTROKEBUG", "finalizeStroke: touchPointList.points is EMPTY — stroke silently dropped!")
+            Log.w("ColorBug", "finalizeStroke: touchPointList.points is EMPTY — stroke silently dropped!")
             isDrawingInProgress = false
             onDrawingStateChanged(false)
             viewModel.endDrawing()
             return
         }
-        Log.d("DROPSTROKEBUG", "finalizeStroke: ${points.size} points, converting to note coords")
+        Log.d("ColorBug", "finalizeStroke: ${points.size} points, converting to note coords")
         val notePointList = surfacePointsToNoteTouchPoints(touchPointList, viewModel.viewportManager)
-        Log.d("DROPSTROKEBUG", "finalizeStroke: notePointList size=${notePointList.size()}, creating shape")
+        Log.d("ColorBug", "finalizeStroke: notePointList size=${notePointList.size()}, creating shape")
         val newShape = drawManager.newShape(notePointList)
-        Log.d("DROPSTROKEBUG", "finalizeStroke: shape created id=${newShape.id}, adding to shapesManager")
+        Log.d("ColorBug", "finalizeStroke: shape created id=${newShape.id}, adding to shapesManager")
         shapesManager.addShape(newShape)
-        Log.d("DROPSTROKEBUG", "finalizeStroke: shape added to shapesManager, total shapes=${shapesManager.shapes().size}")
+        Log.d("ColorBug", "finalizeStroke: shape added to shapesManager, total shapes=${shapesManager.shapes().size}")
         isDrawingInProgress = false
         onDrawingStateChanged(false)
         viewModel.endDrawing()

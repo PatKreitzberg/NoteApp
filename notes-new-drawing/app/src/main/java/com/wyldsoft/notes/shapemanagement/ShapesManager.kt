@@ -57,7 +57,7 @@ class ShapesManager private constructor(note: Note) {
      */
     fun convertDomainShapeToSdkShape(domainShape: com.wyldsoft.notes.domain.models.Shape): BaseShape {
         // Create TouchPointList from domain shape points
-        val touchPointList = domainPointsToTouchPointList(domainShape.points, domainShape.pressure, domainShape.tiltX, domainShape.tiltY)
+        val touchPointList = domainPointsToTouchPointList(domainShape.points, domainShape.pressure, domainShape.tiltX, domainShape.tiltY, domainShape.strokeWidth)
 
         if (domainShape.type == ShapeType.TEXT) {
             val textShape = TextShape()

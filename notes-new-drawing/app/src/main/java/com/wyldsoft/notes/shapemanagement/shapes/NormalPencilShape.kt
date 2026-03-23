@@ -26,7 +26,6 @@ class NormalPencilShape : BaseShape() {
         }
 
         Log.d("NormalPencilShape", "draw paint.color: ${paint.color}")
-        paint.strokeWidth = 30.0F
         canvas.drawPath(path, paint)
     }
 }

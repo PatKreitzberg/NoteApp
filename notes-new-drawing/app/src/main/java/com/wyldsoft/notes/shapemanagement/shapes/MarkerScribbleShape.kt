@@ -5,11 +5,15 @@ import android.graphics.Path
 import android.graphics.PointF
 import android.util.Log
 import com.onyx.android.sdk.pen.NeoMarkerPenWrapper
+
+import com.onyx.android.sdk.pen.BallpointPenRenderWrapper
+
 import com.wyldsoft.notes.rendering.RendererHelper
 import com.wyldsoft.notes.sdkintegration.DeviceHelper
+import kotlin.collections.get
 
 class MarkerScribbleShape : BaseShape() {
-
+val TAG="MarkerScribbleShape"
     override fun render(renderContext: RendererHelper.RenderContext) {
         if (DeviceHelper.isOnyxDevice) {
             renderOnyx(renderContext)
@@ -20,30 +24,16 @@ class MarkerScribbleShape : BaseShape() {
 
     private fun renderOnyx(renderContext: RendererHelper.RenderContext) {
         Log.d("MarkerScribbleShape", "renderOnyx MarkerScribbleShape")
+        applyStrokeStyle(renderContext)
+
         val points = touchPointList!!.getPoints()
 
-        for (i in points.indices) {
-            val point = points[i]
-            val x = point.x
-            val y = point.y
-            val pressure = point.pressure
-            val timestamp = point.timestamp
-            val tiltX = point.tiltX
-            val tiltY = point.tiltY
+        Log.d("MarkerScribbleShape", "Marker: color=${renderContext.paint.color} strokeWidth=${renderContext.paint.strokeWidth} or ${strokeWidth} canvas=${renderContext.canvas.density}")
 
-            Log.d(
-                "MarkerScribbleShape",
-                String.format(
-                    "Point [%d]: tiltX=%.2f, tiltY=%.2f, pressure=%.2f, time=%d",
-                    i, tiltX.toFloat(), tiltY.toFloat(), pressure, timestamp
-                )
-            )
-        }
-
-        applyStrokeStyle(renderContext)
         NeoMarkerPenWrapper.drawStroke(
             renderContext.canvas, renderContext.paint, points, strokeWidth, transparent
         )
+
     }
 
     private fun renderGeneric(renderContext: RendererHelper.RenderContext) {

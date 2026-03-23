@@ -94,12 +94,21 @@ class OnyxStylusHandler(
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
-            Log.d("DROPSTROKEBUG", "onRawDrawingTouchPointListReceived: " +
-                "touchPointList=${touchPointList != null}, " +
-                "size=${touchPointList?.size() ?: "null"}, " +
-                "points=${touchPointList?.points?.size ?: "null"}")
+//            val points= touchPointList?.points
+//            for (i in 0 until (points?.size?.minus(1) ?: 0)) {
+//                val pt = points?.get(i)
+//                Log.d("ColorDebug", "listReceived: point ${i} is size=${pt?.size}  tilte(${pt?.tiltX}, ${pt?.tiltY}) pressure${pt?.pressure}")
+//            }
+//
 
-
+//            val profile = currentPenProfile
+//            Log.d("ColorDebug", "onRawDrawingTouchPointListReceived: " +
+//                "touchPointList=${touchPointList != null}, " +
+//                "size=${touchPointList?.size() ?: "null"}, " +
+//                "points=${touchPointList?.points?.size ?: "null"}, " +
+//                "strokeWidth=${profile.strokeWidth}, " +
+//                "color=#${Integer.toHexString(profile.getColorAsInt())}, " +
+//                "penType=${profile.penType}")
 
             modeRouter.routeEnd(touchPointList)
         }
