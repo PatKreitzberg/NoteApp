@@ -7,14 +7,14 @@ import com.onyx.android.sdk.data.note.TouchPoint;
 import com.onyx.android.sdk.pen.NeoFountainPen;
 import com.onyx.android.sdk.pen.PenUtils;
 import com.onyx.android.sdk.utils.NumberUtils;
-import com.wyldsoft.notes.rendering.RendererHelper;
+import com.wyldsoft.notes.rendering.RenderContext;
 
 import java.util.List;
 
 public class BrushScribbleShape extends Shape {
 
     @Override
-    public void render(RendererHelper.RenderContext renderContext) {
+    public void render(RenderContext renderContext) {
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
         List<TouchPoint> brushPoints = NeoFountainPen.computeStrokePoints(points,

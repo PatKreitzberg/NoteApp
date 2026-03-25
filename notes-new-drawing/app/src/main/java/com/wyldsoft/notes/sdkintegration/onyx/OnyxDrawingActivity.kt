@@ -15,7 +15,7 @@ import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
 import com.wyldsoft.notes.rendering.RendererToScreenRequest
-import com.wyldsoft.notes.rendering.RendererHelper
+import com.wyldsoft.notes.rendering.RenderContext
 import com.wyldsoft.notes.touchhandling.TouchUtils
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
@@ -35,17 +35,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     // Store all drawn shapes for re-rendering
     private val drawnShapes = mutableListOf<Shape>()
 
-    // Renderer helper for shape rendering
-    private var rendererHelper: RendererHelper? = null
-    
     // Erase management
     private val eraseManager = EraseManager()
     private val partialEraseRefresh = PartialEraseRefresh()
 
     override fun initializeSDK() {
         // Onyx-specific initialization
-        // Initialize renderer helper
-        rendererHelper = RendererHelper()
     }
 
     override fun createTouchHelper(surfaceView: SurfaceView) {
@@ -249,8 +244,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     partialEraseRefresh.performPartialRefresh(
                         sv,
                         rect,
-                        drawnShapes, // Pass remaining shapes
-                        rendererHelper!!,
+                        drawnShapes,
                         getRxManager()
                     )
                 }
@@ -310,18 +304,17 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     private fun renderShapeToBitmap(shape: Shape) {
         bitmap?.let { bmp ->
-            val renderContext = rendererHelper?.getRenderContext() ?: return
-            renderContext.bitmap = bmp
-            renderContext.canvas = Canvas(bmp)
-            renderContext.paint = Paint().apply {
-                isAntiAlias = true
-                style = Paint.Style.STROKE
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
+            val renderContext = RenderContext().apply {
+                bitmap = bmp
+                canvas = Canvas(bmp)
+                paint = Paint().apply {
+                    isAntiAlias = true
+                    style = Paint.Style.STROKE
+                    strokeCap = Paint.Cap.ROUND
+                    strokeJoin = Paint.Join.ROUND
+                }
+                viewPoint = android.graphics.Point(0, 0)
             }
-            // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
-            renderContext.viewPoint = android.graphics.Point(0, 0)
-
             shape.render(renderContext)
         }
     }
@@ -334,20 +327,18 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             bitmapCanvas = Canvas(bitmap!!)
             bitmapCanvas?.drawColor(Color.WHITE)
 
-            // Get render context
-            val renderContext = rendererHelper?.getRenderContext() ?: return
-            renderContext.bitmap = bitmap
-            renderContext.canvas = bitmapCanvas!!
-            renderContext.paint = Paint().apply {
-                isAntiAlias = true
-                style = Paint.Style.STROKE
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
+            val renderContext = RenderContext().apply {
+                bitmap = this@OnyxDrawingActivity.bitmap
+                canvas = bitmapCanvas!!
+                paint = Paint().apply {
+                    isAntiAlias = true
+                    style = Paint.Style.STROKE
+                    strokeCap = Paint.Cap.ROUND
+                    strokeJoin = Paint.Join.ROUND
+                }
+                viewPoint = android.graphics.Point(0, 0)
             }
-            // Initialize viewPoint for shapes that need it (like CharcoalScribbleShape)
-            renderContext.viewPoint = android.graphics.Point(0, 0)
 
-            // Render all shapes
             for (shape in drawnShapes) {
                 shape.render(renderContext)
             }

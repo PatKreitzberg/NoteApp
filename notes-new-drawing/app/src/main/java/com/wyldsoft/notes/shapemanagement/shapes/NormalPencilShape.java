@@ -6,7 +6,7 @@ import android.graphics.Path;
 import android.graphics.PointF;
 
 import com.onyx.android.sdk.data.note.TouchPoint;
-import com.wyldsoft.notes.rendering.RendererHelper;
+import com.wyldsoft.notes.rendering.RenderContext;
 
 
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.List;
 public class NormalPencilShape extends Shape {
 
     @Override
-    public void render(RendererHelper.RenderContext renderContext) {
+    public void render(RenderContext renderContext) {
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);
         Canvas canvas = renderContext.canvas;

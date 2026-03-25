@@ -3,14 +3,14 @@ package com.wyldsoft.notes.shapemanagement.shapes;
 import com.onyx.android.sdk.api.device.epd.EpdController;
 import com.onyx.android.sdk.data.note.TouchPoint;
 import com.onyx.android.sdk.pen.NeoMarkerPen;
-import com.wyldsoft.notes.rendering.RendererHelper;
+import com.wyldsoft.notes.rendering.RenderContext;
 import android.util.Log;
 import java.util.List;
 
 public class MarkerScribbleShape extends Shape {
 
     @Override
-    public void render(RendererHelper.RenderContext renderContext) {
+    public void render(RenderContext renderContext) {
 
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);

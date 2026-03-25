@@ -29,7 +29,7 @@ public class RenderingUtils {
         canvas.drawRect(rect, paint);
     }
 
-    public static Matrix getPointMatrix(final RendererHelper.RenderContext renderContext) {
+    public static Matrix getPointMatrix(final RenderContext renderContext) {
         Point anchorPoint = renderContext.viewPoint;
         Matrix matrix = new Matrix();
         matrix.postTranslate(anchorPoint.x, anchorPoint.y);

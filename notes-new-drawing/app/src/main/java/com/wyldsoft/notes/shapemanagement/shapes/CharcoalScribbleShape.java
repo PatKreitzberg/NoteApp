@@ -3,7 +3,7 @@ package com.wyldsoft.notes.shapemanagement.shapes;
 import android.util.Log;
 
 import com.wyldsoft.notes.shapemanagement.ShapeFactory;
-import com.wyldsoft.notes.rendering.RendererHelper;
+import com.wyldsoft.notes.rendering.RenderContext;
 import com.wyldsoft.notes.rendering.RenderingUtils;
 import com.onyx.android.sdk.data.PenConstant;
 import com.onyx.android.sdk.data.note.ShapeCreateArgs;
@@ -16,7 +16,7 @@ import java.util.List;
 public class CharcoalScribbleShape extends Shape {
 
     @Override
-    public void render(RendererHelper.RenderContext renderContext) {
+    public void render(RenderContext renderContext) {
         Log.d("Shape", "render");
         List<TouchPoint> points = touchPointList.getPoints();
         applyStrokeStyle(renderContext);

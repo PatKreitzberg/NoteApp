@@ -6,7 +6,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
 
-import com.wyldsoft.notes.rendering.RendererHelper;
+import com.wyldsoft.notes.rendering.RenderContext;
 import com.onyx.android.sdk.data.note.TouchPoint;
 import com.onyx.android.sdk.pen.PenUtils;
 import com.onyx.android.sdk.pen.data.TouchPointList;
@@ -104,10 +104,10 @@ public class Shape {
         boundingRect = new RectF(originRect);
     }
 
-    public void render(final RendererHelper.RenderContext renderContext) {
+    public void render(final RenderContext renderContext) {
     }
 
-    public void applyStrokeStyle(RendererHelper.RenderContext renderContext) {
+    public void applyStrokeStyle(RenderContext renderContext) {
         Paint paint = renderContext.paint;
         paint.setStrokeWidth(getRenderStrokeWidth());
         paint.setColor(strokeColor);
