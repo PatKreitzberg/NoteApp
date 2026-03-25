@@ -353,15 +353,4 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             }
         }
     }
-
-    // Add method to clear all drawings
-    fun clearDrawing() {
-        drawnShapes.clear()
-        surfaceView?.let { sv ->
-            bitmap?.recycle()
-            bitmap = null
-            bitmapCanvas = null
-            cleanSurfaceView(sv)
-        }
-    }
 }

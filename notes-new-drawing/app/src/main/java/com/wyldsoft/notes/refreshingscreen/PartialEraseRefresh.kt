@@ -11,7 +11,6 @@ import com.wyldsoft.notes.rendering.RendererHelper
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
 class PartialEraseRefresh {
-    
     fun performPartialRefresh(
         surfaceView: SurfaceView,
         refreshRect: RectF,

@@ -58,9 +58,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                     EditorView(
                         onSurfaceViewCreated = { sv ->
                             handleSurfaceViewCreated(sv)
-                        },
-                        onPenProfileChanged = { penProfile ->
-                            updatePenProfile(penProfile)
                         }
                     )
                 }
@@ -127,19 +124,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             }
         }
         surfaceView.holder.addCallback(surfaceCallback)
-    }
-
-    fun updatePenProfile(penProfile: PenProfile) {
-        Log.d(TAG, "Updating pen profile: $penProfile")
-        currentPenProfile = penProfile
-        updatePaintFromProfile()
-        updateTouchHelperWithProfile()
-    }
-
-    fun updateExclusionZones(excludeRects: List<Rect>) {
-        updateTouchHelperExclusionZones(excludeRects)
-        println("forceScreenRefresh() from updateExclusionZone")
-        //forceScreenRefresh()
     }
 
     protected open fun forceScreenRefresh() {

@@ -9,7 +9,6 @@ import com.wyldsoft.notes.editor.EditorState
 
 @Composable
 fun DrawingCanvas(
-    editorState: EditorState,
     onSurfaceViewCreated: (SurfaceView) -> Unit
 ) {
     AndroidView(

@@ -29,17 +29,6 @@ data class PenProfile(
                 profileId = profileId
             )
         }
-
-        // Create 5 default profiles with different pen types and colors
-        fun createDefaultProfiles(): List<PenProfile> {
-            return listOf(
-                PenProfile(5f, PenType.BALLPEN, Color.Black, 0),
-                PenProfile(8f, PenType.FOUNTAIN, Color.Blue, 1),
-                PenProfile(20f, PenType.MARKER, Color.Red, 2),
-                PenProfile(3f, PenType.PENCIL, Color.Gray, 3),
-                PenProfile(15f, PenType.CHARCOAL, Color(0xFF8B4513), 4) // Brown
-            )
-        }
     }
 
     fun getColorAsInt(): Int = strokeColor.toArgb()
