@@ -28,7 +28,7 @@ class EraseManager {
     fun calculateRefreshRect(erasedShapes: List<Shape>): RectF? {
         if (erasedShapes.isEmpty()) return null
 
-        var refreshRect: RectF? = null
+        var refreshRect: RectF? = null // fixme start with non-null then can avoid if (refreshRect == null) {
         
         for (shape in erasedShapes) {
             val boundingRect = shape.boundingRect

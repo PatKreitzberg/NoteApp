@@ -28,14 +28,6 @@ public class Shape {
     public Shape() {
     }
 
-    public Shape(TouchPointList touchPointList) {
-        this.touchPointList = touchPointList;
-    }
-
-    public void setTransparent(boolean transparent) {
-        this.transparent = transparent;
-    }
-
     public boolean isTransparent() {
         return transparent;
     }

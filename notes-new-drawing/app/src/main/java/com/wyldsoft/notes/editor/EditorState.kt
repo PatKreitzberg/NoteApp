@@ -1,12 +1,7 @@
 package com.wyldsoft.notes.editor
 
 import android.graphics.Rect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import com.wyldsoft.notes.ExcludeRects
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
-import com.wyldsoft.notes.pen.PenProfile
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import android.util.Log
