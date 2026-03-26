@@ -1,31 +1,24 @@
 package com.wyldsoft.notes.shapemanagement.shapes
 
-import android.util.Log
 import com.onyx.android.sdk.api.device.epd.EpdController
-import com.onyx.android.sdk.pen.NeoFountainPen
+import com.onyx.android.sdk.pen.NeoFountainPenWrapper
 import com.onyx.android.sdk.pen.PenUtils
-import com.onyx.android.sdk.utils.NumberUtils
 import com.wyldsoft.notes.rendering.RenderContext
-
-import com.onyx.android.sdk.pen.NeoBrushPenWrapper
-import com.onyx.android.sdk.pen.NeoCharcoalPenWrapper
-import com.onyx.android.sdk.pen.NeoMarkerPenWrapper
 
 /**
  * Shape for the FOUNTAIN pen type. Delegates rendering to the Onyx SDK's
- * NeoFountainPen which computes pressure-sensitive variable-width stroke
+ * NeoFountainPenWrapper which computes pressure-sensitive variable-width stroke
  * points, then draws them via PenUtils.drawStrokeByPointSize().
  * Created by ShapeFactory for SHAPE_BRUSH_SCRIBBLE.
  */
 class BrushScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
-        val points = touchPointList!!.getPoints()
+        val points = touchPointList!!.points
         applyStrokeStyle(renderContext)
 
-
-        val brushPoints = NeoFountainPen.computeStrokePoints(
+        val brushPoints = NeoFountainPenWrapper.computeStrokePoints(
             points,
-            NumberUtils.FLOAT_ONE, strokeWidth, EpdController.getMaxTouchPressure()
+            strokeWidth, EpdController.getMaxTouchPressure()
         )
 
         PenUtils.drawStrokeByPointSize(
@@ -34,6 +27,5 @@ class BrushScribbleShape : Shape() {
             brushPoints,
             isTransparent
         )
-        Log.d("Shape", "brushPoints" + brushPoints.size)
     }
 }

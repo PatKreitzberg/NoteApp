@@ -5,6 +5,7 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
+import android.util.Log
 import com.onyx.android.sdk.pen.PenUtils
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.rendering.RenderContext
@@ -26,12 +27,11 @@ import kotlin.math.sqrt
  * CharcoalScribbleShape, NewBrushScribbleShape.
  */
 open class Shape {
-    protected var shapeType: Int = 0
-    protected var texture: Int = 0
+    protected var TAG = "Shape"
+    var shapeType: Int = 0
+    var texture: Int = 0
     var strokeColor: Int = 0
-        protected set
     var strokeWidth: Float = 0f
-        protected set
     var isTransparent: Boolean = false
         protected set
 
@@ -40,33 +40,14 @@ open class Shape {
     var boundingRect: RectF? = null
     var originRect: RectF? = null
 
-    fun setShapeType(shapeType: Int): Shape {
-        this.shapeType = shapeType
-        return this
-    }
-
     fun setTexture(texture: Int): Shape {
         this.texture = texture
         return this
     }
 
-    fun setStrokeColor(strokeColor: Int): Shape {
-        this.strokeColor = strokeColor
-        return this
-    }
-
-    fun setStrokeWidth(strokeWidth: Float): Shape {
-        this.strokeWidth = strokeWidth
-        return this
-    }
-
-    fun setTouchPointList(touchPointList: TouchPointList): Shape {
-        this.touchPointList = touchPointList
-        return this
-    }
-
     fun updateShapeRect() {
-        val list = touchPointList!!.getPoints()
+        Log.d(TAG, "updateShapeRect")
+        val list = touchPointList!!.points
         for (touchPoint in list) {
             if (touchPoint == null) {
                 continue
@@ -85,19 +66,19 @@ open class Shape {
 
     fun applyStrokeStyle(renderContext: RenderContext) {
         val paint = renderContext.paint
-        paint.setStrokeWidth(this.renderStrokeWidth)
+        paint.strokeWidth = this.renderStrokeWidth
         paint.setColor(strokeColor)
-        paint.setAntiAlias(true)
-        paint.setDither(true)
-        paint.setStyle(Paint.Style.STROKE)
-        paint.setStrokeCap(Paint.Cap.ROUND)
-        paint.setStrokeJoin(Paint.Join.ROUND)
-        paint.setStrokeMiter(4.0f)
+        paint.isAntiAlias = true
+        paint.isDither = true
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeJoin = Paint.Join.ROUND
+        paint.strokeMiter = 4.0f
         paint.setPathEffect(null)
         if (this.isTransparent) {
-            paint.setXfermode(PorterDuffXfermode(PorterDuff.Mode.CLEAR))
+            paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
         } else {
-            paint.setXfermode(null)
+            paint.xfermode = null
         }
     }
 
@@ -108,7 +89,8 @@ open class Shape {
         }
 
     fun hitTestPoints(pointList: TouchPointList, radius: Float): Boolean {
-        for (touchPoint in pointList.getPoints()) {
+        Log.d(TAG, "hitTestPoints first")
+        for (touchPoint in pointList.points) {
             if (hitTest(touchPoint.x, touchPoint.y, radius)) {
                 return true
             }
@@ -117,14 +99,14 @@ open class Shape {
     }
 
     private fun hitTest(x: Float, y: Float, radius: Float): Boolean {
-        val limit = radius
+        Log.d(TAG, "hitTest first")
         var hit = false
         var first: Int
         var second: Int
         val point = floatArrayOf(x, y)
         val invertMatrix = Matrix()
         invertMatrix.mapPoints(point)
-        val points = touchPointList!!.getPoints()
+        val points = touchPointList!!.points
         for (i in 0..<points.size - 1) {
             first = i
             second = i + 1
@@ -134,7 +116,7 @@ open class Shape {
                 points.get(first)!!.y,
                 points.get(second)!!.x,
                 points.get(second)!!.y,
-                point[0], point[1], limit
+                point[0], point[1], radius
             )
             if (isIntersect) {
                 hit = true
@@ -148,11 +130,13 @@ open class Shape {
         x1: Float, y1: Float, x2: Float,
         y2: Float, x: Float, y: Float, limit: Float
     ): Boolean {
+        Log.d(TAG, "hitTestPoints second")
         val value = distance(x1, y1, x2, y2, x, y)
         return value <= limit
     }
 
     private fun distance(x1: Float, y1: Float, x2: Float, y2: Float, x: Float, y: Float): Float {
+        Log.d(TAG, "distance")
         val A = x - x1
         val B = y - y1
         val C = x2 - x1

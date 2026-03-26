@@ -37,7 +37,7 @@ import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
  * Subclass: OnyxDrawingActivity (Onyx e-ink SDK implementation).
  */
 abstract class BaseDrawingActivity : ComponentActivity() {
-    protected val TAG = "BaseDrawingActivity"
+    protected open val TAG = "BaseDrawingActivity"
 
     // Common drawing state
     protected var paint = Paint()

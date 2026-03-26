@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.rx.RxManager
@@ -21,12 +22,14 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
  * to serialize it with other rendering operations.
  */
 class PartialEraseRefresh {
+    protected var TAG = "PartialEraseRefresh"
     fun performPartialRefresh(
         surfaceView: SurfaceView,
         refreshRect: RectF,
         remainingShapes: List<Shape>,
         rxManager: RxManager
     ) {
+        Log.d(TAG, "performPartialRefresh")
         val partialRefreshRequest = PartialRefreshRequest(
             surfaceView,
             refreshRect,
@@ -42,7 +45,10 @@ class PartialEraseRefresh {
         private val shapesToRender: List<Shape>
     ) : com.onyx.android.sdk.rx.RxRequest() {
 
+        protected var TAG = "PartialRefreshRequest"
+
         override fun execute() {
+            Log.d(TAG, "execute")
             val width = refreshRect.width().toInt()
             val height = refreshRect.height().toInt()
 
@@ -80,6 +86,7 @@ class PartialEraseRefresh {
         }
         
         private fun renderToSurface(bitmap: Bitmap) {
+            Log.d(TAG, "renderToSurface")
             val holder = surfaceView.holder
             val canvas = holder.lockCanvas(
                 android.graphics.Rect(

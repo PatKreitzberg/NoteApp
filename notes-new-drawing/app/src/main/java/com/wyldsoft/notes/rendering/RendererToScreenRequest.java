@@ -17,8 +17,8 @@ import com.onyx.android.sdk.rx.RxRequest;
  * with a white background via RenderingUtils, then draws the bitmap.
  */
 public class RendererToScreenRequest extends RxRequest {
-    private SurfaceView surfaceView;
-    private Bitmap bitmap;
+    private final SurfaceView surfaceView;
+    private final Bitmap bitmap;
 
     public RendererToScreenRequest(SurfaceView surfaceView, Bitmap bitmap) {
         this.surfaceView = surfaceView;

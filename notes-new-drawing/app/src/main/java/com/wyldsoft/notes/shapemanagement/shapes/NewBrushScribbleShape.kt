@@ -1,13 +1,12 @@
 package com.wyldsoft.notes.shapemanagement.shapes
 
-import android.util.Log
 import com.onyx.android.sdk.api.device.epd.EpdController
-import com.onyx.android.sdk.pen.NeoBrushPen
+import com.onyx.android.sdk.pen.NeoBrushPenWrapper
 import com.onyx.android.sdk.pen.PenUtils
 import com.wyldsoft.notes.rendering.RenderContext
 
 /**
- * Shape for the NEO_BRUSH pen type. Uses the Onyx SDK's NeoBrushPen to
+ * Shape for the NEO_BRUSH pen type. Uses the Onyx SDK's NeoBrushPenWrapper to
  * compute pressure-sensitive stroke points, then draws them via
  * PenUtils.drawStrokeByPointSize(). Similar to BrushScribbleShape but
  * uses a different Onyx pen algorithm for a softer brush effect.
@@ -15,19 +14,18 @@ import com.wyldsoft.notes.rendering.RenderContext
  */
 class NewBrushScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
-        val points = touchPointList!!.getPoints()
+        val points = touchPointList!!.points
         applyStrokeStyle(renderContext)
 
-        val NeoBrushPoints = NeoBrushPen.computeStrokePoints(
+        val neoBrushPoints = NeoBrushPenWrapper.computeStrokePoints(
             points,
             strokeWidth, EpdController.getMaxTouchPressure()
         )
         PenUtils.drawStrokeByPointSize(
             renderContext.canvas,
             renderContext.paint,
-            NeoBrushPoints,
+            neoBrushPoints,
             isTransparent
         )
-        Log.d("Shape", "neoBrushPoints.size()" + NeoBrushPoints.size)
     }
 }

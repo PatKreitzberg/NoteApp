@@ -48,6 +48,7 @@ import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
  * system UI events. Extended by MainActivity as the app entry point.
  */
 open class OnyxDrawingActivity : BaseDrawingActivity() {
+    override var TAG = "OnyxDrawingActivity"
     private var rxManager: RxManager? = null
     private var onyxTouchHelper: TouchHelper? = null
     private var onyxDeviceReceiver: GlobalDeviceReceiver? = null
@@ -82,6 +83,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun cleanSurfaceView(surfaceView: SurfaceView): Boolean {
+        Log.d(TAG, "cleanSurfaceView")
         val holder = surfaceView.holder ?: return false
         val canvas = holder.lockCanvas() ?: return false
         canvas.drawColor(Color.WHITE)
@@ -90,6 +92,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
+        Log.d(TAG, "renderToScreen")
         if (bitmap != null) {
             getRxManager().enqueue(
                 RendererToScreenRequest(
@@ -117,6 +120,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun updateTouchHelperWithProfile() {
+        Log.d(TAG, "updateTouchHelperWithProfile")
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
             helper.closeRawDrawing()
@@ -138,6 +142,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun updateTouchHelperExclusionZones(excludeRects: List<Rect>) {
+        Log.d(TAG, "updateTouchHelperExclusionZones")
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
             helper.closeRawDrawing()
@@ -157,6 +162,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun initializeDeviceReceiver() {
+        Log.d(TAG, "initializeDeviceReceiver")
         val deviceReceiver = createDeviceReceiver() as OnyxDeviceReceiverWrapper
         deviceReceiver.enable(this, true)
         deviceReceiver.setSystemNotificationPanelChangeListener { open ->
@@ -176,7 +182,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun forceScreenRefresh() {
-        Log.d("Onyx", "forceScreenRefresh() called")
+        Log.d(TAG, "forceScreenRefresh() called")
         surfaceView?.let { sv ->
             cleanSurfaceView(sv)
             // Recreate bitmap from all stored shapes
@@ -186,6 +192,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     private fun getRxManager(): RxManager {
+        Log.d(TAG, "getRxManager")
         if (rxManager == null) {
             rxManager = RxManager.Builder.sharedSingleThreadManager()
         }
@@ -194,12 +201,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     private fun createOnyxCallback() = object : com.onyx.android.sdk.pen.RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
+            Log.d(TAG, "createOnyxCallback.onBeginRawDrawing")
             isDrawingInProgress = true
             disableFingerTouch()
             EditorState.notifyDrawingStarted()
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
+            Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
             isDrawingInProgress = false
             enableFingerTouch()
             forceScreenRefresh()
@@ -207,10 +216,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
+            Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointMoveReceived")
             // Handle move events if needed
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
+            //Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
             touchPointList?.points?.let { points ->
                 if (!isDrawingInProgress) {
                     isDrawingInProgress = true
@@ -220,18 +231,22 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
+            Log.d(TAG, "createOnyxCallback.onBeginRawErasing")
             // Handle erasing start
         }
 
         override fun onEndRawErasing(b: Boolean, touchPoint: TouchPoint?) {
+            Log.d(TAG, "createOnyxCallback.onEndRawErasing")
             // Handle erasing end
         }
 
         override fun onRawErasingTouchPointMoveReceived(touchPoint: TouchPoint?) {
+            Log.d(TAG, "createOnyxCallback.onRawErasingTouchPointMoveReceived")
             // Handle erase move
         }
 
         override fun onRawErasingTouchPointListReceived(touchPointList: TouchPointList?) {
+            Log.d(TAG, "createOnyxCallback.onRawErasingTouchPointListReceived")
             touchPointList?.let { erasePointList ->
                 handleErasing(erasePointList)
             }
@@ -292,6 +307,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     private fun createShapeFromPenType(touchPointList: TouchPointList): Shape {
+        Log.d(TAG, "createShapeFromPenType")
         // Map pen type to shape type
         val shapeType = when (currentPenProfile.penType) {
             PenType.BALLPEN, PenType.PENCIL -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE
@@ -304,25 +320,26 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         // Create the shape
         val shape = ShapeFactory.createShape(shapeType)
-        shape.setTouchPointList(touchPointList)
-            .setStrokeColor(currentPenProfile.getColorAsInt())
-            .setStrokeWidth(currentPenProfile.strokeWidth)
-            .setShapeType(shapeType)
+        shape.touchPointList = touchPointList
+        shape.strokeColor = currentPenProfile.getColorAsInt()
+        shape.strokeWidth = currentPenProfile.strokeWidth
+        shape.shapeType = shapeType
             
         // Update bounding rect for hit testing
         shape.updateShapeRect()
 
         // Set texture for charcoal if needed
         if (currentPenProfile.penType == PenType.CHARCOAL_V2) {
-            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V2)
+            shape.texture = com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V2
         } else if (currentPenProfile.penType == PenType.CHARCOAL) {
-            shape.setTexture(com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V1)
+            shape.texture = com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V1
         }
 
         return shape
     }
 
     private fun renderShapeToBitmap(shape: Shape) {
+        Log.d(TAG, "renderShapeToBitmap")
         bitmap?.let { bmp ->
             val renderContext = RenderContext().apply {
                 bitmap = bmp
@@ -340,6 +357,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     private fun recreateBitmapFromShapes() {
+        Log.d(TAG, "recreateBitmapFromShape")
         surfaceView?.let { sv ->
             // Create a fresh bitmap
             bitmap?.recycle()

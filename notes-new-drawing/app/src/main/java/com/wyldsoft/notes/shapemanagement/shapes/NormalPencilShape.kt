@@ -12,7 +12,7 @@ import com.wyldsoft.notes.rendering.RenderContext
  */
 class NormalPencilShape : Shape() {
     override fun render(renderContext: RenderContext) {
-        val points = touchPointList!!.getPoints()
+        val points = touchPointList!!.points
         applyStrokeStyle(renderContext)
         val canvas = renderContext.canvas
         val paint = renderContext.paint

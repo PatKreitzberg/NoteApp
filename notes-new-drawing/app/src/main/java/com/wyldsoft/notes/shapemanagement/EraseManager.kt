@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.shapemanagement
 
 import android.graphics.RectF
+import android.util.Log
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
@@ -14,6 +15,7 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
  * (with padding) so PartialEraseRefresh can redraw only the affected area.
  */
 class EraseManager {
+    protected var TAG = "EraseManager"
     companion object {
         private const val ERASE_RADIUS = 15f // Default erase radius in pixels
     }
@@ -23,6 +25,7 @@ class EraseManager {
         drawnShapes: List<Shape>,
         eraseRadius: Float = ERASE_RADIUS
     ): List<Shape> {
+        Log.d(TAG, "findIntersectingShapes")
         val intersectingShapes = mutableListOf<Shape>()
 
         for (shape in drawnShapes) {
@@ -35,6 +38,7 @@ class EraseManager {
     }
 
     fun calculateRefreshRect(erasedShapes: List<Shape>): RectF? {
+        Log.d(TAG, "calculateRefreshRect")
         if (erasedShapes.isEmpty()) return null
 
         var refreshRect: RectF? = null // fixme start with non-null then can avoid if (refreshRect == null) {

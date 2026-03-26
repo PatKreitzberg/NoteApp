@@ -2,7 +2,7 @@ package com.wyldsoft.notes.shapemanagement
 
 import android.util.Log
 import com.onyx.android.sdk.data.note.PenTexture
-import com.onyx.android.sdk.pen.NeoPenConfig
+import com.onyx.android.sdk.pen.NeoPenConfigWrapper
 import com.onyx.android.sdk.pen.TouchHelper
 import com.wyldsoft.notes.shapemanagement.shapes.BrushScribbleShape
 import com.wyldsoft.notes.shapemanagement.shapes.CharcoalScribbleShape
@@ -25,6 +25,7 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
  * Called by OnyxDrawingActivity.createShapeFromPenType().
  */
 object ShapeFactory {
+    val TAG = "ShapeFactory"
     const val SHAPE_PENCIL_SCRIBBLE: Int = 0
     const val SHAPE_BRUSH_SCRIBBLE: Int = 1
     const val SHAPE_MARKER_SCRIBBLE: Int = 2
@@ -51,6 +52,7 @@ object ShapeFactory {
     }
 
     fun createShape(type: Int): Shape {
+        Log.d(TAG, "createShape")
         val shape: Shape
         when (type) {
             SHAPE_PENCIL_SCRIBBLE -> shape = NormalPencilShape()
@@ -63,15 +65,11 @@ object ShapeFactory {
         return shape
     }
 
-    fun isMarkerShape(shapeType: Int): Boolean {
-        return shapeType == SHAPE_MARKER_SCRIBBLE
-    }
-
     fun getCharcoalPenType(texture: Int): Int {
-        Log.d("ShapeFactory", "getCharcoalPenType")
+        Log.d(TAG, "getCharcoalPenType")
         if (texture == PenTexture.CHARCOAL_SHAPE_V2) {
-            return NeoPenConfig.NEOPEN_PEN_TYPE_CHARCOAL_V2
+            return NeoPenConfigWrapper.NEOPEN_PEN_TYPE_CHARCOAL_V2
         }
-        return NeoPenConfig.NEOPEN_PEN_TYPE_CHARCOAL
+        return NeoPenConfigWrapper.NEOPEN_PEN_TYPE_CHARCOAL
     }
 }

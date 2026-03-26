@@ -16,7 +16,7 @@ import com.wyldsoft.notes.DrawingCanvas
 fun EditorView(
     onSurfaceViewCreated: (android.view.SurfaceView) -> Unit = {}
 ) {
-    val editorState = remember { EditorState() }
+    remember { EditorState() }
 
     Column(
         modifier = Modifier

@@ -12,7 +12,6 @@ import android.util.Log
  * Emits events that coordinate drawing activity and UI:
  * - drawingStarted / drawingEnded: fired by OnyxDrawingActivity's RawInputCallback
  *   so the UI can hide overlays during active drawing.
- * - isStrokeOptionsOpen: controls stroke-options panel visibility.
  * - forceScreenRefresh: triggers a full bitmap re-render to the SurfaceView.
  * - refreshUi: triggers Compose recomposition for UI elements.
  *
@@ -22,7 +21,6 @@ import android.util.Log
 class EditorState {
     companion object {
         val refreshUi = MutableSharedFlow<Unit>()
-        val isStrokeOptionsOpen = MutableSharedFlow<Boolean>()
         val drawingStarted = MutableSharedFlow<Unit>()
         val drawingEnded = MutableSharedFlow<Unit>()
         val forceScreenRefresh = MutableSharedFlow<Unit>()
@@ -36,7 +34,6 @@ class EditorState {
         fun notifyDrawingStarted() {
             kotlinx.coroutines.GlobalScope.launch {
                 drawingStarted.emit(Unit)
-                isStrokeOptionsOpen.emit(false)
             }
         }
 
@@ -54,7 +51,7 @@ class EditorState {
         }
 
         fun forceRefresh() {
-            Log.d("EditorState:", "forceRefresh()");
+            Log.d("EditorState:", "forceRefresh()")
             kotlinx.coroutines.GlobalScope.launch {
                 forceScreenRefresh.emit(Unit)
             }
