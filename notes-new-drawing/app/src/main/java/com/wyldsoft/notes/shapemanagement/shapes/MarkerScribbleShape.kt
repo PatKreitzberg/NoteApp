@@ -13,7 +13,7 @@ import com.wyldsoft.notes.rendering.RenderContext
  */
 class MarkerScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
-        val points = touchPointList.getPoints()
+        val points = touchPointList!!.getPoints()
         applyStrokeStyle(renderContext)
         val markerPoints = NeoMarkerPen.computeStrokePoints(
             points, strokeWidth,
@@ -24,7 +24,7 @@ class MarkerScribbleShape : Shape() {
             renderContext.paint,
             markerPoints,
             strokeWidth,
-            isTransparent()
+            isTransparent
         )
         Log.d("Shape", "markerPoints" + markerPoints)
     }

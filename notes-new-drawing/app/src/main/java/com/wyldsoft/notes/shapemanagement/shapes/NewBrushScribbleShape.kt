@@ -15,7 +15,7 @@ import com.wyldsoft.notes.rendering.RenderContext
  */
 class NewBrushScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
-        val points = touchPointList.getPoints()
+        val points = touchPointList!!.getPoints()
         applyStrokeStyle(renderContext)
 
         val NeoBrushPoints = NeoBrushPen.computeStrokePoints(
@@ -26,7 +26,7 @@ class NewBrushScribbleShape : Shape() {
             renderContext.canvas,
             renderContext.paint,
             NeoBrushPoints,
-            isTransparent()
+            isTransparent
         )
         Log.d("Shape", "neoBrushPoints.size()" + NeoBrushPoints.size)
     }

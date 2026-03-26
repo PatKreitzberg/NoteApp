@@ -19,7 +19,7 @@ import com.wyldsoft.notes.shapemanagement.ShapeFactory
 class CharcoalScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         Log.d("Shape", "render")
-        val points = touchPointList.getPoints()
+        val points = touchPointList!!.getPoints()
         applyStrokeStyle(renderContext)
 
         Log.d("Shape", "render 2")
@@ -28,7 +28,7 @@ class CharcoalScribbleShape : Shape() {
             .setCanvas(renderContext.canvas)
             .setPenType(ShapeFactory.getCharcoalPenType(texture))
             .setColor(strokeColor)
-            .setErase(isTransparent())
+            .setErase(isTransparent)
             .setPaint(renderContext.paint)
             .setScreenMatrix(RenderingUtils.getPointMatrix(renderContext))
 
