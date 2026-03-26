@@ -8,6 +8,15 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.view.SurfaceView;
 
+/**
+ * Static helpers for surface rendering.
+ * - checkSurfaceView: validates a SurfaceView's holder and returns its bounds.
+ * - renderBackground / clearBackground: fills the canvas with white.
+ * - getPointMatrix: builds a translation Matrix from RenderContext.viewPoint,
+ *   used by CharcoalScribbleShape for coordinate transforms during rendering.
+ *
+ * Called by RendererToScreenRequest and CharcoalScribbleShape.
+ */
 public class RenderingUtils {
 
     public static void renderBackground(Canvas canvas,

@@ -9,6 +9,13 @@ import com.wyldsoft.notes.rendering.RenderContext
 import com.wyldsoft.notes.rendering.RenderingUtils
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 
+/**
+ * Shape for CHARCOAL and CHARCOAL_V2 pen types. Uses the Onyx SDK's
+ * NeoCharcoalPenV2 with PenRenderArgs, choosing drawNormalStroke() or
+ * drawBigStroke() based on stroke width threshold. Requires a coordinate
+ * transform matrix from RenderingUtils.getPointMatrix() for rendering.
+ * Created by ShapeFactory for SHAPE_CHARCOAL_SCRIBBLE.
+ */
 class CharcoalScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         Log.d("Shape", "render")

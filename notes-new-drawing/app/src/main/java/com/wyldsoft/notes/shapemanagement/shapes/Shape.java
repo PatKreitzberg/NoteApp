@@ -13,6 +13,21 @@ import com.onyx.android.sdk.pen.data.TouchPointList;
 
 import java.util.List;
 
+/**
+ * Base class for all drawable shapes. Stores stroke properties (color, width, type,
+ * texture), the raw TouchPointList from the Onyx SDK, and bounding/origin rects
+ * for hit testing and partial refresh.
+ *
+ * Subclasses override render(RenderContext) to draw themselves using different
+ * Onyx pen algorithms (NeoFountainPen, NeoMarkerPen, etc.).
+ *
+ * Provides hit testing via hitTestPoints() / hitTest() which compute
+ * point-to-line-segment distance for eraser collision detection (used by EraseManager).
+ * applyStrokeStyle() configures the Paint in a RenderContext before drawing.
+ *
+ * Subclasses: NormalPencilShape, BrushScribbleShape, MarkerScribbleShape,
+ * CharcoalScribbleShape, NewBrushScribbleShape.
+ */
 public class Shape {
     protected int shapeType;
     protected int texture;

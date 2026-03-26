@@ -6,6 +6,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.DrawingCanvas
 
+/**
+ * Top-level Compose layout for the editor screen.
+ * Creates an EditorState instance and hosts the DrawingCanvas composable.
+ * The [onSurfaceViewCreated] callback lets BaseDrawingActivity attach
+ * SDK touch handling to the SurfaceView after it is inflated.
+ */
 @Composable
 fun EditorView(
     onSurfaceViewCreated: (android.view.SurfaceView) -> Unit = {}

@@ -4,6 +4,15 @@ import android.graphics.RectF
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
+/**
+ * Hit-tests erase touch points against drawn shapes to determine which
+ * shapes to remove. Used by OnyxDrawingActivity.handleErasing().
+ *
+ * findIntersectingShapes() iterates all shapes, calling Shape.hitTestPoints()
+ * with an erase radius to find point-to-segment proximity hits.
+ * calculateRefreshRect() computes the union bounding box of erased shapes
+ * (with padding) so PartialEraseRefresh can redraw only the affected area.
+ */
 class EraseManager {
     companion object {
         private const val ERASE_RADIUS = 15f // Default erase radius in pixels

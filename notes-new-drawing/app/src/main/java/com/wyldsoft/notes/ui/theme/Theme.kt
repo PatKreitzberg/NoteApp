@@ -33,6 +33,11 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+/**
+ * App-wide Material 3 theme. Supports dynamic color on Android 12+ and
+ * falls back to the Purple/Pink color scheme. Used by BaseDrawingActivity's
+ * setContent {} to wrap the entire Compose UI hierarchy.
+ */
 @Composable
 fun MinimaleditorTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

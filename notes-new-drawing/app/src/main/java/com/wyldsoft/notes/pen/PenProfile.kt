@@ -3,6 +3,15 @@ package com.wyldsoft.notes.pen
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
+/**
+ * Immutable snapshot of pen settings: stroke width, color, and pen type.
+ * Used by BaseDrawingActivity to configure the Paint and by OnyxDrawingActivity
+ * to set the Onyx TouchHelper stroke style. Also passed to ShapeFactory when
+ * creating new Shape instances so each shape records the pen state at draw time.
+ *
+ * getOnyxStrokeStyleInternal() maps PenType to the integer constant that
+ * TouchHelper.setStrokeStyle() expects.
+ */
 data class PenProfile(
     val strokeWidth: Float,
     var penType: PenType, // Made mutable to allow pen type switching

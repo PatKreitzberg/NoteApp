@@ -4,6 +4,12 @@ import android.content.Context
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 
+/**
+ * Adapter that wraps the Onyx-specific GlobalDeviceReceiver behind the
+ * BaseDeviceReceiver interface. Translates Java-style listener interfaces
+ * into Kotlin lambdas so that OnyxDrawingActivity can register for system
+ * events without depending on GlobalDeviceReceiver directly.
+ */
 class OnyxDeviceReceiverWrapper(private val onyxReceiver: GlobalDeviceReceiver) : BaseDeviceReceiver() {
 
     override fun enable(context: Context, enable: Boolean) {

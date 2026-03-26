@@ -27,6 +27,26 @@ import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
 
 
+/**
+ * Onyx SDK implementation of BaseDrawingActivity. This is the core drawing engine.
+ *
+ * Drawing flow:
+ *   Onyx TouchHelper delivers pen strokes via RawInputCallback ->
+ *   onRawDrawingTouchPointListReceived() -> drawScribbleToBitmap() ->
+ *   ShapeFactory creates a typed Shape -> shape is rendered to the offscreen bitmap
+ *   -> RendererToScreenRequest blits bitmap to SurfaceView via RxManager.
+ *
+ * Erasing flow:
+ *   onRawErasingTouchPointListReceived() -> handleErasing() ->
+ *   EraseManager.findIntersectingShapes() hit-tests erase points against stored shapes ->
+ *   matching shapes removed from drawnShapes list ->
+ *   PartialEraseRefresh redraws just the affected region ->
+ *   recreateBitmapFromShapes() rebuilds the full offscreen bitmap.
+ *
+ * Manages the Onyx TouchHelper lifecycle (open/close raw drawing, stroke style),
+ * finger-touch suppression during pen input, and the GlobalDeviceReceiver for
+ * system UI events. Extended by MainActivity as the app entry point.
+ */
 open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var rxManager: RxManager? = null
     private var onyxTouchHelper: TouchHelper? = null

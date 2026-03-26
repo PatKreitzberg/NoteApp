@@ -2,7 +2,13 @@ package com.wyldsoft.notes
 
 import com.wyldsoft.notes.pen.PenType
 
-// Helper functions for pen profile management
+/**
+ * Helper functions for pen profile UI. Provides default and maximum stroke widths
+ * per PenType (used by stroke-width sliders), and human-readable color names
+ * (used by color picker labels). Referenced by EditorView and any UI that
+ * displays pen configuration.
+ */
+
 fun getDefaultStrokeWidthForPenType(penType: PenType): Float {
     return when (penType) {
         PenType.BALLPEN -> 5f

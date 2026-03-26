@@ -10,6 +10,16 @@ import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.rendering.RenderContext
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
+/**
+ * Handles efficient partial screen redraws after shapes are erased.
+ * Instead of re-rendering the entire bitmap, it creates a temporary bitmap
+ * covering only the erased region, re-renders the surviving shapes that
+ * intersect that region, and blits the result to the SurfaceView.
+ *
+ * Called by OnyxDrawingActivity.handleErasing() after EraseManager identifies
+ * which shapes were hit. The refresh request is enqueued through RxManager
+ * to serialize it with other rendering operations.
+ */
 class PartialEraseRefresh {
     fun performPartialRefresh(
         surfaceView: SurfaceView,

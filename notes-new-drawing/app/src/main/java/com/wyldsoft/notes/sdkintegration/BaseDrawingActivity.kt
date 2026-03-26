@@ -23,6 +23,19 @@ import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
 
+/**
+ * Abstract base activity for all drawing functionality (Template Method pattern).
+ * Owns the shared drawing state: the offscreen Bitmap, Canvas, Paint, and SurfaceView.
+ * Implements the activity lifecycle (onCreate/onResume/onPause/onDestroy) and
+ * delegates SDK-specific work to abstract methods:
+ *   initializeSDK, createDeviceReceiver, enableFingerTouch, disableFingerTouch,
+ *   cleanSurfaceView, renderToScreen, onResumeDrawing, onPauseDrawing, etc.
+ *
+ * Sets up the Compose UI via EditorView and wires the SurfaceView's holder callbacks
+ * so that subclasses get notified of surface lifecycle events.
+ *
+ * Subclass: OnyxDrawingActivity (Onyx e-ink SDK implementation).
+ */
 abstract class BaseDrawingActivity : ComponentActivity() {
     protected val TAG = "BaseDrawingActivity"
 

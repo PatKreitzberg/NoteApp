@@ -6,6 +6,11 @@ import com.onyx.android.sdk.rx.RxBaseAction
 import com.onyx.android.sdk.utils.ResManager
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
+/**
+ * Application entry point. Initializes Onyx SDK resource manager and RxAction system,
+ * and enables hidden API bypass on Android R+ for SDK compatibility.
+ * Must be declared in AndroidManifest.xml as the application class.
+ */
 class ScrotesApp : Application() {
     override fun onCreate() {
         super.onCreate()

@@ -9,6 +9,16 @@ import com.onyx.android.sdk.utils.BroadcastHelper;
 import com.onyx.android.sdk.utils.DeviceReceiver;
 import com.onyx.android.sdk.utils.StringUtils;
 
+/**
+ * BroadcastReceiver that listens for Onyx system UI events:
+ * notification panel open/close and screen-on. Registers/unregisters
+ * via BroadcastHelper. OnyxDrawingActivity uses these events to
+ * pause/resume raw drawing (disabling the pen while the notification
+ * shade is open) and to re-render the bitmap after screen wake.
+ *
+ * Wrapped by OnyxDeviceReceiverWrapper to conform to the
+ * BaseDeviceReceiver abstraction.
+ */
 public class GlobalDeviceReceiver extends BroadcastReceiver {
 
     public static final String SYSTEM_UI_DIALOG_OPEN_ACTION = DeviceReceiver.SYSTEM_UI_DIALOG_OPEN_ACTION;

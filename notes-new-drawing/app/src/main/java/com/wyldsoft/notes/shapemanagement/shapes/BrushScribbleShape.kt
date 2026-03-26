@@ -7,6 +7,12 @@ import com.onyx.android.sdk.pen.PenUtils
 import com.onyx.android.sdk.utils.NumberUtils
 import com.wyldsoft.notes.rendering.RenderContext
 
+/**
+ * Shape for the FOUNTAIN pen type. Delegates rendering to the Onyx SDK's
+ * NeoFountainPen which computes pressure-sensitive variable-width stroke
+ * points, then draws them via PenUtils.drawStrokeByPointSize().
+ * Created by ShapeFactory for SHAPE_BRUSH_SCRIBBLE.
+ */
 class BrushScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList.getPoints()

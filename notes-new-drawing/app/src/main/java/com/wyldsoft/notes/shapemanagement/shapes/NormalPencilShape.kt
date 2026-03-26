@@ -4,6 +4,12 @@ import android.graphics.Path
 import android.graphics.PointF
 import com.wyldsoft.notes.rendering.RenderContext
 
+/**
+ * Shape for BALLPEN and PENCIL pen types. Renders strokes as smooth quad
+ * Bezier paths through the touch points. This is the default/simplest
+ * shape type — no pressure-based width variation or texture effects.
+ * Created by ShapeFactory for SHAPE_PENCIL_SCRIBBLE.
+ */
 class NormalPencilShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList.getPoints()
