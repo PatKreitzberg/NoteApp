@@ -187,6 +187,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             cleanSurfaceView(sv)
             // Recreate bitmap from all stored shapes
             recreateBitmapFromShapes()
+
+            EpdController.enablePost(sv, 1)
             bitmap?.let { renderToScreen(sv, it) }
         }
     }
