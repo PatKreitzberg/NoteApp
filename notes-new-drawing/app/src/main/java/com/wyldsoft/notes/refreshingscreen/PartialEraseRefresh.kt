@@ -7,6 +7,7 @@ import android.graphics.RectF
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.api.device.epd.EpdController
+import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.rendering.RenderContext
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
@@ -30,12 +31,13 @@ class PartialEraseRefresh {
         rxManager: RxManager
     ) {
         Log.d(TAG, "performPartialRefresh")
+
+        EpdController.enablePost(surfaceView, 1)
         val partialRefreshRequest = PartialRefreshRequest(
             surfaceView,
             refreshRect,
             remainingShapes
         )
-        EpdController.enablePost(surfaceView, 1)
         rxManager.enqueue(partialRefreshRequest, null)
     }
 
@@ -79,6 +81,7 @@ class PartialEraseRefresh {
             }
             
             // Render the temporary bitmap to the surface
+            EpdController.enablePost(surfaceView, 1)
             renderToSurface(tempBitmap)
             
             // Clean up
@@ -88,6 +91,7 @@ class PartialEraseRefresh {
         private fun renderToSurface(bitmap: Bitmap) {
             Log.d(TAG, "renderToSurface")
             val holder = surfaceView.holder
+            EpdController.setViewDefaultUpdateMode(surfaceView, UpdateMode.HAND_WRITING_REPAINT_MODE)
             val canvas = holder.lockCanvas(
                 android.graphics.Rect(
                     refreshRect.left.toInt(),
@@ -96,7 +100,7 @@ class PartialEraseRefresh {
                     refreshRect.bottom.toInt()
                 )
             )
-            
+
             if (canvas != null) {
                 try {
                     canvas.drawBitmap(
@@ -107,7 +111,10 @@ class PartialEraseRefresh {
                     )
                 } finally {
                     holder.unlockCanvasAndPost(canvas)
+                    EpdController.resetViewUpdateMode(surfaceView)
                 }
+            } else {
+                EpdController.resetViewUpdateMode(surfaceView)
             }
         }
     }

@@ -23,6 +23,8 @@ import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import com.wyldsoft.notes.pen.PenType
 import androidx.core.graphics.createBitmap
+import com.onyx.android.sdk.api.device.epd.EpdController
+import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
 
@@ -265,16 +267,18 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         
         if (intersectingShapes.isNotEmpty()) {
             Log.d(TAG, "Found ${intersectingShapes.size} shapes to erase")
-            
-            // Calculate refresh area before removing shapes
-            val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
-            
+
             // Remove intersecting shapes from our shape list
             drawnShapes.removeAll(intersectingShapes.toSet())
-            
-            // Perform partial refresh of the erased area
-            refreshRect?.let { rect: RectF ->
 
+            // Calculate refresh area before removing shapes
+            val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
+
+
+
+
+            // Partial refresh only the erased area on the e-ink display
+            refreshRect?.let { rect: RectF ->
                 surfaceView?.let { sv ->
                     partialEraseRefresh.performPartialRefresh(
                         sv,
@@ -284,9 +288,18 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     )
                 }
             }
-            
-            // Also update the main bitmap by recreating it from remaining shapes
+
+            // Keep the in-memory bitmap in sync for future operations
             recreateBitmapFromShapes()
+
+            EpdController.refreshScreenRegion(
+                surfaceView,
+                (refreshRect?.left?.toInt() ?: 0),
+                (refreshRect?.top?.toInt() ?: 0),
+                (refreshRect?.width()?.toInt() ?: 0),
+                (refreshRect?.height()?.toInt() ?: 0),
+                UpdateMode.ANIMATION_MONO
+            )
         }
     }
 
