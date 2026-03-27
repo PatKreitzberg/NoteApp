@@ -316,14 +316,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 holder?.unlockCanvasAndPost(canvas)
             }
             Log.d(TAG, "attempt refreshscreen")
-//            EpdController.refreshScreenRegion(
-//                surfaceView,
-//                (refreshRect?.left?.toInt() ?: 0),
-//                (refreshRect?.top?.toInt() ?: 0),
-//                (refreshRect?.width()?.toInt() ?: 0),
-//                (refreshRect?.height()?.toInt() ?: 0),
-//                UpdateMode.ANIMATION_MONO
-//            )
+            EpdController.refreshScreenRegion(
+                surfaceView,
+                (refreshRect?.left?.toInt() ?: 0),
+                (refreshRect?.top?.toInt() ?: 0),
+                (refreshRect?.width()?.toInt() ?: 0),
+                (refreshRect?.height()?.toInt() ?: 0),
+                UpdateMode.ANIMATION_MONO
+            )
         }
     }
 

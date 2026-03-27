@@ -59,6 +59,7 @@ class PartialEraseRefresh {
             val tempBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val tempCanvas = Canvas(tempBitmap)
             tempCanvas.drawColor(android.graphics.Color.WHITE)
+            tempCanvas.translate(-refreshRect.left, -refreshRect.top)
 
             val renderContext = RenderContext().apply {
                 bitmap = tempBitmap
@@ -69,7 +70,7 @@ class PartialEraseRefresh {
                     strokeCap = Paint.Cap.ROUND
                     strokeJoin = Paint.Join.ROUND
                 }
-                viewPoint = android.graphics.Point(-refreshRect.left.toInt(), -refreshRect.top.toInt())
+                viewPoint = android.graphics.Point(0, 0)
             }
             
             // Render only shapes that intersect with the refresh area
