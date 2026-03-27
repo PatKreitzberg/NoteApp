@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
-import android.graphics.RectF
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.data.note.TouchPoint
@@ -26,8 +25,7 @@ import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.wyldsoft.notes.shapemanagement.EraseManager
-import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
-import com.wyldsoft.notes.rendering.RenderingUtils
+
 
 
 /**
@@ -61,7 +59,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     // Erase management
     private val eraseManager = EraseManager()
-    private val partialEraseRefresh = PartialEraseRefresh()
 
     override fun initializeSDK() {
         // Onyx-specific initialization
@@ -275,55 +272,42 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             // Calculate refresh area before removing shapes
             val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
 
-
-        val intRect = Rect(
-            (refreshRect?.left?.toInt() ?: 0),
-            (refreshRect?.top?.toInt() ?: 0),
-            (refreshRect?.right?.toInt() ?: 0),
-            (refreshRect?.bottom?.toInt() ?: 0)
-        )
-
-            // Partial refresh only the erased area on the e-ink display
-            refreshRect?.let { rect: RectF ->
-                surfaceView?.let { sv ->
-                    partialEraseRefresh.performPartialRefresh(
-                        sv,
-                        rect,
-                        drawnShapes,
-                        getRxManager()
-                    )
-                }
-            }
-
-            val holder = surfaceView?.holder
-            val canvas = holder?.lockCanvas()
-
-
-            Log.d(TAG, "Recreatebitmap")
-
             // Keep the in-memory bitmap in sync for future operations
             recreateBitmapFromShapes()
-
-            EpdController.enablePost(surfaceView, 1)
-            canvas?.clipRect(intRect)
-            Log.d(TAG, "canvas.width ${canvas?.width}")
+            
             try {
+                // Partial refresh only the erased area on the e-ink display
+                val intRect = Rect(
+                    (refreshRect?.left?.toInt() ?: 0),
+                    (refreshRect?.top?.toInt() ?: 0),
+                    (refreshRect?.right?.toInt() ?: 0),
+                    (refreshRect?.bottom?.toInt() ?: 0)
+                )
+                
+                val holder = surfaceView?.holder
+                val canvas = holder?.lockCanvas()
+                canvas?.clipRect(intRect)    
                 canvas?.drawBitmap(bitmap!!, 0f, 0f, null)
+
+                Log.d(TAG, "canvas.width ${canvas?.width}")
+                EpdController.enablePost(surfaceView, 1)
+                EpdController.refreshScreenRegion(
+                    surfaceView,
+                    intRect.left,
+                    intRect.top,
+                    intRect.width(),
+                    intRect.height(),
+                    UpdateMode.ANIMATION_MONO
+                )
+                holder?.unlockCanvasAndPost(canvas)                
                 Log.d(TAG,"Try successful")
             } catch (e: Exception) {
                 Log.d(TAG,"Try unsuccessful $e")
             } finally {
-                holder?.unlockCanvasAndPost(canvas)
+
             }
             Log.d(TAG, "attempt refreshscreen")
-            EpdController.refreshScreenRegion(
-                surfaceView,
-                (refreshRect?.left?.toInt() ?: 0),
-                (refreshRect?.top?.toInt() ?: 0),
-                (refreshRect?.width()?.toInt() ?: 0),
-                (refreshRect?.height()?.toInt() ?: 0),
-                UpdateMode.ANIMATION_MONO
-            )
+            
         }
     }
 
