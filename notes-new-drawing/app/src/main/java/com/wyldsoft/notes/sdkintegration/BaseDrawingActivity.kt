@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.pen.TouchHelper
@@ -21,6 +22,7 @@ import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.editor.EditorView
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
+import com.wyldsoft.notes.touchhandling.GestureHandler
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
 
 /**
@@ -46,6 +48,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected var surfaceView: SurfaceView? = null
     protected var isDrawingInProgress = false
     protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
+    protected var gestureHandler: GestureHandler? = null
+    val gestureLabel = mutableStateOf("")
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun initializeSDK()
@@ -71,7 +75,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                     EditorView(
                         onSurfaceViewCreated = { sv ->
                             handleSurfaceViewCreated(sv)
-                        }
+                        },
+                        gestureLabel = gestureLabel
                     )
                 }
             }
@@ -114,6 +119,18 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         surfaceView = sv
         initializeTouchHelper(sv)
         createTouchHelper(sv)
+        attachGestureHandler(sv)
+    }
+
+    private fun attachGestureHandler(sv: SurfaceView) {
+        Log.d(TAG, "attachGestureHandler")
+        gestureHandler = GestureHandler(
+            isDrawingCheck = { isDrawingInProgress },
+            onGestureEvent = { event ->
+                gestureLabel.value = event.displayName()
+            }
+        )
+        sv.setOnTouchListener(gestureHandler)
     }
 
     protected open fun initializeTouchHelper(surfaceView: SurfaceView) {
