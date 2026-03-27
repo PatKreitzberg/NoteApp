@@ -27,6 +27,7 @@ import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
+import com.wyldsoft.notes.rendering.RenderingUtils
 
 
 /**
@@ -261,7 +262,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         
         // Find shapes that intersect with the erase touch points
         val intersectingShapes = eraseManager.findIntersectingShapes(
-            erasePointList, 
+            erasePointList,
             drawnShapes
         )
         
@@ -275,7 +276,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
 
 
-
+        val intRect = Rect(
+            (refreshRect?.left?.toInt() ?: 0),
+            (refreshRect?.top?.toInt() ?: 0),
+            (refreshRect?.right?.toInt() ?: 0),
+            (refreshRect?.bottom?.toInt() ?: 0)
+        )
 
             // Partial refresh only the erased area on the e-ink display
             refreshRect?.let { rect: RectF ->
@@ -289,19 +295,38 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 }
             }
 
+            val holder = surfaceView?.holder
+            val canvas = holder?.lockCanvas()
+
+
+            Log.d(TAG, "Recreatebitmap")
+
             // Keep the in-memory bitmap in sync for future operations
             recreateBitmapFromShapes()
 
-            EpdController.refreshScreenRegion(
-                surfaceView,
-                (refreshRect?.left?.toInt() ?: 0),
-                (refreshRect?.top?.toInt() ?: 0),
-                (refreshRect?.width()?.toInt() ?: 0),
-                (refreshRect?.height()?.toInt() ?: 0),
-                UpdateMode.ANIMATION_MONO
-            )
+            EpdController.enablePost(surfaceView, 1)
+            canvas?.clipRect(intRect)
+            Log.d(TAG, "canvas.width ${canvas?.width}")
+            try {
+                canvas?.drawBitmap(bitmap!!, 0f, 0f, null)
+                Log.d(TAG,"Try successful")
+            } catch (e: Exception) {
+                Log.d(TAG,"Try unsuccessful $e")
+            } finally {
+                holder?.unlockCanvasAndPost(canvas)
+            }
+            Log.d(TAG, "attempt refreshscreen")
+//            EpdController.refreshScreenRegion(
+//                surfaceView,
+//                (refreshRect?.left?.toInt() ?: 0),
+//                (refreshRect?.top?.toInt() ?: 0),
+//                (refreshRect?.width()?.toInt() ?: 0),
+//                (refreshRect?.height()?.toInt() ?: 0),
+//                UpdateMode.ANIMATION_MONO
+//            )
         }
     }
+
 
     private fun drawScribbleToBitmap(points: List<TouchPoint>, touchPointList: TouchPointList) {
         Log.d(TAG, "drawScribbleToBitmap called list size " + touchPointList.size())
@@ -391,6 +416,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             }
 
             for (shape in drawnShapes) {
+                Log.d(TAG, "Rendering shape width ${shape.boundingRect?.width()}")
                 shape.render(renderContext)
             }
         }
