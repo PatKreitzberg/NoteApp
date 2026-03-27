@@ -75,6 +75,8 @@ Coordinate transforms (ViewportManager), pan/zoom, selection tool, undo/redo (Ac
 - Add new files to git
 - Write new classes/files in Kotlin, not java
 - Onyx SDK repo uses insecure HTTP (`repo.boox.com`) — this is intentional
+- Whenever significant code changes are implement check it compiles
+- When creating new classes make a TAG = <class name> and add Log.d(TAG, "<function name>") for each function larger than four lines.
 
 ## Key Dependencies
 
