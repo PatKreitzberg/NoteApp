@@ -23,7 +23,7 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import com.wyldsoft.notes.pen.PenType
 import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.api.device.epd.EpdController
-import com.onyx.android.sdk.api.device.epd.UpdateMode
+
 import com.wyldsoft.notes.shapemanagement.EraseManager
 
 
@@ -288,48 +288,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             // Keep the in-memory bitmap in sync for future operations
             recreateBitmapFromShapes()
 
-            // Calculate refresh area in note coordinates, then convert to viewport
-            val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
-
-
-
-            try {
-                // Convert refresh rect from note coords to viewport coords
-                val viewportRect = if (refreshRect != null) {
-                    viewportManager.noteToViewport(refreshRect)
-                } else {
-                    android.graphics.RectF()
-                }
-                val intRect = Rect(
-                    viewportRect.left.toInt(),
-                    viewportRect.top.toInt(),
-                    viewportRect.right.toInt(),
-                    viewportRect.bottom.toInt()
-                )
-
-                val holder = surfaceView?.holder
-                val canvas = holder?.lockCanvas()
-                canvas?.clipRect(intRect)
-                canvas?.drawBitmap(bitmap!!, 0f, 0f, null)
-
-                Log.d(TAG, "canvas.width ${canvas?.width}")
-                EpdController.enablePost(surfaceView, 1)
-                EpdController.refreshScreenRegion(
-                    surfaceView,
-                    intRect.left,
-                    intRect.top,
-                    intRect.width(),
-                    intRect.height(),
-                    UpdateMode.ANIMATION_MONO
-                )
-                holder?.unlockCanvasAndPost(canvas)
-                Log.d(TAG,"Try successful")
-            } catch (e: Exception) {
-                Log.d(TAG,"Try unsuccessful $e")
-            } finally {
-
+            // Route screen update through RxManager to serialize with draw operations
+            surfaceView?.let { sv ->
+                EpdController.enablePost(sv, 1)
+                renderToScreen(sv, bitmap)
             }
-            Log.d(TAG, "attempt refreshscreen")
+            Log.d(TAG, "erase render enqueued to RxManager")
 
         }
         Log.d(TAG, "handleerasing done erasing")
@@ -412,12 +376,20 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private fun recreateBitmapFromShapes() {
         Log.d(TAG, "recreateBitmapFromShapes scale=${viewportManager.scale} scrollX=${viewportManager.scrollX} scrollY=${viewportManager.scrollY}")
         surfaceView?.let { sv ->
-            // Create a fresh bitmap
-            Log.d(TAG, "bitmap recycle")
-            bitmap?.recycle()
-            bitmap = createBitmap(sv.width, sv.height)
-            bitmapCanvas = Canvas(bitmap!!)
-            bitmapCanvas?.drawColor(Color.WHITE)
+            // Reuse existing bitmap if same size, otherwise create new one
+            // (avoid recycle — queued RxRequests may still reference the old bitmap)
+            val existingBitmap = bitmap
+            if (existingBitmap != null && !existingBitmap.isRecycled
+                && existingBitmap.width == sv.width && existingBitmap.height == sv.height) {
+                Log.d(TAG, "reusing existing bitmap")
+                bitmapCanvas = Canvas(existingBitmap)
+                bitmapCanvas?.drawColor(Color.WHITE)
+            } else {
+                Log.d(TAG, "creating new bitmap (old size mismatch or null)")
+                bitmap = createBitmap(sv.width, sv.height)
+                bitmapCanvas = Canvas(bitmap!!)
+                bitmapCanvas?.drawColor(Color.WHITE)
+            }
 
             bitmapCanvas?.save()
             viewportManager.applyToCanvas(bitmapCanvas!!)
