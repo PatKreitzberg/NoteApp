@@ -49,6 +49,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected var bitmapCanvas: Canvas? = null
     protected var surfaceView: SurfaceView? = null
     protected var isDrawingInProgress = false
+    protected var isErasingInProgress = false
     protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
     protected var gestureHandler: GestureHandler? = null
     val gestureLabel = mutableStateOf("")
@@ -131,6 +132,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         Log.d(TAG, "attachGestureHandler")
         gestureHandler = GestureHandler(
             isDrawingCheck = { isDrawingInProgress },
+            isErasingCheck = { isErasingInProgress },
             onGestureEvent = { event ->
                 gestureLabel.value = event.displayName()
                 handleGestureForScroll(event)

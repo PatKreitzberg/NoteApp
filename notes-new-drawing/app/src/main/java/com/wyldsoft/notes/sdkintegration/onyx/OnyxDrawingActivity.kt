@@ -223,7 +223,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
-            //Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
+            Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
             touchPointList?.points?.let { points ->
                 if (!isDrawingInProgress) {
                     isDrawingInProgress = true
@@ -234,11 +234,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onBeginRawErasing")
+            isErasingInProgress = true
+            Log.d(TAG, "isErasingInProgress = true onBeginRawErasing")
             // Handle erasing start
         }
 
         override fun onEndRawErasing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawErasing")
+            isErasingInProgress = false
+            Log.d(TAG, "isErasingInProgress = false onEndRawErasing")
             // Handle erasing end
         }
 
@@ -249,6 +253,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         override fun onRawErasingTouchPointListReceived(touchPointList: TouchPointList?) {
             Log.d(TAG, "createOnyxCallback.onRawErasingTouchPointListReceived")
+            if (!isErasingInProgress) {
+                Log.d(TAG, "isErasingInProgress = true onRawErasingTouchPointListReceived")
+                isErasingInProgress = true
+            }
             touchPointList?.let { erasePointList ->
                 handleErasing(erasePointList)
             }
@@ -268,10 +276,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             drawnShapes
         )
 
-        Log.d(TAG, "done checking intersections")
+        Log.d(TAG, "handleerasing done checking intersections")
 
         if (intersectingShapes.isNotEmpty()) {
-            Log.d(TAG, "Found ${intersectingShapes.size} shapes to erase")
+            Log.d(TAG, "handleerasing Found ${intersectingShapes.size} shapes to erase")
 
             // Remove intersecting shapes from our shape list
             drawnShapes.removeAll(intersectingShapes.toSet())
@@ -321,7 +329,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             Log.d(TAG, "attempt refreshscreen")
 
         }
-        Log.d(TAG, "done erasing")
+        Log.d(TAG, "handleerasing done erasing")
     }
 
 
