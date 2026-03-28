@@ -285,12 +285,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             // Remove intersecting shapes from our shape list
             drawnShapes.removeAll(intersectingShapes.toSet())
+            // Keep the in-memory bitmap in sync for future operations
+            recreateBitmapFromShapes()
 
             // Calculate refresh area in note coordinates, then convert to viewport
             val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
 
-            // Keep the in-memory bitmap in sync for future operations
-            recreateBitmapFromShapes()
+
 
             try {
                 // Convert refresh rect from note coords to viewport coords
@@ -412,6 +413,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "recreateBitmapFromShapes scale=${viewportManager.scale} scrollX=${viewportManager.scrollX} scrollY=${viewportManager.scrollY}")
         surfaceView?.let { sv ->
             // Create a fresh bitmap
+            Log.d(TAG, "bitmap recycle")
             bitmap?.recycle()
             bitmap = createBitmap(sv.width, sv.height)
             bitmapCanvas = Canvas(bitmap!!)
@@ -432,6 +434,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 viewPoint = viewportManager.getViewPoint()
             }
 
+            Log.d(TAG, "Drawing ${drawnShapes.size} many shapes")
             for (shape in drawnShapes) {
                 shape.render(renderContext)
             }

@@ -39,6 +39,7 @@ class EraseManager {
             }
         }
 
+        Log.d(TAG, "found ${intersectingShapes.size} many intersecting shapes")
         return intersectingShapes
     }
 
