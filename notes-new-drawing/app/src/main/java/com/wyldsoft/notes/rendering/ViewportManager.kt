@@ -30,6 +30,9 @@ class ViewportManager {
     var scale = 1f
         private set
 
+    val MAX_SCALE_FACTOR = 4f
+    val MIN_SCALE_FACTOR = 0.5f
+
     // --- Coordinate conversion: single points ---
 
     fun viewportToNoteX(vx: Float): Float = vx / scale + scrollX
@@ -121,7 +124,7 @@ class ViewportManager {
         val anchorNoteY = centerY / scale + scrollY
 
         // Apply scale change, clamped to reasonable range
-        val newScale = (scale * scaleFactor).coerceIn(0.25f, 4.0f)
+        val newScale = (scale * scaleFactor).coerceIn(MIN_SCALE_FACTOR, MAX_SCALE_FACTOR)
 
         // Adjust scroll so the anchor stays at (centerX, centerY) on screen
         scrollX = max(0f, anchorNoteX - centerX / newScale)
