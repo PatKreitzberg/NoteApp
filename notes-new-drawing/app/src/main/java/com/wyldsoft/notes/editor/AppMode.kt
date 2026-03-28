@@ -7,6 +7,7 @@ package com.wyldsoft.notes.editor
  * DRAWING: Stylus and drawing are active; pen input is enabled. Default mode when a note is open.
  * SELECTION: (Not yet implemented) Stylus selects shapes on canvas.
  * TEXT: (Not yet implemented) System keyboard text entry.
+ * SETTINGS: For when a settings dialog or dropdown is open
  */
 enum class AppMode {
     HOME,

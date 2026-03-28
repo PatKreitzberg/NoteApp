@@ -24,6 +24,7 @@ import com.wyldsoft.notes.pen.PenType
 import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.wyldsoft.notes.editor.AppMode
+import com.wyldsoft.notes.editor.EditorView
 
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
@@ -116,6 +117,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun enterNewMode(mode: AppMode) {
+        Log.d(TAG, "enter Current Mode")
         when (mode) {
             AppMode.DRAWING -> {
                 Log.d(TAG, "Enter DRAWING mode")
@@ -129,6 +131,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun exitCurrentMode(mode: AppMode) {
+        Log.d(TAG, "exitCurrentMode")
         if (isInMode(mode)) return
 
         when (mode) {

@@ -2,13 +2,15 @@ package com.wyldsoft.notes.editor
 
 import android.annotation.SuppressLint
 import android.graphics.Rect
+import android.util.Log
+import com.wyldsoft.notes.pen.PenProfile
+import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import android.util.Log
 
 /**
  * Global event bus for drawing lifecycle and UI state, using SharedFlows.
@@ -26,7 +28,16 @@ class EditorState {
     companion object {
         private const val TAG = "EditorState"
         private val _currentMode = MutableStateFlow(AppMode.DRAWING)
+        var previousMode = AppMode.DRAWING
         val currentMode: StateFlow<AppMode> = _currentMode.asStateFlow()
+
+        private val _dismissSettings = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val dismissSettings = _dismissSettings.asSharedFlow()
+
+        private val _currentPenProfile = MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN))
+        val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
+
+        private var toolbarRect: Rect? = null
 
         @SuppressLint("StaticFieldLeak")
         private var mainActivity: BaseDrawingActivity? = null
@@ -36,16 +47,37 @@ class EditorState {
         }
 
         fun setMode(mode: AppMode) {
-            val previousMode = _currentMode.value
+            previousMode = _currentMode.value
             if (previousMode == mode) return
             Log.d(TAG, "setMode: $previousMode -> $mode")
             _currentMode.value = mode
         }
 
+        fun emitDismissSettings() {
+            Log.d(TAG, "emitDismissSettings")
+            _dismissSettings.tryEmit(Unit)
+        }
+
+        fun setPenProfile(profile: PenProfile) {
+            Log.d(TAG, "setPenProfile: ${profile.penType.displayName}, width=${profile.strokeWidth}")
+            _currentPenProfile.value = profile
+        }
+
+        fun setToolbarRect(rect: Rect) {
+            val changed = toolbarRect != rect
+            toolbarRect = rect
+            if (changed) {
+                Log.d(TAG, "setToolbarRect: $rect")
+                mainActivity?.let {
+                    it.updateExclusionZones(getCurrentExclusionRects())
+                }
+            }
+        }
+
         fun getCurrentExclusionRects(): List<Rect> {
-            return mainActivity?.let { activity ->
-                emptyList<Rect>()
-            } ?: emptyList()
+            val rects = mutableListOf<Rect>()
+            toolbarRect?.let { rects.add(it) }
+            return rects
         }
     }
 }

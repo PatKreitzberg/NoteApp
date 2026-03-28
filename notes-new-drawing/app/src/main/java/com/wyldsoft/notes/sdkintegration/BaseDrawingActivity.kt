@@ -7,8 +7,10 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
@@ -94,6 +96,18 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
         EditorState.setMainActivity(this as com.wyldsoft.notes.MainActivity)
         observeAppMode()
+        observePenProfile()
+    }
+
+    private fun observePenProfile() {
+        lifecycleScope.launch {
+            EditorState.currentPenProfile.collect { profile ->
+                Log.d(TAG, "Pen profile changed: ${profile.penType.displayName}, width=${profile.strokeWidth}")
+                currentPenProfile = profile
+                updatePaintFromProfile()
+                updateTouchHelperWithProfile()
+            }
+        }
     }
 
     private fun observeAppMode() {
@@ -108,12 +122,15 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     /**
      * Called when the app mode changes. Subclasses enable/disable SDK features accordingly.
      */
-    protected open fun onModeChanged(mode: AppMode) {
-        if (mode != EditorState.currentMode.value) {
-            exitCurrentMode(EditorState.currentMode.value)
-            enterNewMode(mode)
+    protected open fun onModeChanged(newMode: AppMode) {
+        Log.d(TAG, "onModeChanged called")
+        if (newMode != EditorState.previousMode) {
+            Log.d(TAG, "mode != current mode")
+            exitCurrentMode(EditorState.previousMode)
+            enterNewMode(newMode)
         }
     }
+
 
     protected abstract fun enterNewMode(mode: AppMode)
     protected abstract fun exitCurrentMode(mode: AppMode)
@@ -167,7 +184,46 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                 handleGestureForScroll(event)
             }
         )
-        sv.setOnTouchListener(gestureHandler)
+        sv.setOnTouchListener(SettingsDismissTouchWrapper(gestureHandler!!))
+    }
+
+    /**
+     * Touch listener wrapper that intercepts all touches when in SETTINGS mode.
+     * On ACTION_DOWN: emits dismissSettings to close open menus.
+     * On ACTION_UP: transitions to DRAWING mode.
+     * In non-SETTINGS modes, delegates to the wrapped GestureHandler.
+     */
+    private class SettingsDismissTouchWrapper(
+        private val delegate: View.OnTouchListener
+    ) : View.OnTouchListener {
+        companion object {
+            private const val TAG = "SettingsDismissTouch"
+        }
+
+        private var dismissedOnDown = false
+
+        override fun onTouch(view: View, event: MotionEvent): Boolean {
+            Log.d(TAG, "SettingsDismissTouchWrapper.onTouch")
+            if (EditorState.currentMode.value != AppMode.SETTINGS) {
+                return delegate.onTouch(view, event)
+            }
+
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    Log.d(TAG, "Touch down in SETTINGS mode — dismissing settings")
+                    dismissedOnDown = true
+                    EditorState.emitDismissSettings()
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (dismissedOnDown) {
+                        Log.d(TAG, "Touch up in SETTINGS mode — entering DRAWING mode")
+                        dismissedOnDown = false
+                        EditorState.setMode(AppMode.DRAWING)
+                    }
+                }
+            }
+            return true
+        }
     }
 
     private fun handleGestureForScroll(event: GestureEvent) {
@@ -250,6 +306,10 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected abstract fun updateActiveSurface()
     protected abstract fun updateTouchHelperWithProfile()
     protected abstract fun updateTouchHelperExclusionZones(excludeRects: List<Rect>)
+
+    fun updateExclusionZones(excludeRects: List<Rect>) {
+        updateTouchHelperExclusionZones(excludeRects)
+    }
     protected abstract fun initializeDeviceReceiver()
     protected abstract fun onCleanupDeviceReceiver()
 }

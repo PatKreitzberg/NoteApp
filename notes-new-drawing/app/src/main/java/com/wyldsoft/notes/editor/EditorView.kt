@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.DrawingCanvas
 import com.wyldsoft.notes.touchhandling.GestureDisplay
+import com.wyldsoft.notes.ui.toolbar.PenToolbar
 
 /**
  * Top-level Compose layout for the editor screen.
@@ -28,7 +29,7 @@ fun EditorView(
             .padding(16.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(16.dp))
+            PenToolbar()
 
             // Drawing canvas with real Onyx SDK integration
             DrawingCanvas(
