@@ -213,7 +213,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
             isDrawingInProgress = false
             enableFingerTouch()
-            forceScreenRefresh()
+
+            //forceScreenRefresh() // DO NOT REFRESH HERE
+
             EditorState.notifyDrawingEnded()
         }
 
@@ -347,6 +349,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             // Render the new shape to the bitmap (with viewport transform)
             renderShapeToBitmap(shape)
+
             renderToScreen(sv, bitmap)
         }
     }
