@@ -22,10 +22,10 @@ import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.editor.EditorView
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
+import com.wyldsoft.notes.rendering.ViewportManager
 import com.wyldsoft.notes.touchhandling.GestureEvent
 import com.wyldsoft.notes.touchhandling.GestureHandler
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
-import kotlin.math.max
 
 /**
  * Abstract base activity for all drawing functionality (Template Method pattern).
@@ -53,10 +53,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected var gestureHandler: GestureHandler? = null
     val gestureLabel = mutableStateOf("")
 
-    // Viewport scroll state — position of viewport's top-left corner in note coordinates.
-    // scrollX/scrollY >= 0 always (can't scroll into negative space).
-    protected var scrollX = 0f
-    protected var scrollY = 0f
+    // Centralized viewport state: scroll position + scale
+    protected val viewportManager = ViewportManager()
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun initializeSDK()
@@ -145,19 +143,23 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         when (event) {
             is GestureEvent.PanMove -> {
                 if (event.fingerCount == 1) {
-                    // Negate deltas: finger drags up → scroll down (scrollY increases)
-                    scrollX = max(0f, scrollX - event.deltaX)
-                    scrollY = max(0f, scrollY - event.deltaY)
-                    Log.d(TAG, "Scroll position: ($scrollX, $scrollY)")
+                    viewportManager.handlePanMove(event.deltaX, event.deltaY)
                 }
             }
             is GestureEvent.PanEnd -> {
                 if (event.fingerCount == 1) {
-                    Log.d(TAG, "Pan ended, refreshing at scroll ($scrollX, $scrollY)")
+                    Log.d(TAG, "Pan ended, refreshing")
                     forceScreenRefresh()
                 }
             }
-            else -> { /* other gestures don't affect scroll */ }
+            is GestureEvent.PinchMove -> {
+                viewportManager.handlePinchMove(event.centerX, event.centerY, event.scaleFactor)
+            }
+            is GestureEvent.PinchEnd -> {
+                Log.d(TAG, "Pinch ended, refreshing at scale ${viewportManager.scale}")
+                forceScreenRefresh()
+            }
+            else -> { /* other gestures don't affect viewport */ }
         }
     }
 

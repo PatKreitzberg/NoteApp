@@ -26,15 +26,33 @@ class EraseManager {
         eraseRadius: Float = ERASE_RADIUS
     ): List<Shape> {
         Log.d(TAG, "findIntersectingShapes")
-        val intersectingShapes = mutableListOf<Shape>()
 
+        // Option 1: compute erase stroke bounding rect for quick rejection
+        val eraseBounds = computeEraseBounds(touchPointList, eraseRadius) ?: return emptyList()
+
+        val intersectingShapes = mutableListOf<Shape>()
         for (shape in drawnShapes) {
+            val shapeBounds = shape.boundingRect ?: continue
+            if (!RectF.intersects(eraseBounds, shapeBounds)) continue
             if (shape.hitTestPoints(touchPointList, eraseRadius)) {
                 intersectingShapes.add(shape)
             }
         }
 
         return intersectingShapes
+    }
+
+    private fun computeEraseBounds(touchPointList: TouchPointList, eraseRadius: Float): RectF? {
+        val points = touchPointList.points
+        if (points.isEmpty()) return null
+        val first = points[0] ?: return null
+        val bounds = RectF(first.x, first.y, first.x, first.y)
+        for (i in 1 until points.size) {
+            val p = points[i] ?: continue
+            bounds.union(p.x, p.y)
+        }
+        bounds.inset(-eraseRadius, -eraseRadius)
+        return bounds
     }
 
     fun calculateRefreshRect(erasedShapes: List<Shape>): RectF? {

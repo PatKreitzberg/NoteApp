@@ -9,8 +9,6 @@ import android.util.Log
 import com.onyx.android.sdk.pen.PenUtils
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.rendering.RenderContext
-import kotlin.math.sqrt
-
 /**
  * Base class for all drawable shapes. Stores stroke properties (color, width, type,
  * texture), the raw TouchPointList from the Onyx SDK, and bounding/origin rects
@@ -89,7 +87,6 @@ open class Shape {
         }
 
     fun hitTestPoints(pointList: TouchPointList, radius: Float): Boolean {
-        Log.d(TAG, "hitTestPoints first")
         for (touchPoint in pointList.points) {
             if (hitTest(touchPoint.x, touchPoint.y, radius)) {
                 return true
@@ -99,54 +96,40 @@ open class Shape {
     }
 
     private fun hitTest(x: Float, y: Float, radius: Float): Boolean {
-        Log.d(TAG, "hitTest first")
-        var hit = false
-        var first: Int
-        var second: Int
+        // Option 5: early-exit if point is outside expanded bounding rect
+        val br = boundingRect
+        if (br != null && (x < br.left - radius || x > br.right + radius ||
+                    y < br.top - radius || y > br.bottom + radius)) {
+            return false
+        }
+
         val point = floatArrayOf(x, y)
         val invertMatrix = Matrix()
         invertMatrix.mapPoints(point)
+        val radiusSq = radius * radius
         val points = touchPointList!!.points
         for (i in 0..<points.size - 1) {
-            first = i
-            second = i + 1
-
-            val isIntersect = hitTest(
-                points.get(first)!!.x,
-                points.get(first)!!.y,
-                points.get(second)!!.x,
-                points.get(second)!!.y,
-                point[0], point[1], radius
+            val distSq = distanceSquared(
+                points[i]!!.x, points[i]!!.y,
+                points[i + 1]!!.x, points[i + 1]!!.y,
+                point[0], point[1]
             )
-            if (isIntersect) {
-                hit = true
-                break
+            if (distSq <= radiusSq) {
+                return true
             }
         }
-        return hit
+        return false
     }
 
-    private fun hitTest(
-        x1: Float, y1: Float, x2: Float,
-        y2: Float, x: Float, y: Float, limit: Float
-    ): Boolean {
-        Log.d(TAG, "hitTestPoints second")
-        val value = distance(x1, y1, x2, y2, x, y)
-        return value <= limit
-    }
-
-    private fun distance(x1: Float, y1: Float, x2: Float, y2: Float, x: Float, y: Float): Float {
-        Log.d(TAG, "distance")
-        val A = x - x1
-        val B = y - y1
+    private fun distanceSquared(x1: Float, y1: Float, x2: Float, y2: Float, x: Float, y: Float): Float {
         val C = x2 - x1
         val D = y2 - y1
 
-        val dot = A * C + B * D
         val lenSq = C * C + D * D
-        var param = -1.0f
-        if (lenSq != 0f) {
-            param = dot / lenSq
+        val param = if (lenSq != 0f) {
+            ((x - x1) * C + (y - y1) * D) / lenSq
+        } else {
+            -1.0f
         }
 
         val xx: Float
@@ -165,6 +148,6 @@ open class Shape {
 
         val dx = x - xx
         val dy = y - yy
-        return sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+        return dx * dx + dy * dy
     }
 }

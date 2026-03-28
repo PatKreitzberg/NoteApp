@@ -257,17 +257,18 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     private fun handleErasing(erasePointList: TouchPointList) {
-        Log.d(TAG, "handleErasing called with ${erasePointList.size()} points")
+        Log.d(TAG, "handleErasing called")
 
         // Convert erase points from viewport coordinates to note coordinates
-        val noteErasePointList = erasePointList.clone()
-        noteErasePointList.translateAllPoints(scrollX, scrollY)
+        val noteErasePointList = viewportManager.viewportToNoteTouchPoints(erasePointList)
 
         // Find shapes that intersect with the erase touch points (both in note coords)
         val intersectingShapes = eraseManager.findIntersectingShapes(
             noteErasePointList,
             drawnShapes
         )
+
+        Log.d(TAG, "done checking intersections")
 
         if (intersectingShapes.isNotEmpty()) {
             Log.d(TAG, "Found ${intersectingShapes.size} shapes to erase")
@@ -283,16 +284,21 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             try {
                 // Convert refresh rect from note coords to viewport coords
+                val viewportRect = if (refreshRect != null) {
+                    viewportManager.noteToViewport(refreshRect)
+                } else {
+                    android.graphics.RectF()
+                }
                 val intRect = Rect(
-                    ((refreshRect?.left ?: 0f) - scrollX).toInt(),
-                    ((refreshRect?.top ?: 0f) - scrollY).toInt(),
-                    ((refreshRect?.right ?: 0f) - scrollX).toInt(),
-                    ((refreshRect?.bottom ?: 0f) - scrollY).toInt()
+                    viewportRect.left.toInt(),
+                    viewportRect.top.toInt(),
+                    viewportRect.right.toInt(),
+                    viewportRect.bottom.toInt()
                 )
-                
+
                 val holder = surfaceView?.holder
                 val canvas = holder?.lockCanvas()
-                canvas?.clipRect(intRect)    
+                canvas?.clipRect(intRect)
                 canvas?.drawBitmap(bitmap!!, 0f, 0f, null)
 
                 Log.d(TAG, "canvas.width ${canvas?.width}")
@@ -305,7 +311,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     intRect.height(),
                     UpdateMode.ANIMATION_MONO
                 )
-                holder?.unlockCanvasAndPost(canvas)                
+                holder?.unlockCanvasAndPost(canvas)
                 Log.d(TAG,"Try successful")
             } catch (e: Exception) {
                 Log.d(TAG,"Try unsuccessful $e")
@@ -313,8 +319,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             }
             Log.d(TAG, "attempt refreshscreen")
-            
+
         }
+        Log.d(TAG, "done erasing")
     }
 
 
@@ -323,9 +330,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         surfaceView?.let { sv ->
             createDrawingBitmap()
 
-            // Convert viewport coordinates to note coordinates by offsetting by scroll
-            val notePointList = touchPointList.clone()
-            notePointList.translateAllPoints(scrollX, scrollY)
+            // Convert viewport coordinates to note coordinates
+            val notePointList = viewportManager.viewportToNoteTouchPoints(touchPointList)
 
             // Create and store the shape in note coordinates
             val shape = createShapeFromPenType(notePointList)
@@ -373,9 +379,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "renderShapeToBitmap")
         bitmap?.let { bmp ->
             val canvas = Canvas(bmp)
-            // Translate canvas so note coordinates map to viewport coordinates
             canvas.save()
-            canvas.translate(-scrollX, -scrollY)
+            viewportManager.applyToCanvas(canvas)
             val renderContext = RenderContext().apply {
                 bitmap = bmp
                 this.canvas = canvas
@@ -385,7 +390,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     strokeCap = Paint.Cap.ROUND
                     strokeJoin = Paint.Join.ROUND
                 }
-                viewPoint = android.graphics.Point(-scrollX.toInt(), -scrollY.toInt())
+                viewPoint = viewportManager.getViewPoint()
             }
             shape.render(renderContext)
             canvas.restore()
@@ -393,7 +398,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     private fun recreateBitmapFromShapes() {
-        Log.d(TAG, "recreateBitmapFromShape scrollX=$scrollX scrollY=$scrollY")
+        Log.d(TAG, "recreateBitmapFromShapes scale=${viewportManager.scale} scrollX=${viewportManager.scrollX} scrollY=${viewportManager.scrollY}")
         surfaceView?.let { sv ->
             // Create a fresh bitmap
             bitmap?.recycle()
@@ -401,9 +406,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             bitmapCanvas = Canvas(bitmap!!)
             bitmapCanvas?.drawColor(Color.WHITE)
 
-            // Translate canvas so note coordinates map to viewport coordinates
             bitmapCanvas?.save()
-            bitmapCanvas?.translate(-scrollX, -scrollY)
+            viewportManager.applyToCanvas(bitmapCanvas!!)
 
             val renderContext = RenderContext().apply {
                 bitmap = this@OnyxDrawingActivity.bitmap
@@ -414,7 +418,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     strokeCap = Paint.Cap.ROUND
                     strokeJoin = Paint.Join.ROUND
                 }
-                viewPoint = android.graphics.Point(-scrollX.toInt(), -scrollY.toInt())
+                viewPoint = viewportManager.getViewPoint()
             }
 
             for (shape in drawnShapes) {
