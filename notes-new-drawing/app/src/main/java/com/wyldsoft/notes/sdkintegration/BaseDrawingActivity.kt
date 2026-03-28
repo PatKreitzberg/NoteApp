@@ -115,56 +115,12 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         }
     }
 
-    protected open fun enterNewMode(mode: AppMode) {
-        EditorState.setMode(mode)
-        when (mode) {
-            AppMode.DRAWING -> onEnterDrawingMode()
-            AppMode.SELECTION -> onEnterSelectionMode()
-            AppMode.TEXT -> onEnterTextMode()
-            AppMode.HOME -> onEnterHomeMode()
-            AppMode.SETTINGS -> onEnterSettingsMode()
-        }
+    protected abstract fun enterNewMode(mode: AppMode)
+    protected abstract fun exitCurrentMode(mode: AppMode)
+
+    protected open fun isInMode(mode: AppMode): Boolean {
+        return (mode == EditorState.currentMode.value)
     }
-
-    protected open fun exitCurrentMode(mode: AppMode) {
-        when (mode) {
-            AppMode.DRAWING -> onExitDrawingMode()
-            AppMode.SELECTION -> onExitSelectionMode()
-            AppMode.TEXT -> onExitTextMode()
-            AppMode.HOME -> onExitHomeMode()
-            AppMode.SETTINGS -> onExitSettingsMode()
-        }
-    }
-
-    /** Enable stylus drawing. Subclasses override to activate SDK touch handling. */
-    protected abstract fun onEnterDrawingMode()
-
-    /** Disable stylus drawing. Subclasses override to deactivate SDK touch handling. */
-    protected abstract fun onExitDrawingMode()
-
-    /** Enable stylus Selection. Subclasses override to activate SDK touch handling. */
-    protected abstract fun onEnterSelectionMode()
-
-    /** Disable stylus Selection. Subclasses override to deactivate SDK touch handling. */
-    protected abstract fun onExitSelectionMode()
-
-    /** Enable stylus Text. Subclasses override to activate SDK touch handling. */
-    protected abstract fun onEnterTextMode()
-
-    /** Disable stylus Text. Subclasses override to deactivate SDK touch handling. */
-    protected abstract fun onExitTextMode()
-
-    /** Enable stylus Home. Subclasses override to activate SDK touch handling. */
-    protected abstract fun onEnterHomeMode()
-
-    /** Disable stylus Home. Subclasses override to deactivate SDK touch handling. */
-    protected abstract fun onExitHomeMode()
-
-    /** Enable stylus Settings. Subclasses override to activate SDK touch handling. */
-    protected abstract fun onEnterSettingsMode()
-
-    /** Disable stylus Settings. Subclasses override to deactivate SDK touch handling. */
-    protected abstract fun onExitSettingsMode()
 
     open fun createTouchHelper(surfaceView: SurfaceView) { }
 

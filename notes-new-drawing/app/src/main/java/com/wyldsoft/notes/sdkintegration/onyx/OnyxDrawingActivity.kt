@@ -23,6 +23,7 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import com.wyldsoft.notes.pen.PenType
 import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.api.device.epd.EpdController
+import com.wyldsoft.notes.editor.AppMode
 
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
@@ -105,7 +106,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun onResumeDrawing() {
-        if (EditorState.currentMode.value == com.wyldsoft.notes.editor.AppMode.DRAWING) {
+        if (isInMode(AppMode.DRAWING)) {
             onyxTouchHelper?.setRawDrawingEnabled(true)
         }
     }
@@ -114,47 +115,32 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         onyxTouchHelper?.setRawDrawingEnabled(false)
     }
 
-    override fun onEnterDrawingMode() {
-        Log.d(TAG, "onEnterDrawingMode")
-        onyxTouchHelper?.setRawDrawingEnabled(true)
+    override fun enterNewMode(mode: AppMode) {
+        when (mode) {
+            AppMode.DRAWING -> {
+                Log.d(TAG, "Enter DRAWING mode")
+                onyxTouchHelper?.setRawDrawingEnabled(true)
+            }
+            AppMode.SELECTION -> {Log.d(TAG, "Enter SELECTION mode")}
+            AppMode.TEXT -> {Log.d(TAG, "Enter TEXT mode")}
+            AppMode.HOME -> {Log.d(TAG, "Enter HOME mode")}
+            AppMode.SETTINGS -> {Log.d(TAG, "Enter SETTINGS mode")}
+        }
     }
 
-    override fun onExitDrawingMode() {
-        Log.d(TAG, "onExitDrawingMode")
-        onyxTouchHelper?.setRawDrawingEnabled(false)
-    }
+    override fun exitCurrentMode(mode: AppMode) {
+        if (isInMode(mode)) return
 
-    override fun onEnterSelectionMode() {
-        Log.d(TAG, "onEnterSelectionMode")
-        onyxTouchHelper?.setRawDrawingEnabled(false)
-    }
-
-    override fun onExitSelectionMode() {
-        Log.d(TAG, "onExitSelectionMode")
-    }
-
-    override fun onEnterTextMode() {
-        Log.d(TAG, "onEnterTextMode")
-    }
-
-    override fun onExitTextMode() {
-        Log.d(TAG, "onExitTextMode")
-    }
-
-    override fun onEnterHomeMode() {
-        Log.d(TAG, "onEnterHomeMode")
-    }
-
-    override fun onExitHomeMode() {
-        Log.d(TAG, "onExitHomeMode")
-    }
-
-    override fun onEnterSettingsMode() {
-        Log.d(TAG, "onEnterSettingsMode")
-    }
-
-    override fun onExitSettingsMode() {
-        Log.d(TAG, "onExitSettingsMode")
+        when (mode) {
+            AppMode.DRAWING -> {
+                Log.d(TAG, "Exit DRAWING mode")
+                onyxTouchHelper?.setRawDrawingEnabled(false)
+            }
+            AppMode.SELECTION -> {Log.d(TAG, "Exit SELECTION mode")}
+            AppMode.TEXT -> {Log.d(TAG, "Exit TEXT mode")}
+            AppMode.HOME -> {Log.d(TAG, "Exit HOME mode")}
+            AppMode.SETTINGS -> {Log.d(TAG, "Exit SETTINGS mode")}
+        }
     }
 
     override fun onCleanupSDK() {
