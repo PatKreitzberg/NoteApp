@@ -11,6 +11,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,8 +19,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.pen.TouchHelper
+import com.onyx.android.sdk.utils.BroadcastHelper
+import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.editor.EditorView
+import kotlinx.coroutines.launch
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.rendering.ViewportManager
@@ -89,7 +93,78 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         }
 
         EditorState.setMainActivity(this as com.wyldsoft.notes.MainActivity)
+        observeAppMode()
     }
+
+    private fun observeAppMode() {
+        lifecycleScope.launch {
+            EditorState.currentMode.collect { mode ->
+                Log.d(TAG, "App mode changed to: $mode")
+                onModeChanged(mode)
+            }
+        }
+    }
+
+    /**
+     * Called when the app mode changes. Subclasses enable/disable SDK features accordingly.
+     */
+    protected open fun onModeChanged(mode: AppMode) {
+        if (mode != EditorState.currentMode.value) {
+            exitCurrentMode(EditorState.currentMode.value)
+            enterNewMode(mode)
+        }
+    }
+
+    protected open fun enterNewMode(mode: AppMode) {
+        EditorState.setMode(mode)
+        when (mode) {
+            AppMode.DRAWING -> onEnterDrawingMode()
+            AppMode.SELECTION -> onEnterSelectionMode()
+            AppMode.TEXT -> onEnterTextMode()
+            AppMode.HOME -> onEnterHomeMode()
+            AppMode.SETTINGS -> onEnterSettingsMode()
+        }
+    }
+
+    protected open fun exitCurrentMode(mode: AppMode) {
+        when (mode) {
+            AppMode.DRAWING -> onExitDrawingMode()
+            AppMode.SELECTION -> onExitSelectionMode()
+            AppMode.TEXT -> onExitTextMode()
+            AppMode.HOME -> onExitHomeMode()
+            AppMode.SETTINGS -> onExitSettingsMode()
+        }
+    }
+
+    /** Enable stylus drawing. Subclasses override to activate SDK touch handling. */
+    protected abstract fun onEnterDrawingMode()
+
+    /** Disable stylus drawing. Subclasses override to deactivate SDK touch handling. */
+    protected abstract fun onExitDrawingMode()
+
+    /** Enable stylus Selection. Subclasses override to activate SDK touch handling. */
+    protected abstract fun onEnterSelectionMode()
+
+    /** Disable stylus Selection. Subclasses override to deactivate SDK touch handling. */
+    protected abstract fun onExitSelectionMode()
+
+    /** Enable stylus Text. Subclasses override to activate SDK touch handling. */
+    protected abstract fun onEnterTextMode()
+
+    /** Disable stylus Text. Subclasses override to deactivate SDK touch handling. */
+    protected abstract fun onExitTextMode()
+
+    /** Enable stylus Home. Subclasses override to activate SDK touch handling. */
+    protected abstract fun onEnterHomeMode()
+
+    /** Disable stylus Home. Subclasses override to deactivate SDK touch handling. */
+    protected abstract fun onExitHomeMode()
+
+    /** Enable stylus Settings. Subclasses override to activate SDK touch handling. */
+    protected abstract fun onEnterSettingsMode()
+
+    /** Disable stylus Settings. Subclasses override to deactivate SDK touch handling. */
+    protected abstract fun onExitSettingsMode()
 
     open fun createTouchHelper(surfaceView: SurfaceView) { }
 

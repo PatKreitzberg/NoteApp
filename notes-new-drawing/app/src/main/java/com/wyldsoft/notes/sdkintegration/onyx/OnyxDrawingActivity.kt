@@ -105,11 +105,56 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun onResumeDrawing() {
-        onyxTouchHelper?.setRawDrawingEnabled(true)
+        if (EditorState.currentMode.value == com.wyldsoft.notes.editor.AppMode.DRAWING) {
+            onyxTouchHelper?.setRawDrawingEnabled(true)
+        }
     }
 
     override fun onPauseDrawing() {
         onyxTouchHelper?.setRawDrawingEnabled(false)
+    }
+
+    override fun onEnterDrawingMode() {
+        Log.d(TAG, "onEnterDrawingMode")
+        onyxTouchHelper?.setRawDrawingEnabled(true)
+    }
+
+    override fun onExitDrawingMode() {
+        Log.d(TAG, "onExitDrawingMode")
+        onyxTouchHelper?.setRawDrawingEnabled(false)
+    }
+
+    override fun onEnterSelectionMode() {
+        Log.d(TAG, "onEnterSelectionMode")
+        onyxTouchHelper?.setRawDrawingEnabled(false)
+    }
+
+    override fun onExitSelectionMode() {
+        Log.d(TAG, "onExitSelectionMode")
+    }
+
+    override fun onEnterTextMode() {
+        Log.d(TAG, "onEnterTextMode")
+    }
+
+    override fun onExitTextMode() {
+        Log.d(TAG, "onExitTextMode")
+    }
+
+    override fun onEnterHomeMode() {
+        Log.d(TAG, "onEnterHomeMode")
+    }
+
+    override fun onExitHomeMode() {
+        Log.d(TAG, "onExitHomeMode")
+    }
+
+    override fun onEnterSettingsMode() {
+        Log.d(TAG, "onEnterSettingsMode")
+    }
+
+    override fun onExitSettingsMode() {
+        Log.d(TAG, "onExitSettingsMode")
     }
 
     override fun onCleanupSDK() {
@@ -209,17 +254,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             Log.d(TAG, "createOnyxCallback.onBeginRawDrawing")
             isDrawingInProgress = true
             disableFingerTouch()
-            EditorState.notifyDrawingStarted()
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
             isDrawingInProgress = false
             enableFingerTouch()
-
-            //forceScreenRefresh() // DO NOT REFRESH HERE
-
-            EditorState.notifyDrawingEnded()
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
