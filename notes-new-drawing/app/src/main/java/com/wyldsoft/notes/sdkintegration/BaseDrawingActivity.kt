@@ -131,8 +131,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     private fun attachGestureHandler(sv: SurfaceView) {
         Log.d(TAG, "attachGestureHandler")
         gestureHandler = GestureHandler(
-            isDrawingCheck = { isDrawingInProgress },
-            isErasingCheck = { isErasingInProgress },
             onGestureEvent = { event ->
                 gestureLabel.value = event.displayName()
                 handleGestureForScroll(event)
