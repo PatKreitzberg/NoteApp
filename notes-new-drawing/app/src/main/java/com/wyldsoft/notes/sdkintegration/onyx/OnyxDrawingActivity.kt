@@ -25,6 +25,7 @@ import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.api.device.epd.EpdController
 
 import com.wyldsoft.notes.shapemanagement.EraseManager
+import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
 
 
 
@@ -59,6 +60,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     // Erase management
     private val eraseManager = EraseManager()
+    private val partialEraseRefresh = PartialEraseRefresh()
 
     override fun initializeSDK() {
         // Onyx-specific initialization
@@ -129,6 +131,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             surfaceView?.getLocalVisibleRect(limit)
 
             val excludeRects = EditorState.getCurrentExclusionRects()
+
             Log.d("ExclusionRects", "Current exclusion rects ${excludeRects.size}")
             helper.setStrokeWidth(currentPenProfile.strokeWidth)
                 .setStrokeColor(currentPenProfile.getColorAsInt())
@@ -288,12 +291,21 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             // Keep the in-memory bitmap in sync for future operations
             recreateBitmapFromShapes()
 
-            // Route screen update through RxManager to serialize with draw operations
-            surfaceView?.let { sv ->
-                EpdController.enablePost(sv, 1)
-                renderToScreen(sv, bitmap)
+            // Calculate refresh area and do partial screen update via RxManager
+            val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
+            if (refreshRect != null) {
+                val viewportRect = viewportManager.noteToViewport(refreshRect)
+                surfaceView?.let { sv ->
+                    partialEraseRefresh.performPartialRefresh(
+                        sv,
+                        viewportRect,
+                        drawnShapes.toList(),
+                        viewportManager,
+                        getRxManager()
+                    )
+                }
             }
-            Log.d(TAG, "erase render enqueued to RxManager")
+            Log.d(TAG, "erase partial refresh enqueued to RxManager")
 
         }
         Log.d(TAG, "handleerasing done erasing")

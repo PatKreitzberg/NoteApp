@@ -49,6 +49,15 @@ class ViewportManager {
         )
     }
 
+    fun viewportToNote(rect: RectF): RectF {
+        return RectF(
+            viewportToNoteX(rect.left),
+            viewportToNoteY(rect.top),
+            viewportToNoteX(rect.right),
+            viewportToNoteY(rect.bottom)
+        )
+    }
+
     // --- Coordinate conversion: TouchPointList ---
 
     /**

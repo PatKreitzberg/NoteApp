@@ -10,6 +10,7 @@ import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.rendering.RenderContext
+import com.wyldsoft.notes.rendering.ViewportManager
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
 /**
@@ -26,8 +27,9 @@ class PartialEraseRefresh {
     protected var TAG = "PartialEraseRefresh"
     fun performPartialRefresh(
         surfaceView: SurfaceView,
-        refreshRect: RectF,
+        viewportRefreshRect: RectF,
         remainingShapes: List<Shape>,
+        viewportManager: ViewportManager,
         rxManager: RxManager
     ) {
         Log.d(TAG, "performPartialRefresh")
@@ -35,8 +37,9 @@ class PartialEraseRefresh {
         EpdController.enablePost(surfaceView, 1)
         val partialRefreshRequest = PartialRefreshRequest(
             surfaceView,
-            refreshRect,
-            remainingShapes
+            viewportRefreshRect,
+            remainingShapes,
+            viewportManager
         )
         rxManager.enqueue(partialRefreshRequest, null)
     }
@@ -44,7 +47,8 @@ class PartialEraseRefresh {
     private class PartialRefreshRequest(
         private val surfaceView: SurfaceView,
         private val refreshRect: RectF,
-        private val shapesToRender: List<Shape>
+        private val shapesToRender: List<Shape>,
+        private val viewportManager: ViewportManager
     ) : com.onyx.android.sdk.rx.RxRequest() {
 
         protected var TAG = "PartialRefreshRequest"
@@ -60,6 +64,12 @@ class PartialEraseRefresh {
             val tempCanvas = Canvas(tempBitmap)
             tempCanvas.drawColor(android.graphics.Color.WHITE)
 
+            // Offset so viewport origin maps to temp bitmap origin, then apply viewport transform
+            // This transforms note-coord shapes into the temp bitmap's local space
+            tempCanvas.save()
+            tempCanvas.translate(-refreshRect.left, -refreshRect.top)
+            viewportManager.applyToCanvas(tempCanvas)
+
             val renderContext = RenderContext().apply {
                 bitmap = tempBitmap
                 canvas = tempCanvas
@@ -69,16 +79,20 @@ class PartialEraseRefresh {
                     strokeCap = Paint.Cap.ROUND
                     strokeJoin = Paint.Join.ROUND
                 }
-                viewPoint = android.graphics.Point(-refreshRect.left.toInt(), -refreshRect.top.toInt())
+                viewPoint = viewportManager.getViewPoint()
             }
 
-            // Render only shapes that intersect with the refresh area
+            // Convert viewport refresh rect to note coords for shape intersection test
+            val noteRefreshRect = viewportManager.viewportToNote(refreshRect)
+
+            // Render only shapes that intersect with the refresh area (in note coords)
             for (shape in shapesToRender) {
                 val shapeBounds = shape.boundingRect
-                if (shapeBounds != null && RectF.intersects(shapeBounds, refreshRect)) {
+                if (shapeBounds != null && RectF.intersects(shapeBounds, noteRefreshRect)) {
                     shape.render(renderContext)
                 }
             }
+            tempCanvas.restore()
 
             // Render the temporary bitmap to the surface
             EpdController.enablePost(surfaceView, 1)
