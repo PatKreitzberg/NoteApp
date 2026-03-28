@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.sdkintegration
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -184,7 +185,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                 handleGestureForScroll(event)
             }
         )
-        sv.setOnTouchListener(SettingsDismissTouchWrapper(gestureHandler!!))
+        sv.setOnTouchListener(gestureHandler)
+        //sv.setOnTouchListener(SettingsDismissTouchWrapper(gestureHandler!!))
     }
 
     /**

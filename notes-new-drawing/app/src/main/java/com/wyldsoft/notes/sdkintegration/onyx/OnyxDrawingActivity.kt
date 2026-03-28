@@ -123,10 +123,22 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 Log.d(TAG, "Enter DRAWING mode")
                 onyxTouchHelper?.setRawDrawingEnabled(true)
             }
-            AppMode.SELECTION -> {Log.d(TAG, "Enter SELECTION mode")}
-            AppMode.TEXT -> {Log.d(TAG, "Enter TEXT mode")}
-            AppMode.HOME -> {Log.d(TAG, "Enter HOME mode")}
-            AppMode.SETTINGS -> {Log.d(TAG, "Enter SETTINGS mode")}
+
+            AppMode.SELECTION -> {
+                Log.d(TAG, "Enter SELECTION mode close raw drawing!")
+            }
+
+            AppMode.TEXT -> {
+                Log.d(TAG, "Enter TEXT mode")
+            }
+
+            AppMode.HOME -> {
+                Log.d(TAG, "Enter HOME mode")
+            }
+
+            AppMode.SETTINGS -> {
+                Log.d(TAG, "Enter SETTINGS mode")
+            }
         }
     }
 
@@ -252,7 +264,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointMoveReceived")
+            //Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointMoveReceived")
             // Handle move events if needed
         }
 
@@ -281,7 +293,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         override fun onRawErasingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            Log.d(TAG, "createOnyxCallback.onRawErasingTouchPointMoveReceived")
+            //Log.d(TAG, "createOnyxCallback.onRawErasingTouchPointMoveReceived")
             // Handle erase move
         }
 
