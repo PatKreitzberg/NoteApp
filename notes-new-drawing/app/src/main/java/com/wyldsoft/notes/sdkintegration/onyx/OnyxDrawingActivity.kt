@@ -249,7 +249,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun disableRawDrawing() {
         onyxTouchHelper?.setRawDrawingRenderEnabled(false)
-        //onyxTouchHelper?.setRawDrawingEnabled(false)
+        onyxTouchHelper?.setRawDrawingEnabled(false)
     }
 
     private fun getRxManager(): RxManager {
