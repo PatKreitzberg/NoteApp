@@ -39,11 +39,9 @@ class PartialRefreshRequest(
         val tempCanvas = Canvas(tempBitmap)
         tempCanvas.drawColor(android.graphics.Color.WHITE)
 
-        // Offset so viewport origin maps to temp bitmap origin, then apply viewport transform
-        // This transforms note-coord shapes into the temp bitmap's local space
+        // Offset so viewport-coord shapes land in the temp bitmap's local space
         tempCanvas.save()
         tempCanvas.translate(-refreshRect.left, -refreshRect.top)
-        viewportManager.applyToCanvas(tempCanvas)
 
         val renderContext = RenderContext().apply {
             bitmap = tempBitmap
@@ -54,7 +52,7 @@ class PartialRefreshRequest(
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
             }
-            viewPoint = viewportManager.getViewPoint()
+            viewPoint = android.graphics.Point(0, 0)
         }
 
         // Convert viewport refresh rect to note coords for shape intersection test
@@ -64,7 +62,11 @@ class PartialRefreshRequest(
         for (shape in shapesToRender) {
             val shapeBounds = shape.boundingRect
             if (shapeBounds != null && RectF.intersects(shapeBounds, noteRefreshRect)) {
+                val viewportTouchPoints = viewportManager.noteToViewportTouchPoints(shape.touchPointList!!)
+                val originalTouchPoints = shape.touchPointList
+                shape.touchPointList = viewportTouchPoints
                 shape.render(renderContext)
+                shape.touchPointList = originalTouchPoints
             }
         }
         tempCanvas.restore()

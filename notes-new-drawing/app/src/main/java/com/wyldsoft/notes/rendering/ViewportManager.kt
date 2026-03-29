@@ -86,6 +86,30 @@ class ViewportManager {
         return notePoints
     }
 
+    /**
+     * Convert a TouchPointList from note coords to viewport (screen) coords.
+     * Inverse of viewportToNoteTouchPoints. Used when rendering shapes to the
+     * offscreen bitmap so strokes are drawn at screen-space dimensions,
+     * matching the Onyx SDK's real-time rendering.
+     */
+    fun noteToViewportTouchPoints(notePoints: TouchPointList): TouchPointList {
+        Log.d(TAG, "noteToViewportTouchPoints")
+        val viewportPoints = TouchPointList()
+        for (tp in notePoints.points) {
+            val viewportTp = TouchPoint(
+                noteToViewportX(tp.x),
+                noteToViewportY(tp.y),
+                tp.pressure,
+                tp.size,
+                tp.tiltX,
+                tp.tiltY,
+                tp.timestamp
+            )
+            viewportPoints.add(viewportTp)
+        }
+        return viewportPoints
+    }
+
     // --- Canvas transform ---
     /**
      * Apply the full viewport transform to a canvas for rendering note-coord shapes.

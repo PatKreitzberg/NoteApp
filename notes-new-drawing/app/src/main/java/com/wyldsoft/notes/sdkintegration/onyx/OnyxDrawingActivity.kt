@@ -430,8 +430,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "renderShapeToBitmap")
         bitmap?.let { bmp ->
             val canvas = Canvas(bmp)
-            canvas.save()
-            viewportManager.applyToCanvas(canvas)
+            // Convert note-coord touch points to viewport/screen coords so
+            // rendering matches the SDK's real-time stroke appearance
+            val viewportTouchPoints = viewportManager.noteToViewportTouchPoints(shape.touchPointList!!)
+            val originalTouchPoints = shape.touchPointList
+            shape.touchPointList = viewportTouchPoints
             val renderContext = RenderContext().apply {
                 bitmap = bmp
                 this.canvas = canvas
@@ -441,10 +444,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     strokeCap = Paint.Cap.ROUND
                     strokeJoin = Paint.Join.ROUND
                 }
-                viewPoint = viewportManager.getViewPoint()
+                viewPoint = android.graphics.Point(0, 0)
             }
             shape.render(renderContext)
-            canvas.restore()
+            shape.touchPointList = originalTouchPoints
         }
     }
 
@@ -466,9 +469,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 bitmapCanvas?.drawColor(Color.WHITE)
             }
 
-            bitmapCanvas?.save()
-            viewportManager.applyToCanvas(bitmapCanvas!!)
-
             val renderContext = RenderContext().apply {
                 bitmap = this@OnyxDrawingActivity.bitmap
                 canvas = bitmapCanvas!!
@@ -478,15 +478,17 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     strokeCap = Paint.Cap.ROUND
                     strokeJoin = Paint.Join.ROUND
                 }
-                viewPoint = viewportManager.getViewPoint()
+                viewPoint = android.graphics.Point(0, 0)
             }
 
             Log.d(TAG, "Drawing ${drawnShapes.size} many shapes")
             for (shape in drawnShapes) {
+                val viewportTouchPoints = viewportManager.noteToViewportTouchPoints(shape.touchPointList!!)
+                val originalTouchPoints = shape.touchPointList
+                shape.touchPointList = viewportTouchPoints
                 shape.render(renderContext)
+                shape.touchPointList = originalTouchPoints
             }
-
-            bitmapCanvas?.restore()
         }
     }
 }

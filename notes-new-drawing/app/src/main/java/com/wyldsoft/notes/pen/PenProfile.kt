@@ -44,14 +44,14 @@ data class PenProfile(
 
     internal fun getOnyxStrokeStyleInternal(): Int {
         return when (penType) {
+            PenType.PENCIL -> 0
             PenType.BALLPEN -> 0
             PenType.FOUNTAIN -> 1
             PenType.MARKER -> 2
-            PenType.PENCIL -> 3
+            PenType.NEO_BRUSH -> 3
             PenType.CHARCOAL -> 4
-            PenType.CHARCOAL_V2 -> 5
-            PenType.NEO_BRUSH -> 6
-            PenType.DASH -> 7
+            PenType.CHARCOAL_V2 -> 6
+            PenType.DASH -> 5
         }
     }
 }

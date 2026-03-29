@@ -67,7 +67,7 @@ open class Shape {
         paint.strokeWidth = this.renderStrokeWidth
         paint.setColor(strokeColor)
         paint.isAntiAlias = true
-        paint.isDither = true
+        paint.isDither = false
         paint.style = Paint.Style.STROKE
         paint.strokeCap = Paint.Cap.ROUND
         paint.strokeJoin = Paint.Join.ROUND
