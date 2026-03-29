@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.shapemanagement.shapes
 
+import android.util.Log
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.data.PenConstant
 import com.onyx.android.sdk.data.note.ShapeCreateArgs
@@ -19,6 +20,13 @@ import com.wyldsoft.notes.shapemanagement.ShapeFactory
 class CharcoalScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList!!.points
+        Log.d(TAG, "CharcoalScribbleShape")
+
+        for (p in points){
+            Log.d("tilt", p.tiltX.toString())
+        }
+
+
         applyStrokeStyle(renderContext)
 
         val createArgs = ShapeCreateArgs()

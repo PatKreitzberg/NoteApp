@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.shapemanagement.shapes
 
+import android.util.Log
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.pen.NeoBrushPenWrapper
 import com.wyldsoft.notes.rendering.RenderContext
@@ -13,6 +14,9 @@ import com.wyldsoft.notes.rendering.RenderContext
 class NewBrushScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList!!.points
+        for (p in points){
+            Log.d("tilt", p.tiltX.toString())
+        }
         applyStrokeStyle(renderContext)
         NeoBrushPenWrapper.drawStroke(
             renderContext.canvas, renderContext.paint, points,

@@ -72,7 +72,7 @@ Coordinate transforms (ViewportManager), pan/zoom, selection tool, undo/redo (Ac
 
 - Keep classes under 300 lines
 - Commit before and after major changes
-- Add new files to git and do a git commit after each code change
+- Add new files to git and do a git commit after each code change (always commit after code changes, not just new files)
 - Write new classes/files in Kotlin, not java
 - Onyx SDK repo uses insecure HTTP (`repo.boox.com`) — this is intentional
 - Whenever significant code changes are implement check it compiles

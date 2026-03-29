@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.shapemanagement.shapes
 
+import android.util.Log
 import com.onyx.android.sdk.pen.NeoMarkerPenWrapper
 import com.wyldsoft.notes.rendering.RenderContext
 
@@ -11,6 +12,11 @@ import com.wyldsoft.notes.rendering.RenderContext
 class MarkerScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList!!.points
+
+        for (p in points){
+            Log.d("tilt", p.tiltX.toString())
+        }
+
         applyStrokeStyle(renderContext)
         NeoMarkerPenWrapper.drawStroke(
             renderContext.canvas, renderContext.paint, points,

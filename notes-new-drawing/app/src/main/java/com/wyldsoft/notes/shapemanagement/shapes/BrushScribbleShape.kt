@@ -14,6 +14,9 @@ import com.wyldsoft.notes.rendering.RenderContext
 class BrushScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList!!.points
+        for (p in points){
+            Log.d("tilt", p.tiltX.toString())
+        }
         applyStrokeStyle(renderContext)
         NeoFountainPenWrapper.drawStroke(
             renderContext.canvas, renderContext.paint, points,
