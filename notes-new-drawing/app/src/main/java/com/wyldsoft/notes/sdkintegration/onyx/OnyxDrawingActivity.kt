@@ -119,8 +119,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "enter Current Mode")
         when (mode) {
             AppMode.DRAWING -> {
-                Log.d(TAG, "Enter DRAWING mode")
-                enableRawDrawing()
+                Log.d(TAG, "Enter DRAWING mode — applying latest pen profile")
+                updateTouchHelperWithProfile()
             }
 
             AppMode.SELECTION -> {
@@ -167,7 +167,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun updateTouchHelperWithProfile() {
-        Log.d(TAG, "updateTouchHelperWithProfile")
+        Log.d(TAG, "updateTouchHelperWithProfile mode=${EditorState.currentMode.value}")
+        if (EditorState.currentMode.value == AppMode.SETTINGS) {
+            Log.d(TAG, "updateTouchHelperWithProfile skipped — SETTINGS mode, will apply on mode exit")
+            return
+        }
         onyxTouchHelper?.let { helper ->
             helper.setRawDrawingEnabled(false)
             helper.closeRawDrawing()
