@@ -77,6 +77,8 @@ class ViewportManager {
                 viewportToNoteY(tp.y),
                 tp.pressure,
                 tp.size,
+                tp.tiltX,
+                tp.tiltY,
                 tp.timestamp
             )
             notePoints.add(noteTp)
