@@ -258,9 +258,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     private fun createOnyxCallback() = object : com.onyx.android.sdk.pen.RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
-            Log.d(TAG, "createOnyxCallback.onBeginRawDrawing")
+            Log.d(TAG, "createOnyxCallback.onBeginRawDrawing mode=${EditorState.currentMode.value}")
             isDrawingInProgress = true
             disableFingerTouch()
+
+            // If menu is open, mark this stroke for skipping
+            if (EditorState.currentMode.value == AppMode.SETTINGS) {
+                Log.d(TAG, "Stylus down in SETTINGS mode — will skip stroke and dismiss menu")
+                skipNextStroke = true
+            }
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
@@ -273,12 +279,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            //Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointMoveReceived")
             // Handle move events if needed
         }
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
-            Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
+            Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived skipNextStroke=$skipNextStroke")
 
             if (!skipNextStroke) {
                 touchPointList?.points?.let { points ->
@@ -287,6 +292,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     }
                     drawScribbleToBitmap(points, touchPointList)
                 }
+            } else {
+                // Stroke skipped — dismiss the settings menu
+                Log.d(TAG, "Stroke skipped, dismissing settings")
+                EditorState.emitDismissSettings()
+                EditorState.setMode(AppMode.DRAWING)
             }
 
         }

@@ -16,7 +16,8 @@ import com.wyldsoft.notes.editor.EditorState
  */
 @Composable
 fun DrawingCanvas(
-    onSurfaceViewCreated: (SurfaceView) -> Unit
+    onSurfaceViewCreated: (SurfaceView) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     AndroidView(
         factory = { context ->
@@ -25,7 +26,6 @@ fun DrawingCanvas(
                 onSurfaceViewCreated(this)
             }
         },
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
     )
 }
