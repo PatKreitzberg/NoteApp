@@ -38,6 +38,7 @@ class EditorState {
         val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
 
         private var toolbarRect: Rect? = null
+        var exclusionRects = mutableListOf<Rect>()
 
         @SuppressLint("StaticFieldLeak")
         private var mainActivity: BaseDrawingActivity? = null
@@ -47,9 +48,10 @@ class EditorState {
         }
 
         fun setMode(mode: AppMode) {
+            Log.d(TAG, "setMode: ${_currentMode.value} -> $mode")
+
             previousMode = _currentMode.value
             if (previousMode == mode) return
-            Log.d(TAG, "setMode: $previousMode -> $mode")
             _currentMode.value = mode
         }
 
@@ -63,21 +65,12 @@ class EditorState {
             _currentPenProfile.value = profile
         }
 
-        fun setToolbarRect(rect: Rect) {
-            val changed = toolbarRect != rect
-            toolbarRect = rect
-            if (changed) {
-                Log.d(TAG, "setToolbarRect: $rect")
-                mainActivity?.let {
-                    it.updateExclusionZones(getCurrentExclusionRects())
-                }
-            }
+        fun addExclusionRect(rect: Rect) {
+            exclusionRects.add(rect)
         }
 
         fun getCurrentExclusionRects(): List<Rect> {
-            val rects = mutableListOf<Rect>()
-            toolbarRect?.let { rects.add(it) }
-            return rects
+            return exclusionRects
         }
     }
 }

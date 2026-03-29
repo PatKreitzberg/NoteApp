@@ -24,7 +24,6 @@ import com.wyldsoft.notes.pen.PenType
 import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.wyldsoft.notes.editor.AppMode
-import com.wyldsoft.notes.editor.EditorView
 
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
@@ -121,7 +120,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         when (mode) {
             AppMode.DRAWING -> {
                 Log.d(TAG, "Enter DRAWING mode")
-                onyxTouchHelper?.setRawDrawingEnabled(true)
+                enableRawDrawing()
             }
 
             AppMode.SELECTION -> {
@@ -149,7 +148,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         when (mode) {
             AppMode.DRAWING -> {
                 Log.d(TAG, "Exit DRAWING mode")
-                onyxTouchHelper?.setRawDrawingEnabled(false)
+                disableRawDrawing()
             }
             AppMode.SELECTION -> {Log.d(TAG, "Exit SELECTION mode")}
             AppMode.TEXT -> {Log.d(TAG, "Exit TEXT mode")}
@@ -178,7 +177,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             val excludeRects = EditorState.getCurrentExclusionRects()
 
-            Log.d("ExclusionRects", "Current exclusion rects ${excludeRects.size}")
             helper.setStrokeWidth(currentPenProfile.strokeWidth)
                 .setStrokeColor(currentPenProfile.getColorAsInt())
                 .setLimitRect(limit, ArrayList(excludeRects))
@@ -201,10 +199,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             Log.d("ExclusionRects", "Current exclusion rects ${excludeRects.size}")
             helper.setStrokeWidth(currentPenProfile.strokeWidth)
-                .setLimitRect(limit, ArrayList(excludeRects))
+                .setLimitRect(limit,  ArrayList(excludeRects))
                 .openRawDrawing()
             helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
-
             helper.setRawDrawingEnabled(true)
             helper.setRawDrawingRenderEnabled(true)
         }
@@ -242,6 +239,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
     }
 
+    override fun enableRawDrawing() {
+        onyxTouchHelper?.setRawDrawingRenderEnabled(true)
+        //onyxTouchHelper?.setRawDrawingEnabled(true)
+    }
+
+    override fun disableRawDrawing() {
+        onyxTouchHelper?.setRawDrawingRenderEnabled(false)
+        //onyxTouchHelper?.setRawDrawingEnabled(false)
+    }
+
     private fun getRxManager(): RxManager {
         Log.d(TAG, "getRxManager")
         if (rxManager == null) {
@@ -261,6 +268,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
             isDrawingInProgress = false
             enableFingerTouch()
+            if (skipNextStroke) {
+                unsetSkipStroke()
+            }
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
@@ -270,12 +280,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
             Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
-            touchPointList?.points?.let { points ->
-                if (!isDrawingInProgress) {
-                    isDrawingInProgress = true
+
+            if (!skipNextStroke) {
+                touchPointList?.points?.let { points ->
+                    if (!isDrawingInProgress) {
+                        isDrawingInProgress = true
+                    }
+                    drawScribbleToBitmap(points, touchPointList)
                 }
-                drawScribbleToBitmap(points, touchPointList)
             }
+
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
@@ -293,7 +307,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         override fun onRawErasingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            //Log.d(TAG, "createOnyxCallback.onRawErasingTouchPointMoveReceived")
             // Handle erase move
         }
 

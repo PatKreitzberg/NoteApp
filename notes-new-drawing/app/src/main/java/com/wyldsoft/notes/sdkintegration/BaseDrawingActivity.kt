@@ -50,6 +50,7 @@ import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
 abstract class BaseDrawingActivity : ComponentActivity() {
     protected open val TAG = "BaseDrawingActivity"
 
+    protected open var skipNextStroke = true
     // Common drawing state
     protected var paint = Paint()
     protected var bitmap: Bitmap? = null
@@ -69,6 +70,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     abstract fun createDeviceReceiver(): BaseDeviceReceiver
     abstract fun enableFingerTouch()
     abstract fun disableFingerTouch()
+    abstract fun disableRawDrawing()
+    abstract fun enableRawDrawing()
     abstract fun cleanSurfaceView(surfaceView: SurfaceView): Boolean
     abstract fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?)
 
@@ -124,7 +127,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
      * Called when the app mode changes. Subclasses enable/disable SDK features accordingly.
      */
     protected open fun onModeChanged(newMode: AppMode) {
-        Log.d(TAG, "onModeChanged called")
+        Log.d(TAG, "onModeChanged called newMode=$newMode previous mode=${EditorState.previousMode}")
         if (newMode != EditorState.previousMode) {
             Log.d(TAG, "mode != current mode")
             exitCurrentMode(EditorState.previousMode)
@@ -132,6 +135,17 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         }
     }
 
+    protected open fun setSkipStroke() {
+        Log.d(TAG, "set skip next stroke")
+        disableRawDrawing()
+        skipNextStroke = true
+    }
+
+    protected open fun unsetSkipStroke() {
+        Log.d(TAG, "UNset skip next stroke")
+        enableRawDrawing()
+        skipNextStroke = false
+    }
 
     protected abstract fun enterNewMode(mode: AppMode)
     protected abstract fun exitCurrentMode(mode: AppMode)
@@ -180,6 +194,11 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     private fun attachGestureHandler(sv: SurfaceView) {
         Log.d(TAG, "attachGestureHandler")
         gestureHandler = GestureHandler(
+            currentModeProvider = { EditorState.currentMode.value },
+            changeMode = {mode ->
+                EditorState.setMode(mode)
+                         },
+            setSkipStroke = {setSkipStroke()},
             onGestureEvent = { event ->
                 gestureLabel.value = event.displayName()
                 handleGestureForScroll(event)
