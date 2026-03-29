@@ -2,8 +2,6 @@ package com.wyldsoft.notes.ui.toolbar
 
 import android.util.Log
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,16 +32,6 @@ private const val TAG = "PenToolbar"
 fun PenToolbar() {
     val currentProfile by EditorState.currentPenProfile.collectAsState()
     var expanded by remember { mutableStateOf(false) }
-    var wasExpandedOnPress by remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
-
-    LaunchedEffect(interactionSource) {
-        interactionSource.interactions.collect { interaction ->
-            if (interaction is PressInteraction.Press) {
-                wasExpandedOnPress = expanded
-            }
-        }
-    }
 
     LaunchedEffect(Unit) {
         EditorState.dismissSettings.collect {
@@ -66,21 +54,18 @@ fun PenToolbar() {
                 fontSize = 14.sp
             )
             Spacer(modifier = Modifier.width(12.dp))
-            OutlinedButton(
-                onClick = {
-                    Log.d(TAG, "Pen settings button clicked expanded=${expanded} wasExpandedOnPress=${wasExpandedOnPress}")
-                    if (wasExpandedOnPress) {
-                        // Menu was open when finger went down — onDismiss already closed it, don't reopen
-                        Log.d(TAG, "Dropdown was open on press, onDismiss handled close")
-                        EditorState.setMode(AppMode.DRAWING)
-                    } else {
-                        expanded = true
-                        Log.d(TAG, "Opening dropdown")
-                        EditorState.setMode(AppMode.SETTINGS)
-                    }
-                },
-                interactionSource = interactionSource
-            ) {
+            OutlinedButton(onClick = {
+                Log.d(TAG, "Pen settings button clicked is expanded=${expanded}")
+                expanded = !expanded
+
+                if (expanded) {
+                    Log.d(TAG, "willExpand switch to settings expanded=${expanded}")
+                    EditorState.setMode(AppMode.SETTINGS)
+                } else {
+                    Log.d(TAG, "Pen settings closed so change to drawing mode expanded=${expanded}")
+                    EditorState.setMode(AppMode.DRAWING)
+                }
+            }) {
                 Text("Pen Settings")
             }
         }
