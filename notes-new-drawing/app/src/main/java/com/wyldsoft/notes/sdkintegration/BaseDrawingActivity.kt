@@ -188,46 +188,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             }
         )
         sv.setOnTouchListener(gestureHandler)
-        //sv.setOnTouchListener(SettingsDismissTouchWrapper(gestureHandler!!))
-    }
-
-    /**
-     * Touch listener wrapper that intercepts all touches when in SETTINGS mode.
-     * On ACTION_DOWN: emits dismissSettings to close open menus.
-     * On ACTION_UP: transitions to DRAWING mode.
-     * In non-SETTINGS modes, delegates to the wrapped GestureHandler.
-     */
-    private class SettingsDismissTouchWrapper(
-        private val delegate: View.OnTouchListener
-    ) : View.OnTouchListener {
-        companion object {
-            private const val TAG = "SettingsDismissTouch"
-        }
-
-        private var dismissedOnDown = false
-
-        override fun onTouch(view: View, event: MotionEvent): Boolean {
-            Log.d(TAG, "SettingsDismissTouchWrapper.onTouch")
-            if (EditorState.currentMode.value != AppMode.SETTINGS) {
-                return delegate.onTouch(view, event)
-            }
-
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    Log.d(TAG, "Touch down in SETTINGS mode — dismissing settings")
-                    dismissedOnDown = true
-                    EditorState.emitDismissSettings()
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (dismissedOnDown) {
-                        Log.d(TAG, "Touch up in SETTINGS mode — entering DRAWING mode")
-                        dismissedOnDown = false
-                        EditorState.setMode(AppMode.DRAWING)
-                    }
-                }
-            }
-            return true
-        }
     }
 
     private fun handleGestureForScroll(event: GestureEvent) {
