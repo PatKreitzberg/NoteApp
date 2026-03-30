@@ -47,7 +47,6 @@ import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
 abstract class BaseDrawingActivity : ComponentActivity() {
     protected open val TAG = "BaseDrawingActivity"
 
-    //protected open var skipNextStroke = false
     // Common drawing state
     protected var paint = Paint()
     protected var bitmap: Bitmap? = null
@@ -132,18 +131,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         }
     }
 
-//    protected open fun setSkipStroke() {
-//        Log.d(TAG, "set skip next stroke")
-//        disableRawDrawing()
-//        skipNextStroke = true
-//    }
-//
-//    protected open fun unsetSkipStroke() {
-//        Log.d(TAG, "UNset skip next stroke")
-//        enableRawDrawing()
-//        skipNextStroke = false
-//    }
-
     protected abstract fun enterNewMode(mode: AppMode)
     protected abstract fun exitCurrentMode(mode: AppMode)
 
@@ -195,7 +182,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             changeMode = {mode ->
                 EditorState.setMode(mode)
                          },
-            //setSkipStroke = {setSkipStroke()},
             onGestureEvent = { event ->
                 gestureLabel.value = event.displayName()
                 handleGestureForScroll(event)
