@@ -67,8 +67,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     abstract fun createDeviceReceiver(): BaseDeviceReceiver
     abstract fun enableFingerTouch()
     abstract fun disableFingerTouch()
-    abstract fun disableRawDrawing()
-    abstract fun enableRawDrawing()
     abstract fun cleanSurfaceView(surfaceView: SurfaceView): Boolean
     abstract fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?)
 
@@ -131,18 +129,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             enterNewMode(newMode)
         }
     }
-
-//    protected open fun setSkipStroke() {
-//        Log.d(TAG, "set skip next stroke")
-//        disableRawDrawing()
-//        skipNextStroke = true
-//    }
-//
-//    protected open fun unsetSkipStroke() {
-//        Log.d(TAG, "UNset skip next stroke")
-//        enableRawDrawing()
-//        skipNextStroke = false
-//    }
 
     protected abstract fun enterNewMode(mode: AppMode)
     protected abstract fun exitCurrentMode(mode: AppMode)

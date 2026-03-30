@@ -131,19 +131,19 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     fun updateTouchHelper(helper: TouchHelper, excludeRects: List<Rect>) {
-        helper.setRawDrawingEnabled(false)
-        helper.closeRawDrawing()
         val limit = Rect()
         surfaceView?.getLocalVisibleRect(limit)
+
+        helper.setRawDrawingEnabled(false)
+        helper.closeRawDrawing()
+
         helper.setStrokeWidth(currentPenProfile.strokeWidth * viewportManager.scale)
             .setStrokeColor(currentPenProfile.getColorAsInt())
             .setLimitRect(limit, ArrayList(excludeRects))
             .openRawDrawing()
-        helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
-        helper.setRawDrawingEnabled(true)
-        // Disable SDK live rendering for DASH pen — the SDK's dash pattern doesn't
-        // scale with zoom. The app's DashPencilShape handles scaling correctly on bitmap.
-        helper.setRawDrawingRenderEnabled(currentPenProfile.penType != com.wyldsoft.notes.pen.PenType.DASH)
+            .setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
+            .setRawDrawingEnabled(true)
+            .setRawDrawingRenderEnabled(true)
     }
 
     override fun initializeDeviceReceiver() {
@@ -175,15 +175,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
     }
 
-    override fun enableRawDrawing() {
-        onyxTouchHelper?.setRawDrawingRenderEnabled(true)
-    }
-
-    override fun disableRawDrawing() {
-        onyxTouchHelper?.setRawDrawingRenderEnabled(false)
-        onyxTouchHelper?.setRawDrawingEnabled(false)
-    }
-
     private fun getRxManager(): RxManager {
         Log.d(TAG, "getRxManager")
         if (rxManager == null) {
@@ -197,39 +188,24 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             Log.d(TAG, "createOnyxCallback.onBeginRawDrawing mode=${EditorState.currentMode.value}")
             isDrawingInProgress = true
             disableFingerTouch()
-
-            // fixme i think no longer needed
-//            if (EditorState.currentMode.value == AppMode.SETTINGS) {
-//                Log.d(TAG, "Stylus down in SETTINGS mode — will skip stroke and dismiss menu")
-//                skipNextStroke = true
-//            }
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
             isDrawingInProgress = false
             enableFingerTouch()
-//            if (skipNextStroke) {
-//                unsetSkipStroke()
-//            }
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {}
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
             Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
-            //if (!skipNextStroke) {
-                touchPointList?.points?.let { points ->
-                    if (!isDrawingInProgress) {
-                        isDrawingInProgress = true
-                    }
-                    handleDrawing(points, touchPointList)
+            touchPointList?.points?.let { points ->
+                if (!isDrawingInProgress) {
+                    isDrawingInProgress = true
                 }
-//            } else {
-//                Log.d(TAG, "Stroke skipped, dismissing settings")
-//                EditorState.emitDismissSettings()
-//                EditorState.setMode(AppMode.DRAWING)
-//            }
+                handleDrawing(points, touchPointList)
+            }
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
