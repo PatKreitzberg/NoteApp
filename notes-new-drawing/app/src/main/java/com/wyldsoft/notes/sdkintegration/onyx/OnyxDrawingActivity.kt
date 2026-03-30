@@ -122,41 +122,27 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             return
         }
         onyxTouchHelper?.let { helper ->
-            helper.setRawDrawingEnabled(false)
-            helper.closeRawDrawing()
-
-            val limit = Rect()
-            surfaceView?.getLocalVisibleRect(limit)
-
-            val excludeRects = EditorState.getCurrentExclusionRects()
-
-            helper.setStrokeWidth(currentPenProfile.strokeWidth * viewportManager.scale)
-                .setStrokeColor(currentPenProfile.getColorAsInt())
-                .setLimitRect(limit, ArrayList(excludeRects))
-                .openRawDrawing()
-            helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
-            helper.setRawDrawingEnabled(true)
-            helper.setRawDrawingRenderEnabled(true)
+            updateTouchHelper(helper, EditorState.getCurrentExclusionRects())
         }
     }
 
     override fun updateTouchHelperExclusionZones(excludeRects: List<Rect>) {
         Log.d(TAG, "updateTouchHelperExclusionZones")
-        onyxTouchHelper?.let { helper ->
-            helper.setRawDrawingEnabled(false)
-            helper.closeRawDrawing()
+        onyxTouchHelper?.let { helper -> updateTouchHelper(helper, excludeRects) }
+    }
 
-            val limit = Rect()
-            surfaceView?.getLocalVisibleRect(limit)
-
-            Log.d("ExclusionRects", "Current exclusion rects ${excludeRects.size}")
-            helper.setStrokeWidth(currentPenProfile.strokeWidth * viewportManager.scale)
-                .setLimitRect(limit, ArrayList(excludeRects))
-                .openRawDrawing()
-            helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
-            helper.setRawDrawingEnabled(true)
-            helper.setRawDrawingRenderEnabled(true)
-        }
+    fun updateTouchHelper(helper: TouchHelper, excludeRects: List<Rect>) {
+        helper.setRawDrawingEnabled(false)
+        helper.closeRawDrawing()
+        val limit = Rect()
+        surfaceView?.getLocalVisibleRect(limit)
+        helper.setStrokeWidth(currentPenProfile.strokeWidth * viewportManager.scale)
+            .setStrokeColor(currentPenProfile.getColorAsInt())
+            .setLimitRect(limit, ArrayList(excludeRects))
+            .openRawDrawing()
+        helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
+        helper.setRawDrawingEnabled(true)
+        helper.setRawDrawingRenderEnabled(true)
     }
 
     override fun initializeDeviceReceiver() {
