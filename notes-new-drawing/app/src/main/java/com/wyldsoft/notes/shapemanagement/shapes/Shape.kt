@@ -67,12 +67,15 @@ open class Shape {
      * Centralizes the note→viewport coord swap that was duplicated across rendering call sites.
      */
     fun renderInViewport(renderContext: RenderContext, viewportManager: com.wyldsoft.notes.rendering.ViewportManager) {
-        val original = touchPointList
+        val originalPoints = touchPointList
+        val originalStrokeWidth = strokeWidth
         touchPointList = viewportManager.noteToViewportTouchPoints(touchPointList!!)
+        strokeWidth *= viewportManager.scale
         try {
             render(renderContext)
         } finally {
-            touchPointList = original
+            touchPointList = originalPoints
+            strokeWidth = originalStrokeWidth
         }
     }
 
