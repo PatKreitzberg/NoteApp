@@ -434,11 +434,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "renderShapeToBitmap")
         bitmap?.let { bmp ->
             val canvas = Canvas(bmp)
-            // Convert note-coord touch points to viewport/screen coords so
-            // rendering matches the SDK's real-time stroke appearance
-            val viewportTouchPoints = viewportManager.noteToViewportTouchPoints(shape.touchPointList!!)
-            val originalTouchPoints = shape.touchPointList
-            shape.touchPointList = viewportTouchPoints
             val renderContext = RenderContext().apply {
                 bitmap = bmp
                 this.canvas = canvas
@@ -450,8 +445,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 }
                 viewPoint = android.graphics.Point(0, 0)
             }
-            shape.render(renderContext)
-            shape.touchPointList = originalTouchPoints
+            shape.renderInViewport(renderContext, viewportManager)
         }
     }
 
@@ -487,11 +481,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             Log.d(TAG, "Drawing ${drawnShapes.size} many shapes")
             for (shape in drawnShapes) {
-                val viewportTouchPoints = viewportManager.noteToViewportTouchPoints(shape.touchPointList!!)
-                val originalTouchPoints = shape.touchPointList
-                shape.touchPointList = viewportTouchPoints
-                shape.render(renderContext)
-                shape.touchPointList = originalTouchPoints
+                shape.renderInViewport(renderContext, viewportManager)
             }
         }
     }

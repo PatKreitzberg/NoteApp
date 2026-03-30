@@ -62,11 +62,7 @@ class PartialRefreshRequest(
         for (shape in shapesToRender) {
             val shapeBounds = shape.boundingRect
             if (shapeBounds != null && RectF.intersects(shapeBounds, noteRefreshRect)) {
-                val viewportTouchPoints = viewportManager.noteToViewportTouchPoints(shape.touchPointList!!)
-                val originalTouchPoints = shape.touchPointList
-                shape.touchPointList = viewportTouchPoints
-                shape.render(renderContext)
-                shape.touchPointList = originalTouchPoints
+                shape.renderInViewport(renderContext, viewportManager)
             }
         }
         tempCanvas.restore()

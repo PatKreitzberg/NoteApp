@@ -62,6 +62,20 @@ open class Shape {
     open fun render(renderContext: RenderContext) {
     }
 
+    /**
+     * Temporarily swaps touchPointList to viewport coordinates, renders, then restores.
+     * Centralizes the note→viewport coord swap that was duplicated across rendering call sites.
+     */
+    fun renderInViewport(renderContext: RenderContext, viewportManager: com.wyldsoft.notes.rendering.ViewportManager) {
+        val original = touchPointList
+        touchPointList = viewportManager.noteToViewportTouchPoints(touchPointList!!)
+        try {
+            render(renderContext)
+        } finally {
+            touchPointList = original
+        }
+    }
+
     fun applyStrokeStyle(renderContext: RenderContext) {
         val paint = renderContext.paint
         paint.strokeWidth = this.renderStrokeWidth
