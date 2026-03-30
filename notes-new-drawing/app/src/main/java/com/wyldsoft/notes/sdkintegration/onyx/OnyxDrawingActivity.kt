@@ -141,7 +141,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             .openRawDrawing()
         helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
         helper.setRawDrawingEnabled(true)
-        helper.setRawDrawingRenderEnabled(true)
+        // Disable SDK live rendering for DASH pen — the SDK's dash pattern doesn't
+        // scale with zoom. The app's DashPencilShape handles scaling correctly on bitmap.
+        helper.setRawDrawingRenderEnabled(currentPenProfile.penType != com.wyldsoft.notes.pen.PenType.DASH)
     }
 
     override fun initializeDeviceReceiver() {
