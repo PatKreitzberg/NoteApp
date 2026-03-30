@@ -13,37 +13,26 @@ import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
 import com.wyldsoft.notes.rendering.RendererToScreenRequest
-import com.wyldsoft.notes.rendering.RenderContext
+import com.wyldsoft.notes.rendering.DrawingPipeline
 import com.wyldsoft.notes.touchhandling.TouchUtils
 import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
-import com.wyldsoft.notes.shapemanagement.ShapeFactory
-import com.wyldsoft.notes.shapemanagement.shapes.Shape
-import com.wyldsoft.notes.pen.PenType
-import androidx.core.graphics.createBitmap
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.wyldsoft.notes.editor.AppMode
-
-import com.wyldsoft.notes.shapemanagement.EraseManager
-import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
-
-
 
 /**
  * Onyx SDK implementation of BaseDrawingActivity. This is the core drawing engine.
  *
  * Drawing flow:
  *   Onyx TouchHelper delivers pen strokes via RawInputCallback ->
- *   onRawDrawingTouchPointListReceived() -> drawScribbleToBitmap() ->
+ *   onRawDrawingTouchPointListReceived() -> DrawingPipeline.drawScribbleToBitmap() ->
  *   ShapeFactory creates a typed Shape -> shape is rendered to the offscreen bitmap
  *   -> RendererToScreenRequest blits bitmap to SurfaceView via RxManager.
  *
  * Erasing flow:
- *   onRawErasingTouchPointListReceived() -> handleErasing() ->
+ *   onRawErasingTouchPointListReceived() -> DrawingPipeline.handleErasing() ->
  *   EraseManager.findIntersectingShapes() hit-tests erase points against stored shapes ->
- *   matching shapes removed from drawnShapes list ->
- *   PartialEraseRefresh redraws just the affected region ->
- *   recreateBitmapFromShapes() rebuilds the full offscreen bitmap.
+ *   matching shapes removed -> PartialEraseRefresh redraws just the affected region.
  *
  * Manages the Onyx TouchHelper lifecycle (open/close raw drawing, stroke style),
  * finger-touch suppression during pen input, and the GlobalDeviceReceiver for
@@ -54,13 +43,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var rxManager: RxManager? = null
     private var onyxTouchHelper: TouchHelper? = null
     private var onyxDeviceReceiver: GlobalDeviceReceiver? = null
-
-    // Store all drawn shapes for re-rendering
-    private val drawnShapes = mutableListOf<Shape>()
-
-    // Erase management
-    private val eraseManager = EraseManager()
-    private val partialEraseRefresh = PartialEraseRefresh()
+    private val drawingPipeline = DrawingPipeline(viewportManager)
 
     override fun initializeSDK() {
         // Onyx-specific initialization
@@ -97,10 +80,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "renderToScreen")
         if (bitmap != null) {
             getRxManager().enqueue(
-                RendererToScreenRequest(
-                    surfaceView,
-                    bitmap
-                ), null)
+                RendererToScreenRequest(surfaceView, bitmap), null
+            )
         }
     }
 
@@ -115,50 +96,19 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun enterNewMode(mode: AppMode) {
-        Log.d(TAG, "enter Current Mode")
-        when (mode) {
-            AppMode.DRAWING -> {
-                Log.d(TAG, "Enter DRAWING mode — applying latest pen profile")
-                updateTouchHelperWithProfile()
-            }
-
-            AppMode.SELECTION -> {
-                Log.d(TAG, "Enter SELECTION mode close raw drawing!")
-            }
-
-            AppMode.TEXT -> {
-                Log.d(TAG, "Enter TEXT mode")
-            }
-
-            AppMode.HOME -> {
-                Log.d(TAG, "Enter HOME mode")
-            }
-
-            AppMode.SETTINGS -> {
-                Log.d(TAG, "Enter SETTINGS mode")
-            }
-        }
+        Log.d(TAG, "enterNewMode $mode")
+        if (mode == AppMode.DRAWING) updateTouchHelperWithProfile()
     }
 
     override fun exitCurrentMode(mode: AppMode) {
-        Log.d(TAG, "exitCurrentMode")
+        Log.d(TAG, "exitCurrentMode $mode")
         if (isInMode(mode)) return
-
-        when (mode) {
-            AppMode.DRAWING -> {
-                Log.d(TAG, "Exit DRAWING mode")
-                disableRawDrawing()
-            }
-            AppMode.SELECTION -> {Log.d(TAG, "Exit SELECTION mode")}
-            AppMode.TEXT -> {Log.d(TAG, "Exit TEXT mode")}
-            AppMode.HOME -> {Log.d(TAG, "Exit HOME mode")}
-            AppMode.SETTINGS -> {Log.d(TAG, "Exit SETTINGS mode")}
-        }
+        if (mode == AppMode.DRAWING) disableRawDrawing()
     }
 
     override fun onCleanupSDK() {
         onyxTouchHelper?.closeRawDrawing()
-        drawnShapes.clear()
+        drawingPipeline.clearShapes()
     }
 
     override fun updateActiveSurface() {
@@ -201,7 +151,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             Log.d("ExclusionRects", "Current exclusion rects ${excludeRects.size}")
             helper.setStrokeWidth(currentPenProfile.strokeWidth)
-                .setLimitRect(limit,  ArrayList(excludeRects))
+                .setLimitRect(limit, ArrayList(excludeRects))
                 .openRawDrawing()
             helper.setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
             helper.setRawDrawingEnabled(true)
@@ -215,13 +165,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         deviceReceiver.enable(this, true)
         deviceReceiver.setSystemNotificationPanelChangeListener { open ->
             onyxTouchHelper?.setRawDrawingEnabled(!open)
-            surfaceView?.let { sv ->
-                renderToScreen(sv, bitmap)
-            }
+            surfaceView?.let { sv -> renderToScreen(sv, bitmap) }
         }.setSystemScreenOnListener {
-            surfaceView?.let { sv ->
-                renderToScreen(sv, bitmap)
-            }
+            surfaceView?.let { sv -> renderToScreen(sv, bitmap) }
         }
     }
 
@@ -233,8 +179,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "forceScreenRefresh() called")
         surfaceView?.let { sv ->
             cleanSurfaceView(sv)
-            // Recreate bitmap from all stored shapes
-            recreateBitmapFromShapes()
+            val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+            bitmap = state.bitmap
+            bitmapCanvas = state.canvas
 
             EpdController.enablePost(sv, 1)
             bitmap?.let { renderToScreen(sv, it) }
@@ -243,7 +190,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun enableRawDrawing() {
         onyxTouchHelper?.setRawDrawingRenderEnabled(true)
-        //onyxTouchHelper?.setRawDrawingEnabled(true)
     }
 
     override fun disableRawDrawing() {
@@ -265,7 +211,6 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             isDrawingInProgress = true
             disableFingerTouch()
 
-            // If menu is open, mark this stroke for skipping
             if (EditorState.currentMode.value == AppMode.SETTINGS) {
                 Log.d(TAG, "Stylus down in SETTINGS mode — will skip stroke and dismiss menu")
                 skipNextStroke = true
@@ -281,185 +226,65 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             }
         }
 
-        override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            // Handle move events if needed
-        }
+        override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {}
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
             Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived skipNextStroke=$skipNextStroke")
-
             if (!skipNextStroke) {
                 touchPointList?.points?.let { points ->
                     if (!isDrawingInProgress) {
                         isDrawingInProgress = true
                     }
-                    drawScribbleToBitmap(points, touchPointList)
+                    handleDrawing(points, touchPointList)
                 }
             } else {
-                // Stroke skipped — dismiss the settings menu
                 Log.d(TAG, "Stroke skipped, dismissing settings")
                 EditorState.emitDismissSettings()
                 EditorState.setMode(AppMode.DRAWING)
             }
-
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onBeginRawErasing")
             isErasingInProgress = true
-            Log.d(TAG, "isErasingInProgress = true onBeginRawErasing")
-            // Handle erasing start
         }
 
         override fun onEndRawErasing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawErasing")
             isErasingInProgress = false
-            Log.d(TAG, "isErasingInProgress = false onEndRawErasing")
-            // Handle erasing end
         }
 
-        override fun onRawErasingTouchPointMoveReceived(touchPoint: TouchPoint?) {
-            // Handle erase move
-        }
+        override fun onRawErasingTouchPointMoveReceived(touchPoint: TouchPoint?) {}
 
         override fun onRawErasingTouchPointListReceived(touchPointList: TouchPointList?) {
             Log.d(TAG, "createOnyxCallback.onRawErasingTouchPointListReceived")
             if (!isErasingInProgress) {
-                Log.d(TAG, "isErasingInProgress = true onRawErasingTouchPointListReceived")
                 isErasingInProgress = true
             }
-            touchPointList?.let { erasePointList ->
-                handleErasing(erasePointList)
-            }
+            touchPointList?.let { handleErasing(it) }
+        }
+    }
 
+    private fun handleDrawing(points: List<TouchPoint>, touchPointList: TouchPointList) {
+        Log.d(TAG, "handleDrawing")
+        surfaceView?.let { sv ->
+            createDrawingBitmap()
+            bitmap?.let { bmp ->
+                drawingPipeline.drawScribbleToBitmap(points, touchPointList, bmp, currentPenProfile)
+                renderToScreen(sv, bitmap)
+            }
         }
     }
 
     private fun handleErasing(erasePointList: TouchPointList) {
-        Log.d(TAG, "handleErasing called")
-
-        // Convert erase points from viewport coordinates to note coordinates
-        val noteErasePointList = viewportManager.viewportToNoteTouchPoints(erasePointList)
-
-        // Find shapes that intersect with the erase touch points (both in note coords)
-        val intersectingShapes = eraseManager.findIntersectingShapes(
-            noteErasePointList,
-            drawnShapes
-        )
-
-        Log.d(TAG, "handleerasing done checking intersections")
-
-        if (intersectingShapes.isNotEmpty()) {
-            Log.d(TAG, "handleerasing Found ${intersectingShapes.size} shapes to erase")
-
-            // Remove intersecting shapes from our shape list
-            drawnShapes.removeAll(intersectingShapes.toSet())
-            // Keep the in-memory bitmap in sync for future operations
-            recreateBitmapFromShapes()
-
-            // Calculate refresh area and do partial screen update via RxManager
-            val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
-            if (refreshRect != null) {
-                val viewportRect = viewportManager.noteToViewport(refreshRect)
-                surfaceView?.let { sv ->
-                    partialEraseRefresh.performPartialRefresh(
-                        sv,
-                        viewportRect,
-                        drawnShapes.toList(),
-                        viewportManager,
-                        getRxManager()
-                    )
-                }
-            }
-            Log.d(TAG, "erase partial refresh enqueued to RxManager")
-
-        }
-        Log.d(TAG, "handleerasing done erasing")
-    }
-
-
-    private fun drawScribbleToBitmap(points: List<TouchPoint>, touchPointList: TouchPointList) {
-        Log.d(TAG, "drawScribbleToBitmap called list size " + touchPointList.size())
+        Log.d(TAG, "handleErasing")
         surfaceView?.let { sv ->
-            createDrawingBitmap()
-
-            // Convert viewport coordinates to note coordinates
-            val notePointList = viewportManager.viewportToNoteTouchPoints(touchPointList)
-
-            // Create and store the shape in note coordinates
-            val shape = createShapeFromPenType(notePointList)
-            drawnShapes.add(shape)
-
-            // Render the new shape to the bitmap (with viewport transform)
-            renderShapeToBitmap(shape)
-
-            renderToScreen(sv, bitmap)
-        }
-    }
-
-    private fun createShapeFromPenType(touchPointList: TouchPointList): Shape {
-        Log.d(TAG, "createShapeFromPenType")
-        // Map pen type to shape type
-        val shapeType = when (currentPenProfile.penType) {
-            PenType.BALLPEN, PenType.PENCIL -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE
-            PenType.FOUNTAIN -> ShapeFactory.SHAPE_BRUSH_SCRIBBLE
-            PenType.MARKER -> ShapeFactory.SHAPE_MARKER_SCRIBBLE
-            PenType.CHARCOAL, PenType.CHARCOAL_V2 -> ShapeFactory.SHAPE_CHARCOAL_SCRIBBLE
-            PenType.NEO_BRUSH -> ShapeFactory.SHAPE_NEO_BRUSH_SCRIBBLE
-            PenType.DASH -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE // Default to pencil for dash
-        }
-
-        // Create the shape
-        val shape = ShapeFactory.createShape(shapeType)
-        shape.touchPointList = touchPointList
-        shape.strokeColor = currentPenProfile.getColorAsInt()
-        shape.strokeWidth = currentPenProfile.strokeWidth
-        shape.shapeType = shapeType
-            
-        // Update bounding rect for hit testing
-        shape.updateShapeRect()
-
-        // Set texture for charcoal if needed
-        if (currentPenProfile.penType == PenType.CHARCOAL_V2) {
-            shape.texture = com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V2
-        } else if (currentPenProfile.penType == PenType.CHARCOAL) {
-            shape.texture = com.onyx.android.sdk.data.note.PenTexture.CHARCOAL_SHAPE_V1
-        }
-
-        return shape
-    }
-
-    private fun renderShapeToBitmap(shape: Shape) {
-        Log.d(TAG, "renderShapeToBitmap")
-        bitmap?.let { bmp ->
-            val renderContext = RenderContext.createForBitmap(bmp, Canvas(bmp))
-            shape.renderInViewport(renderContext, viewportManager)
-        }
-    }
-
-    private fun recreateBitmapFromShapes() {
-        Log.d(TAG, "recreateBitmapFromShapes scale=${viewportManager.scale} scrollX=${viewportManager.scrollX} scrollY=${viewportManager.scrollY}")
-        surfaceView?.let { sv ->
-            // Reuse existing bitmap if same size, otherwise create new one
-            // (avoid recycle — queued RxRequests may still reference the old bitmap)
-            val existingBitmap = bitmap
-            if (existingBitmap != null && !existingBitmap.isRecycled
-                && existingBitmap.width == sv.width && existingBitmap.height == sv.height) {
-                Log.d(TAG, "reusing existing bitmap")
-                bitmapCanvas = Canvas(existingBitmap)
-                bitmapCanvas?.drawColor(Color.WHITE)
-            } else {
-                Log.d(TAG, "creating new bitmap (old size mismatch or null)")
-                bitmap = createBitmap(sv.width, sv.height)
-                bitmapCanvas = Canvas(bitmap!!)
-                bitmapCanvas?.drawColor(Color.WHITE)
-            }
-
-            val renderContext = RenderContext.createForBitmap(this@OnyxDrawingActivity.bitmap!!, bitmapCanvas!!)
-
-            Log.d(TAG, "Drawing ${drawnShapes.size} many shapes")
-            for (shape in drawnShapes) {
-                shape.renderInViewport(renderContext, viewportManager)
+            val newState = drawingPipeline.handleErasing(
+                erasePointList, bitmap, bitmapCanvas, sv, getRxManager()
+            ) { com.wyldsoft.notes.rendering.BitmapState(bitmap!!, bitmapCanvas!!) }
+            if (newState != null) {
+                bitmap = newState.bitmap
+                bitmapCanvas = newState.canvas
             }
         }
     }
