@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Point
+import android.util.Log
 
 /**
  * Bag of drawing resources passed to Shape.render().
@@ -17,4 +18,23 @@ class RenderContext {
     @JvmField var bitmap: Bitmap? = null
     @JvmField var canvas: Canvas? = null
     @JvmField var viewPoint: Point? = null
+
+    companion object {
+        private val TAG = "RenderContext"
+
+        fun createForBitmap(bitmap: Bitmap, canvas: Canvas): RenderContext {
+            Log.d(TAG, "createForBitmap")
+            return RenderContext().apply {
+                this.bitmap = bitmap
+                this.canvas = canvas
+                paint = Paint().apply {
+                    isAntiAlias = true
+                    style = Paint.Style.STROKE
+                    strokeCap = Paint.Cap.ROUND
+                    strokeJoin = Paint.Join.ROUND
+                }
+                viewPoint = Point(0, 0)
+            }
+        }
+    }
 }

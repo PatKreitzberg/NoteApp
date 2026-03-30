@@ -3,7 +3,6 @@ package com.wyldsoft.notes.sdkintegration.onyx
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Rect
 import android.util.Log
 import android.view.SurfaceView
@@ -433,18 +432,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private fun renderShapeToBitmap(shape: Shape) {
         Log.d(TAG, "renderShapeToBitmap")
         bitmap?.let { bmp ->
-            val canvas = Canvas(bmp)
-            val renderContext = RenderContext().apply {
-                bitmap = bmp
-                this.canvas = canvas
-                paint = Paint().apply {
-                    isAntiAlias = true
-                    style = Paint.Style.STROKE
-                    strokeCap = Paint.Cap.ROUND
-                    strokeJoin = Paint.Join.ROUND
-                }
-                viewPoint = android.graphics.Point(0, 0)
-            }
+            val renderContext = RenderContext.createForBitmap(bmp, Canvas(bmp))
             shape.renderInViewport(renderContext, viewportManager)
         }
     }
@@ -467,17 +455,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 bitmapCanvas?.drawColor(Color.WHITE)
             }
 
-            val renderContext = RenderContext().apply {
-                bitmap = this@OnyxDrawingActivity.bitmap
-                canvas = bitmapCanvas!!
-                paint = Paint().apply {
-                    isAntiAlias = true
-                    style = Paint.Style.STROKE
-                    strokeCap = Paint.Cap.ROUND
-                    strokeJoin = Paint.Join.ROUND
-                }
-                viewPoint = android.graphics.Point(0, 0)
-            }
+            val renderContext = RenderContext.createForBitmap(this@OnyxDrawingActivity.bitmap!!, bitmapCanvas!!)
 
             Log.d(TAG, "Drawing ${drawnShapes.size} many shapes")
             for (shape in drawnShapes) {

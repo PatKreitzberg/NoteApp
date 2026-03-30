@@ -2,7 +2,6 @@ package com.wyldsoft.notes.rendering
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Paint
 import android.graphics.RectF
 import android.util.Log
 import android.view.SurfaceView
@@ -43,17 +42,7 @@ class PartialRefreshRequest(
         tempCanvas.save()
         tempCanvas.translate(-refreshRect.left, -refreshRect.top)
 
-        val renderContext = RenderContext().apply {
-            bitmap = tempBitmap
-            canvas = tempCanvas
-            paint = Paint().apply {
-                isAntiAlias = true
-                style = Paint.Style.STROKE
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
-            }
-            viewPoint = android.graphics.Point(0, 0)
-        }
+        val renderContext = RenderContext.createForBitmap(tempBitmap, tempCanvas)
 
         // Convert viewport refresh rect to note coords for shape intersection test
         val noteRefreshRect = viewportManager.viewportToNote(refreshRect)
