@@ -266,6 +266,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             is GestureEvent.PinchEnd -> {
                 Log.d(TAG, "Pinch ended, refreshing at scale ${viewportManager.scale}")
                 forceScreenRefresh()
+                updateTouchHelperWithProfile()
             }
             else -> { /* other gestures don't affect viewport */ }
         }
