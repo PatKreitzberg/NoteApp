@@ -1,6 +1,5 @@
 package com.wyldsoft.notes.sdkintegration
 
-import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -21,8 +20,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.graphics.createBitmap
-import com.onyx.android.sdk.pen.TouchHelper
-import com.onyx.android.sdk.utils.BroadcastHelper
 import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.editor.EditorView
@@ -50,7 +47,7 @@ import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
 abstract class BaseDrawingActivity : ComponentActivity() {
     protected open val TAG = "BaseDrawingActivity"
 
-    protected open var skipNextStroke = true
+    //protected open var skipNextStroke = false
     // Common drawing state
     protected var paint = Paint()
     protected var bitmap: Bitmap? = null
@@ -135,17 +132,17 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         }
     }
 
-    protected open fun setSkipStroke() {
-        Log.d(TAG, "set skip next stroke")
-        disableRawDrawing()
-        skipNextStroke = true
-    }
-
-    protected open fun unsetSkipStroke() {
-        Log.d(TAG, "UNset skip next stroke")
-        enableRawDrawing()
-        skipNextStroke = false
-    }
+//    protected open fun setSkipStroke() {
+//        Log.d(TAG, "set skip next stroke")
+//        disableRawDrawing()
+//        skipNextStroke = true
+//    }
+//
+//    protected open fun unsetSkipStroke() {
+//        Log.d(TAG, "UNset skip next stroke")
+//        enableRawDrawing()
+//        skipNextStroke = false
+//    }
 
     protected abstract fun enterNewMode(mode: AppMode)
     protected abstract fun exitCurrentMode(mode: AppMode)
@@ -198,7 +195,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             changeMode = {mode ->
                 EditorState.setMode(mode)
                          },
-            setSkipStroke = {setSkipStroke()},
+            //setSkipStroke = {setSkipStroke()},
             onGestureEvent = { event ->
                 gestureLabel.value = event.displayName()
                 handleGestureForScroll(event)

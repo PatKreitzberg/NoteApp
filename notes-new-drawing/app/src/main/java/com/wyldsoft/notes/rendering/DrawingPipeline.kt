@@ -141,7 +141,7 @@ class DrawingPipeline(
             PenType.MARKER -> ShapeFactory.SHAPE_MARKER_SCRIBBLE
             PenType.CHARCOAL, PenType.CHARCOAL_V2 -> ShapeFactory.SHAPE_CHARCOAL_SCRIBBLE
             PenType.NEO_BRUSH -> ShapeFactory.SHAPE_NEO_BRUSH_SCRIBBLE
-            PenType.DASH -> ShapeFactory.SHAPE_PENCIL_SCRIBBLE
+            PenType.DASH -> ShapeFactory.SHAPE_DASH_SCRIBBLE
         }
 
         val shape = ShapeFactory.createShape(shapeType)

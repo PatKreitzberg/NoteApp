@@ -8,6 +8,7 @@ import com.wyldsoft.notes.shapemanagement.shapes.BrushScribbleShape
 import com.wyldsoft.notes.shapemanagement.shapes.CharcoalScribbleShape
 import com.wyldsoft.notes.shapemanagement.shapes.MarkerScribbleShape
 import com.wyldsoft.notes.shapemanagement.shapes.NewBrushScribbleShape
+import com.wyldsoft.notes.shapemanagement.shapes.DashPencilShape
 import com.wyldsoft.notes.shapemanagement.shapes.NormalPencilShape
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
@@ -31,6 +32,7 @@ object ShapeFactory {
     const val SHAPE_MARKER_SCRIBBLE: Int = 2
     const val SHAPE_NEO_BRUSH_SCRIBBLE: Int = 3
     const val SHAPE_CHARCOAL_SCRIBBLE: Int = 4
+    const val SHAPE_DASH_SCRIBBLE: Int = 5
 
     const val ERASER_STROKE: Int = 0
 
@@ -46,6 +48,7 @@ object ShapeFactory {
                 }
                 return TouchHelper.STROKE_STYLE_CHARCOAL
             }
+            SHAPE_DASH_SCRIBBLE -> return TouchHelper.STROKE_STYLE_PENCIL
 
             else -> return TouchHelper.STROKE_STYLE_PENCIL
         }
@@ -60,6 +63,7 @@ object ShapeFactory {
             SHAPE_MARKER_SCRIBBLE -> shape = MarkerScribbleShape()
             SHAPE_NEO_BRUSH_SCRIBBLE -> shape = NewBrushScribbleShape()
             SHAPE_CHARCOAL_SCRIBBLE -> shape = CharcoalScribbleShape()
+            SHAPE_DASH_SCRIBBLE -> shape = DashPencilShape()
             else -> shape = NormalPencilShape()
         }
         return shape

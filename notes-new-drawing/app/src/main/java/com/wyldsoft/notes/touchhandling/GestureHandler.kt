@@ -1,11 +1,11 @@
 package com.wyldsoft.notes.touchhandling
 
+import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import com.onyx.android.sdk.utils.BroadcastHelper
 import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
 import kotlin.math.abs
@@ -23,7 +23,7 @@ import kotlin.math.hypot
 class GestureHandler(
     private val currentModeProvider: () -> AppMode,
     private val changeMode: (AppMode) -> Unit,
-    private val setSkipStroke: () -> Unit,
+    //private val setSkipStroke: () -> Unit,
     private val onGestureEvent: (GestureEvent) -> Unit
 ) : View.OnTouchListener {
 
@@ -88,6 +88,7 @@ class GestureHandler(
         return false
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(view: View, event: MotionEvent): Boolean {
         Log.d(TAG, "GestureHandler.onTouch current mode=${currentModeProvider()}")
 
@@ -96,7 +97,7 @@ class GestureHandler(
             if (isStylusOrEraser(event)) {
                 Log.d(TAG, "onTouch set mode to drawing, dismissing settings")
                 changeMode(AppMode.DRAWING)
-                setSkipStroke()
+                //setSkipStroke()
                 EditorState.emitDismissSettings()
                 return false
             }

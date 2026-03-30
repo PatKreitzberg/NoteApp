@@ -1,7 +1,6 @@
 package com.wyldsoft.notes.sdkintegration.onyx
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
 import android.util.Log
@@ -197,37 +196,38 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             isDrawingInProgress = true
             disableFingerTouch()
 
-            if (EditorState.currentMode.value == AppMode.SETTINGS) {
-                Log.d(TAG, "Stylus down in SETTINGS mode — will skip stroke and dismiss menu")
-                skipNextStroke = true
-            }
+            // fixme i think no longer needed
+//            if (EditorState.currentMode.value == AppMode.SETTINGS) {
+//                Log.d(TAG, "Stylus down in SETTINGS mode — will skip stroke and dismiss menu")
+//                skipNextStroke = true
+//            }
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
             isDrawingInProgress = false
             enableFingerTouch()
-            if (skipNextStroke) {
-                unsetSkipStroke()
-            }
+//            if (skipNextStroke) {
+//                unsetSkipStroke()
+//            }
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {}
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
-            Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived skipNextStroke=$skipNextStroke")
-            if (!skipNextStroke) {
+            Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
+            //if (!skipNextStroke) {
                 touchPointList?.points?.let { points ->
                     if (!isDrawingInProgress) {
                         isDrawingInProgress = true
                     }
                     handleDrawing(points, touchPointList)
                 }
-            } else {
-                Log.d(TAG, "Stroke skipped, dismissing settings")
-                EditorState.emitDismissSettings()
-                EditorState.setMode(AppMode.DRAWING)
-            }
+//            } else {
+//                Log.d(TAG, "Stroke skipped, dismissing settings")
+//                EditorState.emitDismissSettings()
+//                EditorState.setMode(AppMode.DRAWING)
+//            }
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {
