@@ -175,6 +175,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
     }
 
+    override fun enableRawDrawing() {
+        onyxTouchHelper?.setRawDrawingRenderEnabled(true)
+        onyxTouchHelper?.setRawDrawingEnabled(true)
+    }
+
+    override fun disableRawDrawing() {
+        onyxTouchHelper?.setRawDrawingRenderEnabled(false)
+        onyxTouchHelper?.setRawDrawingEnabled(false)
+    }
+
     private fun getRxManager(): RxManager {
         Log.d(TAG, "getRxManager")
         if (rxManager == null) {
@@ -188,24 +198,39 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             Log.d(TAG, "createOnyxCallback.onBeginRawDrawing mode=${EditorState.currentMode.value}")
             isDrawingInProgress = true
             disableFingerTouch()
+
+            // fixme i think no longer needed
+//            if (EditorState.currentMode.value == AppMode.SETTINGS) {
+//                Log.d(TAG, "Stylus down in SETTINGS mode — will skip stroke and dismiss menu")
+//                skipNextStroke = true
+//            }
         }
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
             isDrawingInProgress = false
             enableFingerTouch()
+//            if (skipNextStroke) {
+//                unsetSkipStroke()
+//            }
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {}
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
             Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
-            touchPointList?.points?.let { points ->
-                if (!isDrawingInProgress) {
-                    isDrawingInProgress = true
+            //if (!skipNextStroke) {
+                touchPointList?.points?.let { points ->
+                    if (!isDrawingInProgress) {
+                        isDrawingInProgress = true
+                    }
+                    handleDrawing(points, touchPointList)
                 }
-                handleDrawing(points, touchPointList)
-            }
+//            } else {
+//                Log.d(TAG, "Stroke skipped, dismissing settings")
+//                EditorState.emitDismissSettings()
+//                EditorState.setMode(AppMode.DRAWING)
+//            }
         }
 
         override fun onBeginRawErasing(b: Boolean, touchPoint: TouchPoint?) {

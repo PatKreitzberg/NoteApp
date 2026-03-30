@@ -1,6 +1,5 @@
 package com.wyldsoft.notes.shapemanagement.shapes
 
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
@@ -121,8 +120,6 @@ open class Shape {
         }
 
         val point = floatArrayOf(x, y)
-        val invertMatrix = Matrix()
-        invertMatrix.mapPoints(point)
         val radiusSq = radius * radius
         val points = touchPointList!!.points
         for (i in 0..<points.size - 1) {

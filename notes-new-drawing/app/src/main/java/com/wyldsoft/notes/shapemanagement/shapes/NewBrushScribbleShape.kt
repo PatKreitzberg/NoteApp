@@ -14,9 +14,7 @@ import com.wyldsoft.notes.rendering.RenderContext
 class NewBrushScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList!!.points
-        for (p in points){
-            Log.d("tilt", p.tiltX.toString())
-        }
+
         applyStrokeStyle(renderContext)
         NeoBrushPenWrapper.drawStroke(
             renderContext.canvas, renderContext.paint, points,
