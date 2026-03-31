@@ -7,6 +7,7 @@ import android.graphics.RectF
 import android.util.Log
 import com.onyx.android.sdk.pen.PenUtils
 import com.onyx.android.sdk.pen.data.TouchPointList
+import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.rendering.RenderContext
 /**
  * Base class for all drawable shapes. Stores stroke properties (color, width, type,
@@ -31,6 +32,8 @@ open class Shape {
     var strokeWidth: Float = 0f
     var isTransparent: Boolean = false
         protected set
+    var penType: PenType = PenType.BALLPEN
+    var entityId: String? = null
 
     var touchPointList: TouchPointList? = null
 

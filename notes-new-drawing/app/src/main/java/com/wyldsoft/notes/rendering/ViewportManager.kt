@@ -32,6 +32,13 @@ class ViewportManager {
 
     var paginationEnabled = false
 
+    fun restoreState(scale: Float, scrollX: Float, scrollY: Float) {
+        Log.d(TAG, "restoreState scale=$scale scrollX=$scrollX scrollY=$scrollY")
+        this.scale = scale
+        this.scrollX = scrollX
+        this.scrollY = scrollY
+    }
+
     val MAX_SCALE_FACTOR = 4f
     val MIN_SCALE_FACTOR = 0.5f
 

@@ -19,9 +19,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.graphics.createBitmap
+import com.wyldsoft.notes.ScrotesApp
+import com.wyldsoft.notes.data.database.repository.NoteRepository
 import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.editor.EditorView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
@@ -61,6 +64,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     // Centralized viewport state: scroll position + scale
     protected val viewportManager = ViewportManager()
     protected var paginationManager: PaginationManager? = null
+    protected var currentNoteId: String? = null
+    private var noteRepository: NoteRepository? = null
 
     // Throttle for smooth scroll/zoom updates (ms between renders)
     private val GESTURE_RENDER_INTERVAL_MS = 150L
@@ -79,6 +84,26 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     // Template methods - common implementation for all SDKs
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        currentNoteId = intent.getStringExtra("noteId")
+        val db = (application as ScrotesApp).database
+        noteRepository = NoteRepository(db.noteDao())
+
+        // Restore viewport state from the note if available
+        currentNoteId?.let { noteId ->
+            lifecycleScope.launch(Dispatchers.IO) {
+                val note = noteRepository?.getById(noteId)
+                if (note != null) {
+                    launch(Dispatchers.Main) {
+                        viewportManager.restoreState(
+                            note.viewportScale,
+                            note.viewportScrollX,
+                            note.viewportScrollY
+                        )
+                    }
+                }
+            }
+        }
 
         initializeSDK()
         initializePaint()
@@ -207,6 +232,20 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         onPauseDrawing()
+        saveViewportState()
+    }
+
+    private fun saveViewportState() {
+        val noteId = currentNoteId ?: return
+        val repo = noteRepository ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            repo.updateViewport(
+                noteId,
+                viewportManager.scale,
+                viewportManager.scrollX,
+                viewportManager.scrollY
+            )
+        }
     }
 
     override fun onDestroy() {

@@ -5,10 +5,13 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.util.Log
 import android.view.SurfaceView
+import androidx.lifecycle.lifecycleScope
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.TouchHelper
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
+import com.wyldsoft.notes.ScrotesApp
+import com.wyldsoft.notes.data.database.repository.ShapeRepository
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
 import com.wyldsoft.notes.rendering.RendererToScreenRequest
@@ -18,6 +21,8 @@ import com.wyldsoft.notes.sdkintegration.BaseDeviceReceiver
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.wyldsoft.notes.editor.AppMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Onyx SDK implementation of BaseDrawingActivity. This is the core drawing engine.
@@ -42,10 +47,31 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var rxManager: RxManager? = null
     private var onyxTouchHelper: TouchHelper? = null
     private var onyxDeviceReceiver: GlobalDeviceReceiver? = null
-    private val drawingPipeline = DrawingPipeline(viewportManager)
+    private lateinit var drawingPipeline: DrawingPipeline
+    private var shapesLoaded = false
 
     override fun initializeSDK() {
-        // Onyx-specific initialization
+        Log.d(TAG, "initializeSDK")
+        val db = (application as ScrotesApp).database
+        val shapeRepo = ShapeRepository(db.shapeDao())
+        val noteId = intent.getStringExtra("noteId")
+
+        drawingPipeline = DrawingPipeline(
+            viewportManager = viewportManager,
+            scope = lifecycleScope,
+            shapeRepository = shapeRepo,
+            noteId = noteId
+        )
+
+        if (noteId != null) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                drawingPipeline.loadShapes(noteId)
+                shapesLoaded = true
+                launch(Dispatchers.Main) {
+                    forceScreenRefresh()
+                }
+            }
+        }
     }
 
     override fun createTouchHelper(surfaceView: SurfaceView) {

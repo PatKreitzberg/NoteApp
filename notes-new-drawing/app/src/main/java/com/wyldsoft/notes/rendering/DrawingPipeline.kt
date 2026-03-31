@@ -9,6 +9,8 @@ import android.view.SurfaceView
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
+import com.wyldsoft.notes.data.database.repository.ShapeRepository
+import com.wyldsoft.notes.data.mappers.ShapeMapper
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
@@ -16,16 +18,20 @@ import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import androidx.core.graphics.createBitmap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Manages the drawing pipeline: shape creation, rendering to bitmap, and erasing.
  * Owns the in-memory list of drawn shapes and coordinates viewport transforms
- * for rendering.
- *
- * Extracted from OnyxDrawingActivity to keep that class focused on SDK lifecycle.
+ * for rendering. Persists shapes to the database when a noteId and repository are set.
  */
 class DrawingPipeline(
-    private val viewportManager: ViewportManager
+    private val viewportManager: ViewportManager,
+    private val scope: CoroutineScope? = null,
+    var shapeRepository: ShapeRepository? = null,
+    var noteId: String? = null
 ) {
     private val TAG = "DrawingPipeline"
 
@@ -50,6 +56,35 @@ class DrawingPipeline(
         val shape = createShapeFromPenType(notePointList, penProfile)
         drawnShapes.add(shape)
         renderShapeToBitmap(shape, bitmap)
+        persistShape(shape)
+    }
+
+    private fun persistShape(shape: Shape) {
+        val repo = shapeRepository ?: return
+        val nId = noteId ?: return
+        val entity = ShapeMapper.toEntity(shape, nId)
+        scope?.launch(Dispatchers.IO) {
+            repo.saveShape(entity)
+        }
+    }
+
+    private fun deleteErasedShapes(shapes: List<Shape>) {
+        val repo = shapeRepository ?: return
+        scope?.launch(Dispatchers.IO) {
+            for (shape in shapes) {
+                shape.entityId?.let { repo.deleteShape(it) }
+            }
+        }
+    }
+
+    suspend fun loadShapes(noteId: String) {
+        Log.d(TAG, "loadShapes noteId=$noteId")
+        val repo = shapeRepository ?: return
+        val entities = repo.getShapesForNote(noteId)
+        val shapes = entities.map { ShapeMapper.toShape(it) }
+        drawnShapes.clear()
+        drawnShapes.addAll(shapes)
+        Log.d(TAG, "loadShapes loaded ${shapes.size} shapes")
     }
 
     fun handleErasing(
@@ -72,6 +107,7 @@ class DrawingPipeline(
         if (intersectingShapes.isNotEmpty()) {
             Log.d(TAG, "handleErasing found ${intersectingShapes.size} shapes to erase")
             drawnShapes.removeAll(intersectingShapes.toSet())
+            deleteErasedShapes(intersectingShapes)
 
             val newState = recreateBitmapFromShapes(
                 bitmap, surfaceView.width, surfaceView.height
@@ -189,6 +225,7 @@ class DrawingPipeline(
         shape.strokeColor = penProfile.getColorAsInt()
         shape.strokeWidth = penProfile.strokeWidth
         shape.shapeType = shapeType
+        shape.penType = penProfile.penType
         shape.updateShapeRect()
 
         if (penProfile.penType == PenType.CHARCOAL_V2) {
