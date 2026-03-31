@@ -332,9 +332,9 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     }
 
     /**
-     * Renders the existing bitmap to the SurfaceView with a transform applied,
-     * providing smooth visual feedback during scroll/zoom gestures without
-     * re-rendering all shapes. Throttled to avoid overwhelming the e-ink display.
+     * Renders shapes at the current viewport position during scroll/zoom gestures.
+     * Recreates the bitmap from shapes so that shapes scrolling into view appear
+     * correctly. Throttled to avoid overwhelming the e-ink display.
      */
     private fun renderBitmapWithGestureTransform() {
         val now = SystemClock.uptimeMillis()
@@ -342,18 +342,25 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         lastGestureRenderTime = now
 
         val sv = surfaceView ?: return
-        val bmp = bitmap ?: return
 
+        recreateBitmapAtCurrentViewport()
+
+        val bmp = bitmap ?: return
         val canvas = sv.holder.lockCanvas() ?: return
         try {
             canvas.drawColor(Color.WHITE)
-            canvas.save()
-            viewportManager.applyGestureTransformToCanvas(canvas)
             canvas.drawBitmap(bmp, 0f, 0f, null)
-            canvas.restore()
         } finally {
             sv.holder.unlockCanvasAndPost(canvas)
         }
+    }
+
+    /**
+     * Recreates the offscreen bitmap from all shapes at the current viewport.
+     * Subclasses override to call their DrawingPipeline.
+     */
+    protected open fun recreateBitmapAtCurrentViewport() {
+        // Default no-op; subclasses with a DrawingPipeline override this.
     }
 
     protected open fun initializeTouchHelper(surfaceView: SurfaceView) {

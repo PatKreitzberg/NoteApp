@@ -3,6 +3,7 @@ package com.wyldsoft.notes.sdkintegration.onyx
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
+import android.os.SystemClock
 import android.util.Log
 import android.view.SurfaceView
 import androidx.lifecycle.lifecycleScope
@@ -208,6 +209,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             EpdController.enablePost(sv, 1)
             bitmap?.let { renderToScreen(sv, it) }
+        }
+    }
+
+    override fun recreateBitmapAtCurrentViewport() {
+        surfaceView?.let { sv ->
+            val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+            bitmap = state.bitmap
+            bitmapCanvas = state.canvas
         }
     }
 
