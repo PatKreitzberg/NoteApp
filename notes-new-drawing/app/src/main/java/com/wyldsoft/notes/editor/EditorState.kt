@@ -37,6 +37,14 @@ class EditorState {
         private val _currentPenProfile = MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN))
         val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
 
+        private val _paginationEnabled = MutableStateFlow(false)
+        val paginationEnabled: StateFlow<Boolean> = _paginationEnabled.asStateFlow()
+
+        fun togglePagination() {
+            Log.d(TAG, "togglePagination: ${!_paginationEnabled.value}")
+            _paginationEnabled.value = !_paginationEnabled.value
+        }
+
         private var toolbarRect: Rect? = null
         var exclusionRects = mutableListOf<Rect>()
 
@@ -48,8 +56,6 @@ class EditorState {
         }
 
         fun setMode(mode: AppMode) {
-            Log.d(TAG, "setMode: ${_currentMode.value} -> $mode")
-
             previousMode = _currentMode.value
             if (previousMode == mode) return
             _currentMode.value = mode

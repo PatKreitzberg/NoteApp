@@ -8,10 +8,8 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
-import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
@@ -27,6 +25,7 @@ import com.wyldsoft.notes.editor.EditorView
 import kotlinx.coroutines.launch
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
+import com.wyldsoft.notes.rendering.PaginationManager
 import com.wyldsoft.notes.rendering.ViewportManager
 import com.wyldsoft.notes.touchhandling.GestureEvent
 import com.wyldsoft.notes.touchhandling.GestureHandler
@@ -61,6 +60,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
     // Centralized viewport state: scroll position + scale
     protected val viewportManager = ViewportManager()
+    protected var paginationManager: PaginationManager? = null
 
     // Throttle for smooth scroll/zoom updates (ms between renders)
     private val GESTURE_RENDER_INTERVAL_MS = 150L
@@ -102,6 +102,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         EditorState.setMainActivity(this as com.wyldsoft.notes.MainActivity)
         observeAppMode()
         observePenProfile()
+        observePagination()
     }
 
     private fun observePenProfile() {
@@ -111,6 +112,59 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                 currentPenProfile = profile
                 updatePaintFromProfile()
                 updateTouchHelperWithProfile()
+            }
+        }
+    }
+
+    private fun observePagination() {
+        lifecycleScope.launch {
+            EditorState.paginationEnabled.collect { enabled ->
+                Log.d(TAG, "Pagination changed: $enabled")
+                viewportManager.paginationEnabled = enabled
+                if (enabled) {
+                    viewportManager.resetViewport()
+                    surfaceView?.let { sv ->
+                        paginationManager = PaginationManager(
+                            screenWidthPx = sv.width,
+                            screenHeightPx = sv.height,
+                            density = resources.displayMetrics.density
+                        )
+                    }
+                } else {
+                    paginationManager = null
+                }
+                onPaginationChanged(enabled)
+                forceScreenRefresh()
+                updatePaginationExclusions()
+            }
+        }
+    }
+
+    protected open fun onPaginationChanged(enabled: Boolean) {}
+
+    private fun checkLazyPageCreation() {
+        paginationManager?.let { pm ->
+            surfaceView?.let { sv ->
+                val viewportHeightInNote = sv.height / viewportManager.scale
+                if (pm.maybeAddPage(viewportManager.scrollY, viewportHeightInNote)) {
+                    Log.d(TAG, "Lazy page created, now ${pm.pageCount} pages")
+                    forceScreenRefresh()
+                    updatePaginationExclusions()
+                }
+            }
+        }
+    }
+
+    private fun updatePaginationExclusions() {
+        paginationManager?.let { pm ->
+            surfaceView?.let { sv ->
+                val gapExclusions = pm.computeExclusionRects(
+                    viewportManager.scrollX, viewportManager.scrollY,
+                    viewportManager.scale, sv.width, sv.height
+                )
+                val allExclusions = EditorState.getCurrentExclusionRects().toMutableList()
+                allExclusions.addAll(gapExclusions)
+                updateExclusionZones(allExclusions)
             }
         }
     }
@@ -189,16 +243,17 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                          },
             onGestureEvent = { event ->
                 gestureLabel.value = event.displayName()
-                handleGestureForScroll(event)
+                handleGestureThatTransformsViewport(event)
             }
         )
         sv.setOnTouchListener(gestureHandler)
     }
 
-    private fun handleGestureForScroll(event: GestureEvent) {
+    private fun handleGestureThatTransformsViewport(event: GestureEvent) {
         when (event) {
             is GestureEvent.PanStart -> {
                 if (event.fingerCount == 1) {
+                    onGestureStart()
                     viewportManager.saveSnapshot()
                 }
             }
@@ -213,9 +268,12 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                     Log.d(TAG, "Pan ended, refreshing")
                     viewportManager.clearSnapshot()
                     forceScreenRefresh()
+                    checkLazyPageCreation()
+                    updatePaginationExclusions()
                 }
             }
             is GestureEvent.PinchStart -> {
+                onGestureStart()
                 viewportManager.saveSnapshot()
             }
             is GestureEvent.PinchMove -> {
@@ -227,6 +285,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                 viewportManager.clearSnapshot()
                 forceScreenRefresh()
                 updateTouchHelperWithProfile()
+                checkLazyPageCreation()
+                updatePaginationExclusions()
             }
             else -> { /* other gestures don't affect viewport */ }
         }
@@ -307,6 +367,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     }
 
     // Abstract methods for SDK-specific lifecycle
+    protected abstract fun onGestureStart()
     protected abstract fun onResumeDrawing()
     protected abstract fun onPauseDrawing()
     protected abstract fun onCleanupSDK()

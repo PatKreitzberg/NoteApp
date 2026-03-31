@@ -75,5 +75,15 @@ fun PenToolbar(
         }) {
             Text("Pen Settings")
         }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        val paginationEnabled by EditorState.paginationEnabled.collectAsState()
+        OutlinedButton(onClick = {
+            Log.d(TAG, "Pagination button clicked, currently=$paginationEnabled")
+            EditorState.togglePagination()
+        }) {
+            Text(if (paginationEnabled) "Pages ON" else "Pages OFF")
+        }
     }
 }

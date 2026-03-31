@@ -75,6 +75,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         return true
     }
 
+
+    override fun onGestureStart() {
+        Log.d(TAG, "onGestureStart")
+        surfaceView?.let { EpdController.enablePost(it, 1) }
+    }
     override fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?) {
         Log.d(TAG, "renderToScreen")
         if (bitmap != null) {
@@ -92,6 +97,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun onPauseDrawing() {
         onyxTouchHelper?.setRawDrawingEnabled(false)
+    }
+
+    override fun onPaginationChanged(enabled: Boolean) {
+        Log.d(TAG, "onPaginationChanged: $enabled")
+        drawingPipeline.paginationManager = paginationManager
     }
 
     override fun enterNewMode(mode: AppMode) {

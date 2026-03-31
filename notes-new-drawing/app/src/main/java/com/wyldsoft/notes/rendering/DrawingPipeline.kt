@@ -3,6 +3,7 @@ package com.wyldsoft.notes.rendering
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.data.note.TouchPoint
@@ -31,6 +32,7 @@ class DrawingPipeline(
     private val drawnShapes = mutableListOf<Shape>()
     private val eraseManager = EraseManager()
     private val partialEraseRefresh = PartialEraseRefresh()
+    var paginationManager: PaginationManager? = null
 
     fun clearShapes() {
         Log.d(TAG, "clearShapes")
@@ -127,7 +129,45 @@ class DrawingPipeline(
             shape.renderInViewport(renderContext, viewportManager)
         }
 
+        paginationManager?.let { pm ->
+            renderPaginationOverlays(canvas, pm, width, height)
+        }
+
         return BitmapState(bmp, canvas)
+    }
+
+    private fun renderPaginationOverlays(
+        canvas: Canvas,
+        pm: PaginationManager,
+        screenWidth: Int,
+        screenHeight: Int
+    ) {
+        Log.d(TAG, "renderPaginationOverlays: ${pm.pageCount} pages")
+        val gapPaint = Paint().apply {
+            color = Color.parseColor("#4A90D9")
+            style = Paint.Style.FILL
+        }
+        val textPaint = Paint().apply {
+            color = Color.DKGRAY
+            textSize = 14f * viewportManager.scale
+            textAlign = Paint.Align.RIGHT
+            isAntiAlias = true
+        }
+
+        for (gapRect in pm.allGapRects()) {
+            val vpRect = viewportManager.noteToViewport(gapRect)
+            if (vpRect.bottom > 0 && vpRect.top < screenHeight) {
+                canvas.drawRect(vpRect, gapPaint)
+            }
+        }
+
+        for (i in 0 until pm.pageCount) {
+            val vpX = viewportManager.noteToViewportX(pm.pageWidth - 20f)
+            val vpY = viewportManager.noteToViewportY(pm.pageTopY(i) + 30f)
+            if (vpY > -50 && vpY < screenHeight + 50) {
+                canvas.drawText("${i + 1}", vpX, vpY, textPaint)
+            }
+        }
     }
 
     private fun createShapeFromPenType(

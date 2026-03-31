@@ -30,6 +30,8 @@ class ViewportManager {
     var scale = 1f
         private set
 
+    var paginationEnabled = false
+
     val MAX_SCALE_FACTOR = 4f
     val MIN_SCALE_FACTOR = 0.5f
 
@@ -178,8 +180,17 @@ class ViewportManager {
      * Handle a pan (scroll) gesture. Divides deltas by scale so panning
      * feels consistent regardless of zoom level.
      */
+    fun resetViewport() {
+        scrollX = 0f
+        scrollY = 0f
+        scale = 1f
+        Log.d(TAG, "resetViewport")
+    }
+
     fun handlePanMove(deltaX: Float, deltaY: Float) {
-        scrollX = max(0f, scrollX - deltaX / scale)
+        if (!paginationEnabled) {
+            scrollX = max(0f, scrollX - deltaX / scale)
+        }
         scrollY = max(0f, scrollY - deltaY / scale)
         Log.d(TAG, "handlePanMove scrollX=$scrollX scrollY=$scrollY")
     }
@@ -197,7 +208,7 @@ class ViewportManager {
         val newScale = (scale * scaleFactor).coerceIn(MIN_SCALE_FACTOR, MAX_SCALE_FACTOR)
 
         // Adjust scroll so the anchor stays at (centerX, centerY) on screen
-        scrollX = max(0f, anchorNoteX - centerX / newScale)
+        scrollX = if (paginationEnabled) 0f else max(0f, anchorNoteX - centerX / newScale)
         scrollY = max(0f, anchorNoteY - centerY / newScale)
 
         scale = newScale
