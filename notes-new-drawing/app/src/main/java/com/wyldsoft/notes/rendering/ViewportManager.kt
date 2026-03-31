@@ -33,6 +33,50 @@ class ViewportManager {
     val MAX_SCALE_FACTOR = 4f
     val MIN_SCALE_FACTOR = 0.5f
 
+    // Snapshot of viewport state when a gesture begins.
+    // Used to compute the transform for drawing the existing bitmap during gestures.
+    private var snapshotScrollX = 0f
+    private var snapshotScrollY = 0f
+    private var snapshotScale = 1f
+    private var hasSnapshot = false
+
+    /**
+     * Save a snapshot of the current viewport state at gesture start.
+     * The bitmap was rendered at this state, so we compute a delta transform
+     * from this snapshot to the current state for smooth live updates.
+     */
+    fun saveSnapshot() {
+        snapshotScrollX = scrollX
+        snapshotScrollY = scrollY
+        snapshotScale = scale
+        hasSnapshot = true
+        Log.d(TAG, "saveSnapshot scrollX=$scrollX scrollY=$scrollY scale=$scale")
+    }
+
+    fun clearSnapshot() {
+        hasSnapshot = false
+    }
+
+    /**
+     * Apply a transform to a Canvas that maps the bitmap (rendered at snapshot state)
+     * to the current viewport state. This allows drawing the existing bitmap with
+     * a translate/scale during gestures for smooth visual feedback.
+     *
+     * Math: bitmapCoord -> noteCoord -> currentViewportCoord
+     *   screenPos = bitmapPos * (newScale/oldScale) + (oldScroll - newScroll) * newScale
+     */
+    fun applyGestureTransformToCanvas(canvas: Canvas): Boolean {
+        if (!hasSnapshot) return false
+        val sx = scale / snapshotScale
+        val sy = scale / snapshotScale
+        val tx = (snapshotScrollX - scrollX) * scale
+        val ty = (snapshotScrollY - scrollY) * scale
+        canvas.translate(tx, ty)
+        canvas.scale(sx, sy)
+        Log.d(TAG, "applyGestureTransform sx=$sx tx=$tx ty=$ty")
+        return true
+    }
+
     // --- Coordinate conversion: single points ---
 
     fun viewportToNoteX(vx: Float): Float = vx / scale + scrollX

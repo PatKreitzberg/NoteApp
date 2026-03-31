@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceHolder
@@ -60,6 +61,10 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
     // Centralized viewport state: scroll position + scale
     protected val viewportManager = ViewportManager()
+
+    // Throttle for smooth scroll/zoom updates (ms between renders)
+    private val GESTURE_RENDER_INTERVAL_MS = 150L
+    private var lastGestureRenderTime = 0L
 
     // Abstract methods that must be implemented by SDK-specific classes
     abstract fun initializeSDK()
@@ -192,26 +197,63 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
     private fun handleGestureForScroll(event: GestureEvent) {
         when (event) {
+            is GestureEvent.PanStart -> {
+                if (event.fingerCount == 1) {
+                    viewportManager.saveSnapshot()
+                }
+            }
             is GestureEvent.PanMove -> {
                 if (event.fingerCount == 1) {
                     viewportManager.handlePanMove(event.deltaX, event.deltaY)
+                    renderBitmapWithGestureTransform()
                 }
             }
             is GestureEvent.PanEnd -> {
                 if (event.fingerCount == 1) {
                     Log.d(TAG, "Pan ended, refreshing")
+                    viewportManager.clearSnapshot()
                     forceScreenRefresh()
                 }
             }
+            is GestureEvent.PinchStart -> {
+                viewportManager.saveSnapshot()
+            }
             is GestureEvent.PinchMove -> {
                 viewportManager.handlePinchMove(event.centerX, event.centerY, event.scaleFactor)
+                renderBitmapWithGestureTransform()
             }
             is GestureEvent.PinchEnd -> {
                 Log.d(TAG, "Pinch ended, refreshing at scale ${viewportManager.scale}")
+                viewportManager.clearSnapshot()
                 forceScreenRefresh()
                 updateTouchHelperWithProfile()
             }
             else -> { /* other gestures don't affect viewport */ }
+        }
+    }
+
+    /**
+     * Renders the existing bitmap to the SurfaceView with a transform applied,
+     * providing smooth visual feedback during scroll/zoom gestures without
+     * re-rendering all shapes. Throttled to avoid overwhelming the e-ink display.
+     */
+    private fun renderBitmapWithGestureTransform() {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastGestureRenderTime < GESTURE_RENDER_INTERVAL_MS) return
+        lastGestureRenderTime = now
+
+        val sv = surfaceView ?: return
+        val bmp = bitmap ?: return
+
+        val canvas = sv.holder.lockCanvas() ?: return
+        try {
+            canvas.drawColor(Color.WHITE)
+            canvas.save()
+            viewportManager.applyGestureTransformToCanvas(canvas)
+            canvas.drawBitmap(bmp, 0f, 0f, null)
+            canvas.restore()
+        } finally {
+            sv.holder.unlockCanvasAndPost(canvas)
         }
     }
 
