@@ -23,7 +23,6 @@ import kotlin.math.hypot
 class GestureHandler(
     private val currentModeProvider: () -> AppMode,
     private val changeMode: (AppMode) -> Unit,
-    //private val setSkipStroke: () -> Unit,
     private val onGestureEvent: (GestureEvent) -> Unit
 ) : View.OnTouchListener {
 
@@ -106,10 +105,9 @@ class GestureHandler(
         if (isStylusOrEraser(event)) return false
 
         when (event.actionMasked) {
-            MotionEvent.ACTION_UP -> handleAllPointersUp(event)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> handleAllPointersUp(event)
             MotionEvent.ACTION_DOWN -> handleActionDown(event)
             MotionEvent.ACTION_MOVE -> handleMove(event)
-            MotionEvent.ACTION_CANCEL -> handleAllPointersUp(event)
             MotionEvent.ACTION_POINTER_UP -> handlePointerUp(event)
             MotionEvent.ACTION_POINTER_DOWN -> handlePointerDown(event)
         }

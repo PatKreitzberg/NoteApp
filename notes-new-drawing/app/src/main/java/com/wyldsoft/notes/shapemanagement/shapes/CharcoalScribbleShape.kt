@@ -43,13 +43,11 @@ class CharcoalScribbleShape : Shape() {
             .setScreenMatrix(RenderingUtils.getPointMatrix(renderContext))
 
         if (strokeWidth <= PenConstant.CHARCOAL_SHAPE_DRAW_NORMAL_SCALE_WIDTH_THRESHOLD) {
-            renderArgs.setStrokeWidth(strokeWidth)
-                .setPoints(points)
+            renderArgs.setStrokeWidth(strokeWidth).points = points
             NeoCharcoalPenWrapper.drawNormalStroke(renderArgs)
         } else {
             renderArgs.setStrokeWidth(strokeWidth)
-                .setPoints(points)
-                .setRenderMatrix(RenderingUtils.getPointMatrix(renderContext))
+                .setPoints(points).renderMatrix = RenderingUtils.getPointMatrix(renderContext)
             NeoCharcoalPenWrapper.drawBigStroke(renderArgs)
         }
     }

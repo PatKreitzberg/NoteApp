@@ -3,7 +3,6 @@ package com.wyldsoft.notes.sdkintegration.onyx
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
-import android.os.SystemClock
 import android.util.Log
 import android.view.SurfaceView
 import androidx.lifecycle.lifecycleScope
@@ -179,8 +178,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             .setLimitRect(limit, ArrayList(excludeRects))
             .openRawDrawing()
             .setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
-            .setRawDrawingEnabled(true)
-            .setRawDrawingRenderEnabled(true)
+            .setRawDrawingEnabled(true).isRawDrawingRenderEnabled = true
     }
 
     override fun initializeDeviceReceiver() {
@@ -221,12 +219,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     override fun enableRawDrawing() {
-        onyxTouchHelper?.setRawDrawingRenderEnabled(true)
+        onyxTouchHelper?.isRawDrawingRenderEnabled = true
         onyxTouchHelper?.setRawDrawingEnabled(true)
     }
 
     override fun disableRawDrawing() {
-        onyxTouchHelper?.setRawDrawingRenderEnabled(false)
+        onyxTouchHelper?.isRawDrawingRenderEnabled = false
         onyxTouchHelper?.setRawDrawingEnabled(false)
     }
 
@@ -289,7 +287,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         surfaceView?.let { sv ->
             createDrawingBitmap()
             bitmap?.let { bmp ->
-                drawingPipeline.drawScribbleToBitmap(points, touchPointList, bmp, currentPenProfile)
+                drawingPipeline.drawScribbleToBitmap(touchPointList, bmp, currentPenProfile)
                 renderToScreen(sv, bitmap)
             }
         }
@@ -299,8 +297,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "handleErasing")
         surfaceView?.let { sv ->
             val newState = drawingPipeline.handleErasing(
-                erasePointList, bitmap, bitmapCanvas, sv, getRxManager()
-            ) { com.wyldsoft.notes.rendering.BitmapState(bitmap!!, bitmapCanvas!!) }
+                erasePointList, bitmap, sv, getRxManager()
+            )
             if (newState != null) {
                 bitmap = newState.bitmap
                 bitmapCanvas = newState.canvas

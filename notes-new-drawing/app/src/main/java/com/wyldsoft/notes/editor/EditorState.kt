@@ -41,7 +41,6 @@ class EditorState {
         val paginationEnabled: StateFlow<Boolean> = _paginationEnabled.asStateFlow()
 
         fun togglePagination() {
-            Log.d(TAG, "togglePagination: ${!_paginationEnabled.value}")
             _paginationEnabled.value = !_paginationEnabled.value
         }
 

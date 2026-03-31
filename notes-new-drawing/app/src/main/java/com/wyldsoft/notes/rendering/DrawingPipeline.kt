@@ -6,7 +6,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.Log
 import android.view.SurfaceView
-import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.data.database.repository.ShapeRepository
@@ -46,7 +45,6 @@ class DrawingPipeline(
     }
 
     fun drawScribbleToBitmap(
-        points: List<TouchPoint>,
         touchPointList: TouchPointList,
         bitmap: Bitmap,
         penProfile: PenProfile
@@ -90,28 +88,20 @@ class DrawingPipeline(
     fun handleErasing(
         erasePointList: TouchPointList,
         bitmap: Bitmap?,
-        bitmapCanvas: Canvas?,
         surfaceView: SurfaceView,
-        rxManager: RxManager,
-        bitmapProvider: () -> BitmapState
+        rxManager: RxManager
     ): BitmapState? {
         Log.d(TAG, "handleErasing called")
-
         val noteErasePointList = viewportManager.viewportToNoteTouchPoints(erasePointList)
         val intersectingShapes = eraseManager.findIntersectingShapes(
             noteErasePointList,
             drawnShapes
         )
-        Log.d(TAG, "handleErasing done checking intersections")
-
         if (intersectingShapes.isNotEmpty()) {
-            Log.d(TAG, "handleErasing found ${intersectingShapes.size} shapes to erase")
             drawnShapes.removeAll(intersectingShapes.toSet())
             deleteErasedShapes(intersectingShapes)
 
-            val newState = recreateBitmapFromShapes(
-                bitmap, surfaceView.width, surfaceView.height
-            )
+            val newState = recreateBitmapFromShapes(bitmap, surfaceView.width, surfaceView.height)
 
             val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
             if (refreshRect != null) {
@@ -124,10 +114,8 @@ class DrawingPipeline(
                     rxManager
                 )
             }
-            Log.d(TAG, "erase partial refresh enqueued to RxManager")
             return newState
         }
-        Log.d(TAG, "handleErasing done — no shapes erased")
         return null
     }
 
@@ -147,12 +135,10 @@ class DrawingPipeline(
         if (currentBitmap != null && !currentBitmap.isRecycled
             && currentBitmap.width == width && currentBitmap.height == height
         ) {
-            Log.d(TAG, "reusing existing bitmap")
             bmp = currentBitmap
             canvas = Canvas(bmp)
             canvas.drawColor(Color.WHITE)
         } else {
-            Log.d(TAG, "creating new bitmap (old size mismatch or null)")
             bmp = createBitmap(width, height)
             canvas = Canvas(bmp)
             canvas.drawColor(Color.WHITE)
@@ -160,7 +146,6 @@ class DrawingPipeline(
 
         val renderContext = RenderContext.createForBitmap(bmp, canvas)
 
-        Log.d(TAG, "Drawing ${drawnShapes.size} shapes")
         for (shape in drawnShapes) {
             shape.renderInViewport(renderContext, viewportManager)
         }
@@ -238,7 +223,6 @@ class DrawingPipeline(
     }
 
     private fun renderShapeToBitmap(shape: Shape, bitmap: Bitmap) {
-        Log.d(TAG, "renderShapeToBitmap")
         val renderContext = RenderContext.createForBitmap(bitmap, Canvas(bitmap))
         shape.renderInViewport(renderContext, viewportManager)
     }
