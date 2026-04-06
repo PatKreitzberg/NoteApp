@@ -63,7 +63,10 @@ object ShapeMapper {
 
     fun toShape(entity: ShapeEntity): Shape {
         Log.d(TAG, "toShape id=${entity.id}")
-        val shapeType = entity.type.toInt()
+        val shapeType = entity.type.toIntOrNull() ?: run {
+            Log.w(TAG, "Unrecognised shape type '${entity.type}' for id=${entity.id}, defaulting to PENCIL")
+            ShapeFactory.SHAPE_PENCIL_SCRIBBLE
+        }
         val shape = ShapeFactory.createShape(shapeType)
 
         shape.shapeType = shapeType

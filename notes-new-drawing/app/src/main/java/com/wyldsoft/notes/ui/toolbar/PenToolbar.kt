@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,6 +75,21 @@ fun PenToolbar(
             }
         }) {
             Text("Pen Settings")
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        val currentMode by EditorState.currentMode.collectAsState()
+        val inSelection = currentMode == AppMode.SELECTION
+        OutlinedButton(
+            onClick = {
+                Log.d(TAG, "Selection button clicked, inSelection=$inSelection")
+                if (inSelection) EditorState.setMode(AppMode.DRAWING)
+                else EditorState.setMode(AppMode.SELECTION)
+            },
+            border = if (inSelection) BorderStroke(2.dp, Color.DarkGray) else null
+        ) {
+            Text("Select")
         }
 
         Spacer(modifier = Modifier.width(12.dp))

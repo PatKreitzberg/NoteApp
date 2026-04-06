@@ -44,6 +44,24 @@ class DrawingPipeline(
         drawnShapes.clear()
     }
 
+    fun getShapes(): List<Shape> = drawnShapes.toList()
+
+    fun updateShape(shape: Shape) {
+        Log.d(TAG, "updateShape entityId=${shape.entityId}")
+        persistShape(shape)
+    }
+
+    fun recreateBitmapExcluding(
+        excludedShapes: List<Shape>,
+        currentBitmap: Bitmap?,
+        width: Int,
+        height: Int
+    ): BitmapState {
+        Log.d(TAG, "recreateBitmapExcluding excluded=${excludedShapes.size}")
+        val excludedSet = excludedShapes.toSet()
+        return recreateBitmapFromShapes(currentBitmap, width, height, drawnShapes.filter { it !in excludedSet })
+    }
+
     fun drawScribbleToBitmap(
         touchPointList: TouchPointList,
         bitmap: Bitmap,
@@ -121,12 +139,14 @@ class DrawingPipeline(
 
     /**
      * Recreates the full offscreen bitmap by re-rendering all stored shapes.
+     * Pass [shapesToRender] to render a custom subset (e.g. excluding selected shapes).
      * Returns the new bitmap and canvas so the caller can update its fields.
      */
     fun recreateBitmapFromShapes(
         currentBitmap: Bitmap?,
         width: Int,
-        height: Int
+        height: Int,
+        shapesToRender: List<Shape> = drawnShapes
     ): BitmapState {
         Log.d(TAG, "recreateBitmapFromShapes scale=${viewportManager.scale} scrollX=${viewportManager.scrollX} scrollY=${viewportManager.scrollY}")
 
@@ -146,7 +166,7 @@ class DrawingPipeline(
 
         val renderContext = RenderContext.createForBitmap(bmp, canvas)
 
-        for (shape in drawnShapes) {
+        for (shape in shapesToRender) {
             shape.renderInViewport(renderContext, viewportManager)
         }
 
