@@ -86,6 +86,9 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         currentNoteId = intent.getStringExtra("noteId")
+        val currentNotebookId = intent.getStringExtra("notebookId")
+        EditorState.currentNoteId = currentNoteId
+        EditorState.currentNotebookId = currentNotebookId
         val db = (application as ScrotesApp).database
         noteRepository = NoteRepository(db.noteDao())
 

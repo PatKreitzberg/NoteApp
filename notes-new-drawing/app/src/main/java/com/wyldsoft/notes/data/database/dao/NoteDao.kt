@@ -35,6 +35,9 @@ interface NoteDao {
     @Query("UPDATE notes SET isPaginationEnabled = :enabled, modifiedAt = :modifiedAt WHERE id = :noteId")
     suspend fun updatePagination(noteId: String, enabled: Boolean, modifiedAt: Long = System.currentTimeMillis())
 
+    @Query("UPDATE notes SET title = :title, modifiedAt = :now WHERE id = :id")
+    suspend fun renameNote(id: String, title: String, now: Long)
+
     // Sync methods
     @Query("SELECT * FROM notes WHERE modifiedAt > :timestamp")
     suspend fun getNotesModifiedAfter(timestamp: Long): List<NoteEntity>

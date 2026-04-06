@@ -53,4 +53,9 @@ class NoteRepository(private val noteDao: NoteDao) {
         Log.d(TAG, "update noteId=${note.id}")
         noteDao.update(note)
     }
+
+    suspend fun renameNote(id: String, newTitle: String) {
+        Log.d(TAG, "renameNote id=$id newTitle=$newTitle")
+        noteDao.renameNote(id, newTitle, System.currentTimeMillis())
+    }
 }

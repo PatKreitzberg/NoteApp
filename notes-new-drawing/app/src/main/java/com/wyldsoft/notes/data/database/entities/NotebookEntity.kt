@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.data.database.entities
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -24,5 +25,7 @@ data class NotebookEntity(
     val folderId: String,
     val settings: String = "{}",
     val createdAt: Long = System.currentTimeMillis(),
-    val modifiedAt: Long = System.currentTimeMillis()
+    val modifiedAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "trashedFromId")
+    val trashedFromId: String? = null
 )

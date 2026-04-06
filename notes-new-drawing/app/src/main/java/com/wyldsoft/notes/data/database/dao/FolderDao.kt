@@ -25,6 +25,15 @@ interface FolderDao {
     @Delete
     suspend fun delete(folder: FolderEntity)
 
+    @Query("SELECT * FROM folders WHERE parentFolderId = 'trash' ORDER BY modifiedAt DESC")
+    suspend fun getFoldersInTrash(): List<FolderEntity>
+
+    @Query("UPDATE folders SET parentFolderId = :newParentId, trashedFromId = :trashedFrom, modifiedAt = :now WHERE id = :id")
+    suspend fun moveFolder(id: String, newParentId: String, trashedFrom: String?, now: Long)
+
+    @Query("UPDATE folders SET name = :name, modifiedAt = :now WHERE id = :id")
+    suspend fun renameFolder(id: String, name: String, now: Long)
+
     // Sync methods
     @Query("SELECT * FROM folders WHERE modifiedAt > :timestamp")
     suspend fun getFoldersModifiedAfter(timestamp: Long): List<FolderEntity>

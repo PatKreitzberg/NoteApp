@@ -13,7 +13,7 @@ import com.wyldsoft.notes.ui.toolbar.PenToolbar
 
 /**
  * Top-level Compose layout for the editor screen.
- * Hosts the PenToolbar, DrawingCanvas, and an optional settings panel
+ * Hosts the PenToolbar, DrawingCanvas, and optional settings panels
  * with a fullscreen scrim for dismissal.
  */
 @Composable
@@ -24,6 +24,7 @@ fun EditorView(
     remember { EditorState() }
 
     var menuExpanded by remember { mutableStateOf(false) }
+    var settingsExpanded by remember { mutableStateOf(false) }
     val currentProfile by EditorState.currentPenProfile.collectAsState()
 
     Box(
@@ -34,7 +35,9 @@ fun EditorView(
         Column(modifier = Modifier.fillMaxSize()) {
             PenToolbar(
                 expanded = menuExpanded,
-                onExpandedChange = { menuExpanded = it }
+                onExpandedChange = { menuExpanded = it },
+                settingsExpanded = settingsExpanded,
+                onSettingsExpandedChange = { settingsExpanded = it }
             )
 
             DrawingCanvas(
@@ -45,8 +48,8 @@ fun EditorView(
             )
         }
 
-        // Scrim + settings panel overlay when menu is open
-        if (menuExpanded) {
+        // Scrim + panels overlay when any panel is open
+        if (menuExpanded || settingsExpanded) {
             // Fullscreen transparent scrim — catches finger taps outside the panel
             Box(
                 modifier = Modifier
@@ -56,18 +59,31 @@ fun EditorView(
                         interactionSource = remember { MutableInteractionSource() }
                     ) {
                         menuExpanded = false
+                        settingsExpanded = false
                         EditorState.setMode(AppMode.DRAWING)
                     }
             )
 
-            // Settings panel positioned below the toolbar
-            PenPropertiesPanel(
-                currentProfile = currentProfile,
-                onProfileChanged = { newProfile ->
-                    EditorState.setPenProfile(newProfile)
-                },
-                modifier = Modifier.padding(top = 48.dp)
-            )
+            if (menuExpanded) {
+                // Pen settings panel positioned below the toolbar
+                PenPropertiesPanel(
+                    currentProfile = currentProfile,
+                    onProfileChanged = { newProfile ->
+                        EditorState.setPenProfile(newProfile)
+                    },
+                    modifier = Modifier.padding(top = 48.dp)
+                )
+            }
+
+            if (settingsExpanded) {
+                // Editor settings panel positioned below the toolbar, right-aligned
+                EditorSettingsPanel(
+                    modifier = Modifier
+                        .padding(top = 48.dp)
+                        .wrapContentWidth()
+                        .align(androidx.compose.ui.Alignment.TopEnd)
+                )
+            }
         }
 
         // Gesture notification overlay

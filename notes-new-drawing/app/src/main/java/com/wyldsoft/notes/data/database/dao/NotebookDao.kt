@@ -25,6 +25,15 @@ interface NotebookDao {
     @Delete
     suspend fun delete(notebook: NotebookEntity)
 
+    @Query("SELECT * FROM notebooks WHERE folderId = 'trash' ORDER BY modifiedAt DESC")
+    suspend fun getNotebooksInTrash(): List<NotebookEntity>
+
+    @Query("UPDATE notebooks SET folderId = :newFolderId, trashedFromId = :trashedFrom, modifiedAt = :now WHERE id = :id")
+    suspend fun moveNotebook(id: String, newFolderId: String, trashedFrom: String?, now: Long)
+
+    @Query("UPDATE notebooks SET name = :name, modifiedAt = :now WHERE id = :id")
+    suspend fun renameNotebook(id: String, name: String, now: Long)
+
     // Sync methods
     @Query("SELECT * FROM notebooks WHERE modifiedAt > :timestamp")
     suspend fun getNotebooksModifiedAfter(timestamp: Long): List<NotebookEntity>

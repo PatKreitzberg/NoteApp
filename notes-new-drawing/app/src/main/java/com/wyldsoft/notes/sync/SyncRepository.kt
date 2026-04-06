@@ -9,6 +9,7 @@ import com.wyldsoft.notes.data.database.dao.NoteDao
 import com.wyldsoft.notes.data.database.dao.NotebookDao
 import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.dao.SyncStateDao
+import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.SyncStateEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,6 +39,7 @@ class SyncRepository(
     private val context: Context
 ) {
     private val isRunning = AtomicBoolean(false)
+    private val THIRTY_DAYS_MS = 30L * 24 * 60 * 60 * 1000
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
@@ -95,6 +97,7 @@ class SyncRepository(
             deletionHandler.applyRemoteDeletions(client, appFolder, lastSync, errors)
 
             val thirtyDaysAgo = syncStartTime - 30L * 24 * 60 * 60 * 1000
+            cleanupOldTrashItems(thirtyDaysAgo)
             deletedItemDao.deleteOlderThan(thirtyDaysAgo)
 
             syncStateDao.upsert(SyncStateEntity(deviceId = deviceId, lastSyncTimestamp = syncStartTime))
@@ -109,6 +112,37 @@ class SyncRepository(
             SyncResult.Failure(e)
         } finally {
             isRunning.set(false)
+        }
+    }
+
+    private suspend fun cleanupOldTrashItems(cutoffMs: Long) {
+        Log.d(TAG, "cleanupOldTrashItems cutoff=$cutoffMs")
+        val trashedFolders = folderDao.getFoldersInTrash()
+        trashedFolders.filter { it.modifiedAt < cutoffMs }.forEach { folder ->
+            Log.d(TAG, "Permanently deleting trashed folder id=${folder.id}")
+            folderDao.deleteById(folder.id)
+            deletedItemDao.insert(
+                DeletedItemEntity(
+                    entityId = folder.id,
+                    entityType = "folder",
+                    deletedAt = System.currentTimeMillis(),
+                    originalParentId = folder.trashedFromId
+                )
+            )
+        }
+
+        val trashedNotebooks = notebookDao.getNotebooksInTrash()
+        trashedNotebooks.filter { it.modifiedAt < cutoffMs }.forEach { notebook ->
+            Log.d(TAG, "Permanently deleting trashed notebook id=${notebook.id}")
+            notebookDao.deleteById(notebook.id)
+            deletedItemDao.insert(
+                DeletedItemEntity(
+                    entityId = notebook.id,
+                    entityType = "notebook",
+                    deletedAt = System.currentTimeMillis(),
+                    originalParentId = notebook.trashedFromId
+                )
+            )
         }
     }
 }

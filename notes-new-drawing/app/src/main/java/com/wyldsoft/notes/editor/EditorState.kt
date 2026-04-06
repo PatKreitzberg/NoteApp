@@ -44,6 +44,9 @@ class EditorState {
             _paginationEnabled.value = !_paginationEnabled.value
         }
 
+        var currentNoteId: String? = null
+        var currentNotebookId: String? = null
+
         private var toolbarRect: Rect? = null
         var exclusionRects = mutableListOf<Rect>()
 

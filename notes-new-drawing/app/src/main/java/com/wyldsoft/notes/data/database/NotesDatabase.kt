@@ -22,6 +22,7 @@ import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRefEntity
 import com.wyldsoft.notes.data.database.entities.ShapeEntity
 import com.wyldsoft.notes.data.database.entities.SyncStateEntity
+import com.wyldsoft.notes.data.database.migrations.MIGRATION_2_3
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,7 +37,7 @@ import kotlinx.coroutines.launch
         SyncStateEntity::class,
         DeletedItemEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -87,7 +88,7 @@ abstract class NotesDatabase : RoomDatabase() {
                 NotesDatabase::class.java,
                 "notes_database"
             )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(SeedCallback())
                 .build()
         }
@@ -96,11 +97,15 @@ abstract class NotesDatabase : RoomDatabase() {
     private class SeedCallback : Callback() {
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            Log.d(TAG, "SeedCallback.onCreate — inserting root folder")
+            Log.d(TAG, "SeedCallback.onCreate — inserting root and trash folders")
             val now = System.currentTimeMillis()
             db.execSQL(
-                "INSERT INTO folders (id, name, parentFolderId, createdAt, modifiedAt) VALUES (?, ?, NULL, ?, ?)",
+                "INSERT INTO folders (id, name, parentFolderId, createdAt, modifiedAt, trashedFromId) VALUES (?, ?, NULL, ?, ?, NULL)",
                 arrayOf<Any>(FolderEntity.ROOT_ID, "Home", now, now)
+            )
+            db.execSQL(
+                "INSERT INTO folders (id, name, parentFolderId, createdAt, modifiedAt, trashedFromId) VALUES (?, ?, ?, ?, ?, NULL)",
+                arrayOf<Any>(FolderEntity.TRASH_ID, "Trash", FolderEntity.ROOT_ID, now, now)
             )
         }
     }

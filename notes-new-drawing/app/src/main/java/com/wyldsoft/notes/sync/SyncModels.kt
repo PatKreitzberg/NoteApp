@@ -58,7 +58,8 @@ data class NotebookJson(
     val folderId: String,
     val settings: String,
     val createdAt: Long,
-    val modifiedAt: Long
+    val modifiedAt: Long,
+    val trashedFromId: String? = null
 )
 
 @Serializable
@@ -67,7 +68,8 @@ data class FolderJson(
     val name: String,
     val parentFolderId: String?,
     val createdAt: Long,
-    val modifiedAt: Long
+    val modifiedAt: Long,
+    val trashedFromId: String? = null
 )
 
 @Serializable
@@ -166,7 +168,8 @@ fun NotebookEntity.toNotebookJson() = NotebookJson(
     folderId = folderId,
     settings = settings,
     createdAt = createdAt,
-    modifiedAt = modifiedAt
+    modifiedAt = modifiedAt,
+    trashedFromId = trashedFromId
 )
 
 fun NotebookJson.toEntity() = NotebookEntity(
@@ -175,7 +178,8 @@ fun NotebookJson.toEntity() = NotebookEntity(
     folderId = folderId,
     settings = settings,
     createdAt = createdAt,
-    modifiedAt = modifiedAt
+    modifiedAt = modifiedAt,
+    trashedFromId = trashedFromId
 )
 
 fun FolderEntity.toFolderJson() = FolderJson(
@@ -183,7 +187,8 @@ fun FolderEntity.toFolderJson() = FolderJson(
     name = name,
     parentFolderId = parentFolderId,
     createdAt = createdAt,
-    modifiedAt = modifiedAt
+    modifiedAt = modifiedAt,
+    trashedFromId = trashedFromId
 )
 
 fun FolderJson.toEntity() = FolderEntity(
@@ -191,5 +196,6 @@ fun FolderJson.toEntity() = FolderEntity(
     name = name,
     parentFolderId = parentFolderId,
     createdAt = createdAt,
-    modifiedAt = modifiedAt
+    modifiedAt = modifiedAt,
+    trashedFromId = trashedFromId
 )
