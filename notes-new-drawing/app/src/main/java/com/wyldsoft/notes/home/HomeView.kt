@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -29,14 +30,22 @@ import com.wyldsoft.notes.home.components.BreadcrumbBar
 import com.wyldsoft.notes.home.components.CreateItemDialog
 import com.wyldsoft.notes.home.components.FolderCard
 import com.wyldsoft.notes.home.components.NotebookCard
+import com.wyldsoft.notes.home.components.SyncBar
+import com.wyldsoft.notes.sync.SyncUiState
+import com.wyldsoft.notes.sync.SyncViewModel
 
 @Composable
 fun HomeView(
     viewModel: HomeViewModel,
+    syncViewModel: SyncViewModel,
+    isSignedIn: Boolean,
+    onSignInClick: () -> Unit,
+    onSignOutClick: () -> Unit,
     onOpenNotebook: (notebookId: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val syncUiState by syncViewModel.syncUiState.collectAsState()
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showCreateNotebookDialog by remember { mutableStateOf(false) }
 
@@ -61,6 +70,16 @@ fun HomeView(
             breadcrumbs = uiState.breadcrumbs,
             onFolderClick = { folderId -> viewModel.navigateToFolder(folderId) }
         )
+
+        // Sync status bar
+        SyncBar(
+            isSignedIn = isSignedIn,
+            syncUiState = syncUiState,
+            onSignInClick = onSignInClick,
+            onSignOutClick = onSignOutClick,
+            onSyncNowClick = { syncViewModel.triggerSync() }
+        )
+        Divider()
 
         // Folders section header
         Row(

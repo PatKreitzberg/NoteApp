@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.wyldsoft.notes.data.database.entities.NoteEntity
+import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRefEntity
 
 @Dao
 interface NoteDao {
@@ -33,4 +34,29 @@ interface NoteDao {
 
     @Query("UPDATE notes SET isPaginationEnabled = :enabled, modifiedAt = :modifiedAt WHERE id = :noteId")
     suspend fun updatePagination(noteId: String, enabled: Boolean, modifiedAt: Long = System.currentTimeMillis())
+
+    // Sync methods
+    @Query("SELECT * FROM notes WHERE modifiedAt > :timestamp")
+    suspend fun getNotesModifiedAfter(timestamp: Long): List<NoteEntity>
+
+    @Query("SELECT * FROM notes")
+    suspend fun getAllNoteEntities(): List<NoteEntity>
+
+    @Query("SELECT * FROM note_notebook_cross_ref WHERE noteId = :noteId")
+    suspend fun getCrossRefsForNote(noteId: String): List<NoteNotebookCrossRefEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNote(note: NoteEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCrossRef(crossRef: NoteNotebookCrossRefEntity)
+
+    @Query("DELETE FROM note_notebook_cross_ref WHERE noteId = :noteId")
+    suspend fun deleteCrossRefsForNote(noteId: String)
+
+    @Query("DELETE FROM notes WHERE id = :noteId")
+    suspend fun deleteById(noteId: String)
+
+    @Query("SELECT * FROM notes WHERE id = :noteId")
+    suspend fun getNote(noteId: String): NoteEntity?
 }

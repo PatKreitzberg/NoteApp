@@ -24,4 +24,20 @@ interface NotebookDao {
 
     @Delete
     suspend fun delete(notebook: NotebookEntity)
+
+    // Sync methods
+    @Query("SELECT * FROM notebooks WHERE modifiedAt > :timestamp")
+    suspend fun getNotebooksModifiedAfter(timestamp: Long): List<NotebookEntity>
+
+    @Query("SELECT * FROM notebooks")
+    suspend fun getAllNotebookEntities(): List<NotebookEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNotebook(notebook: NotebookEntity)
+
+    @Query("DELETE FROM notebooks WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM notebooks WHERE id = :id")
+    suspend fun getNotebook(id: String): NotebookEntity?
 }

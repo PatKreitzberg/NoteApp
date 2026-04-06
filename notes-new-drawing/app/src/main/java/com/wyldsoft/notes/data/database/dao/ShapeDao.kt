@@ -22,4 +22,11 @@ interface ShapeDao {
 
     @Query("DELETE FROM shapes WHERE noteId = :noteId")
     suspend fun deleteByNoteId(noteId: String)
+
+    // Sync method aliases
+    @Query("SELECT * FROM shapes WHERE noteId = :noteId ORDER BY layer, timestamp")
+    suspend fun getShapesForNoteOnce(noteId: String): List<ShapeEntity>
+
+    @Query("DELETE FROM shapes WHERE noteId = :noteId")
+    suspend fun deleteAllForNote(noteId: String)
 }

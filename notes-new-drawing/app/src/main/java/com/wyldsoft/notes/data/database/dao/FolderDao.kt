@@ -24,4 +24,20 @@ interface FolderDao {
 
     @Delete
     suspend fun delete(folder: FolderEntity)
+
+    // Sync methods
+    @Query("SELECT * FROM folders WHERE modifiedAt > :timestamp")
+    suspend fun getFoldersModifiedAfter(timestamp: Long): List<FolderEntity>
+
+    @Query("SELECT * FROM folders")
+    suspend fun getAllFolderEntities(): List<FolderEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertFolder(folder: FolderEntity)
+
+    @Query("DELETE FROM folders WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM folders WHERE id = :id")
+    suspend fun getFolder(id: String): FolderEntity?
 }
