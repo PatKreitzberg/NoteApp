@@ -34,6 +34,16 @@ class EditorState {
         private val _dismissSettings = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val dismissSettings = _dismissSettings.asSharedFlow()
 
+        private val _canUndo = MutableStateFlow(false)
+        val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
+        private val _canRedo = MutableStateFlow(false)
+        val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
+
+        private val _undoRequested = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val undoRequested = _undoRequested.asSharedFlow()
+        private val _redoRequested = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val redoRequested = _redoRequested.asSharedFlow()
+
         private val _currentPenProfile = MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN))
         val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
 
@@ -61,6 +71,21 @@ class EditorState {
             previousMode = _currentMode.value
             if (previousMode == mode) return
             _currentMode.value = mode
+        }
+
+        fun setUndoRedoState(canUndo: Boolean, canRedo: Boolean) {
+            _canUndo.value = canUndo
+            _canRedo.value = canRedo
+        }
+
+        fun requestUndo() {
+            Log.d(TAG, "requestUndo")
+            _undoRequested.tryEmit(Unit)
+        }
+
+        fun requestRedo() {
+            Log.d(TAG, "requestRedo")
+            _redoRequested.tryEmit(Unit)
         }
 
         fun emitDismissSettings() {

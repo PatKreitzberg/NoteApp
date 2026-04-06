@@ -28,6 +28,10 @@ import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
 import com.wyldsoft.notes.selection.SelectionManager
 import com.wyldsoft.notes.touchhandling.TouchUtils
+import com.wyldsoft.notes.undoredo.ActionManager
+import com.wyldsoft.notes.undoredo.DrawAction
+import com.wyldsoft.notes.undoredo.EraseAction
+import com.wyldsoft.notes.undoredo.MoveAction
 import com.onyx.android.sdk.api.device.epd.EpdController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -77,6 +81,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var lastSelectionRenderTime = 0L
     private var savedPenProfile: PenProfile? = null
     private val selectionManager = SelectionManager()
+    private val actionManager = ActionManager()
 
     private val SELECTION_LASSO_PROFILE = PenProfile(
         strokeWidth = 3f,
@@ -114,6 +119,33 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     forceScreenRefresh()
                 }
             }
+        }
+
+        observeUndoRedo()
+    }
+
+    private fun observeUndoRedo() {
+        Log.d(TAG, "observeUndoRedo")
+        lifecycleScope.launch {
+            EditorState.undoRequested.collect {
+                actionManager.undo(lifecycleScope, ::onUndoRedoComplete)
+            }
+        }
+        lifecycleScope.launch {
+            EditorState.redoRequested.collect {
+                actionManager.redo(lifecycleScope, ::onUndoRedoComplete)
+            }
+        }
+    }
+
+    private fun onUndoRedoComplete() {
+        Log.d(TAG, "onUndoRedoComplete")
+        surfaceView?.let { sv ->
+            val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+            bitmap = state.bitmap
+            bitmapCanvas = state.canvas
+            EpdController.enablePost(sv, 1)
+            renderToScreen(sv, bitmap)
         }
     }
 
@@ -405,7 +437,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         surfaceView?.let { sv ->
             createDrawingBitmap()
             bitmap?.let { bmp ->
-                drawingPipeline.drawScribbleToBitmap(touchPointList, bmp, currentPenProfile)
+                val shape = drawingPipeline.drawScribbleToBitmap(touchPointList, bmp, currentPenProfile)
+                actionManager.recordAction(DrawAction(shape, drawingPipeline))
                 renderToScreen(sv, bitmap)
             }
         }
@@ -420,6 +453,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             if (newState != null) {
                 bitmap = newState.bitmap
                 bitmapCanvas = newState.canvas
+                val erased = drawingPipeline.lastErasedShapes
+                if (erased.isNotEmpty()) {
+                    actionManager.recordAction(EraseAction(erased, drawingPipeline))
+                }
             }
         }
     }
@@ -496,10 +533,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         val dNoteX = dViewX / viewportManager.scale
         val dNoteY = dViewY / viewportManager.scale
 
+        val shapesBeforeMove = selectedShapes.toList()
         for (shape in selectedShapes) {
             selectionManager.translateShape(shape, dNoteX, dNoteY)
             drawingPipeline.updateShape(shape)
         }
+        actionManager.recordAction(MoveAction(shapesBeforeMove, dNoteX, dNoteY, drawingPipeline, selectionManager))
         selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
 
         onyxTouchHelper?.isRawDrawingRenderEnabled = true

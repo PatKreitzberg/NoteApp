@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -96,6 +98,37 @@ fun PenToolbar(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        val canUndo by EditorState.canUndo.collectAsState()
+        val canRedo by EditorState.canRedo.collectAsState()
+
+        IconButton(
+            onClick = {
+                Log.d(TAG, "Undo button clicked")
+                EditorState.requestUndo()
+            },
+            enabled = canUndo
+        ) {
+            Icon(
+                imageVector = Icons.Default.Undo,
+                contentDescription = "Undo",
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        IconButton(
+            onClick = {
+                Log.d(TAG, "Redo button clicked")
+                EditorState.requestRedo()
+            },
+            enabled = canRedo
+        ) {
+            Icon(
+                imageVector = Icons.Default.Redo,
+                contentDescription = "Redo",
+                modifier = Modifier.size(24.dp)
+            )
+        }
 
         IconButton(onClick = {
             Log.d(TAG, "Settings button clicked, settingsExpanded=$settingsExpanded")

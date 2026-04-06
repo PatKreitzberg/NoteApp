@@ -39,6 +39,10 @@ class DrawingPipeline(
     private val partialEraseRefresh = PartialEraseRefresh()
     var paginationManager: PaginationManager? = null
 
+    /** The shapes removed during the most recent erase stroke, for undo recording. */
+    var lastErasedShapes: List<Shape> = emptyList()
+        private set
+
     fun clearShapes() {
         Log.d(TAG, "clearShapes")
         drawnShapes.clear()
@@ -66,13 +70,28 @@ class DrawingPipeline(
         touchPointList: TouchPointList,
         bitmap: Bitmap,
         penProfile: PenProfile
-    ) {
+    ): Shape {
         Log.d(TAG, "drawScribbleToBitmap list size ${touchPointList.size()}")
         val notePointList = viewportManager.viewportToNoteTouchPoints(touchPointList)
         val shape = createShapeFromPenType(notePointList, penProfile)
         drawnShapes.add(shape)
         renderShapeToBitmap(shape, bitmap)
         persistShape(shape)
+        return shape
+    }
+
+    /** Adds a shape to the in-memory list and persists it. Used by undo/redo. */
+    fun addShape(shape: Shape) {
+        Log.d(TAG, "addShape entityId=${shape.entityId}")
+        drawnShapes.add(shape)
+        persistShape(shape)
+    }
+
+    /** Removes a shape from the in-memory list and deletes it from the DB. Used by undo/redo. */
+    fun removeShape(shape: Shape) {
+        Log.d(TAG, "removeShape entityId=${shape.entityId}")
+        drawnShapes.remove(shape)
+        deleteErasedShapes(listOf(shape))
     }
 
     private fun persistShape(shape: Shape) {
@@ -116,6 +135,7 @@ class DrawingPipeline(
             drawnShapes
         )
         if (intersectingShapes.isNotEmpty()) {
+            lastErasedShapes = intersectingShapes.toList()
             drawnShapes.removeAll(intersectingShapes.toSet())
             deleteErasedShapes(intersectingShapes)
 
