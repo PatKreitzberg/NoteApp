@@ -70,91 +70,66 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun createFolder(name: String) {
         Log.d(TAG, "createFolder name=$name")
-        viewModelScope.launch(Dispatchers.IO) {
-            folderRepository.createFolder(name, _uiState.value.currentFolderId)
-            refreshCurrentFolder()
-            loadAllFolders()
-        }
+        launchWithFullRefresh { folderRepository.createFolder(name, _uiState.value.currentFolderId) }
     }
 
     fun createNotebook(name: String) {
         Log.d(TAG, "createNotebook name=$name")
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithFolderRefresh {
             notebookRepository.createNotebookWithFirstNote(
                 name,
                 _uiState.value.currentFolderId,
                 appSettings.defaultPaginationEnabled
             )
-            refreshCurrentFolder()
         }
     }
 
     fun renameFolder(id: String, newName: String) {
         Log.d(TAG, "renameFolder id=$id newName=$newName")
-        viewModelScope.launch(Dispatchers.IO) {
-            folderRepository.renameFolder(id, newName)
-            refreshCurrentFolder()
-            loadAllFolders()
-        }
+        launchWithFullRefresh { folderRepository.renameFolder(id, newName) }
     }
 
     fun renameNotebook(id: String, newName: String) {
         Log.d(TAG, "renameNotebook id=$id newName=$newName")
-        viewModelScope.launch(Dispatchers.IO) {
-            notebookRepository.renameNotebook(id, newName)
-            refreshCurrentFolder()
-        }
+        launchWithFolderRefresh { notebookRepository.renameNotebook(id, newName) }
     }
 
     fun moveFolder(id: String, newParentId: String) {
         Log.d(TAG, "moveFolder id=$id newParentId=$newParentId")
-        viewModelScope.launch(Dispatchers.IO) {
-            folderRepository.moveFolder(id, newParentId)
-            refreshCurrentFolder()
-            loadAllFolders()
-        }
+        launchWithFullRefresh { folderRepository.moveFolder(id, newParentId) }
     }
 
     fun moveNotebook(id: String, newFolderId: String) {
         Log.d(TAG, "moveNotebook id=$id newFolderId=$newFolderId")
-        viewModelScope.launch(Dispatchers.IO) {
-            notebookRepository.moveNotebook(id, newFolderId)
-            refreshCurrentFolder()
-        }
+        launchWithFolderRefresh { notebookRepository.moveNotebook(id, newFolderId) }
     }
 
     fun moveFolderToTrash(id: String) {
         Log.d(TAG, "moveFolderToTrash id=$id")
-        viewModelScope.launch(Dispatchers.IO) {
-            folderRepository.moveToTrash(id)
-            refreshCurrentFolder()
-            loadAllFolders()
-        }
+        launchWithFullRefresh { folderRepository.moveToTrash(id) }
     }
 
     fun moveNotebookToTrash(id: String) {
         Log.d(TAG, "moveNotebookToTrash id=$id")
-        viewModelScope.launch(Dispatchers.IO) {
-            notebookRepository.moveToTrash(id)
-            refreshCurrentFolder()
-        }
+        launchWithFolderRefresh { notebookRepository.moveToTrash(id) }
     }
 
     fun restoreFolderFromTrash(id: String) {
         Log.d(TAG, "restoreFolderFromTrash id=$id")
-        viewModelScope.launch(Dispatchers.IO) {
-            folderRepository.restoreFromTrash(id)
-            refreshCurrentFolder()
-            loadAllFolders()
-        }
+        launchWithFullRefresh { folderRepository.restoreFromTrash(id) }
     }
 
     fun restoreNotebookFromTrash(id: String) {
         Log.d(TAG, "restoreNotebookFromTrash id=$id")
-        viewModelScope.launch(Dispatchers.IO) {
-            notebookRepository.restoreFromTrash(id)
-            refreshCurrentFolder()
-        }
+        launchWithFolderRefresh { notebookRepository.restoreFromTrash(id) }
+    }
+
+    private fun launchWithFullRefresh(block: suspend () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) { block(); refreshCurrentFolder(); loadAllFolders() }
+    }
+
+    private fun launchWithFolderRefresh(block: suspend () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) { block(); refreshCurrentFolder() }
     }
 
     fun getMostRecentNoteIdForNotebook(

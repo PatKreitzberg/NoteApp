@@ -27,17 +27,10 @@ class SyncUploader(
         Log.d(TAG, "uploadFolders isFirstSync=$isFirstSync")
         val toUpload = if (isFirstSync) folderDao.getAllFolderEntities()
         else folderDao.getFoldersModifiedAfter(lastSync)
-        val existingFiles = client.listFilesWithNames(foldersDir).toMap()
-        for (folder in toUpload) {
-            try {
-                val fileName = "${folder.id}.json"
-                val folderJson = json.encodeToString(folder.toFolderJson())
-                client.uploadJsonFile(foldersDir, fileName, folderJson, existingFiles[fileName]?.id)
-            } catch (e: Exception) {
-                Log.e(TAG, "Upload folder ${folder.id}", e)
-                errors.add("Upload folder ${folder.id}: ${e.message}")
-            }
-        }
+        uploadEntities(client, foldersDir, toUpload, errors,
+            entityId = { it.id },
+            encode = { json.encodeToString(it.toFolderJson()) }
+        )
     }
 
     suspend fun uploadNotebooks(
@@ -50,17 +43,10 @@ class SyncUploader(
         Log.d(TAG, "uploadNotebooks isFirstSync=$isFirstSync")
         val toUpload = if (isFirstSync) notebookDao.getAllNotebookEntities()
         else notebookDao.getNotebooksModifiedAfter(lastSync)
-        val existingFiles = client.listFilesWithNames(notebooksDir).toMap()
-        for (notebook in toUpload) {
-            try {
-                val fileName = "${notebook.id}.json"
-                val notebookJson = json.encodeToString(notebook.toNotebookJson())
-                client.uploadJsonFile(notebooksDir, fileName, notebookJson, existingFiles[fileName]?.id)
-            } catch (e: Exception) {
-                Log.e(TAG, "Upload notebook ${notebook.id}", e)
-                errors.add("Upload notebook ${notebook.id}: ${e.message}")
-            }
-        }
+        uploadEntities(client, notebooksDir, toUpload, errors,
+            entityId = { it.id },
+            encode = { json.encodeToString(it.toNotebookJson()) }
+        )
     }
 
     suspend fun uploadNotes(
@@ -73,9 +59,9 @@ class SyncUploader(
         Log.d(TAG, "uploadNotes isFirstSync=$isFirstSync")
         val toUpload = if (isFirstSync) noteDao.getAllNoteEntities()
         else noteDao.getNotesModifiedAfter(lastSync)
-        val existingFiles = client.listFilesWithNames(notesDir).toMap()
-        for (note in toUpload) {
-            try {
+        uploadEntities(client, notesDir, toUpload, errors,
+            entityId = { it.id },
+            encode = { note ->
                 val shapes = shapeDao.getShapesForNoteOnce(note.id)
                 val notebookIds = noteDao.getCrossRefsForNote(note.id).map { it.notebookId }
                 val dto = NoteSyncDto(
@@ -83,12 +69,29 @@ class SyncUploader(
                     shapes = shapes.map { it.toShapeJson() },
                     notebookIds = notebookIds
                 )
-                val fileName = "${note.id}.json"
-                val noteJson = json.encodeToString(dto)
-                client.uploadJsonFile(notesDir, fileName, noteJson, existingFiles[fileName]?.id)
+                json.encodeToString(dto)
+            }
+        )
+    }
+
+    private suspend fun <T> uploadEntities(
+        client: DriveApiClient,
+        directory: String,
+        entities: List<T>,
+        errors: MutableList<String>,
+        entityId: (T) -> String,
+        encode: suspend (T) -> String
+    ) {
+        val existingFiles = client.listFilesWithNames(directory).toMap()
+        for (entity in entities) {
+            try {
+                val id = entityId(entity)
+                val fileName = "$id.json"
+                client.uploadJsonFile(directory, fileName, encode(entity), existingFiles[fileName]?.id)
             } catch (e: Exception) {
-                Log.e(TAG, "Upload note ${note.id}", e)
-                errors.add("Upload note ${note.id}: ${e.message}")
+                val id = entityId(entity)
+                Log.e(TAG, "Upload $id", e)
+                errors.add("Upload $id: ${e.message}")
             }
         }
     }
