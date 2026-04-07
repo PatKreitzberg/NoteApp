@@ -81,6 +81,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var moveStartY = 0f
     private var lastSelectionRenderTime = 0L
     private var savedPenProfile: PenProfile? = null
+    private var skipNextStroke = false
     private val selectionManager = SelectionManager()
     private lateinit var actionManager: ActionManager
 
@@ -368,6 +369,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         if (isTouchInsideSelection(tp)) {
                             startGhostMove(tp)
                         } else {
+                            onyxTouchHelper?.isRawDrawingRenderEnabled = false
+                            skipNextStroke = true
                             EditorState.setMode(AppMode.DRAWING)
                         }
                     }
@@ -383,6 +386,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
+            if (skipNextStroke) {
+                skipNextStroke = false
+                onyxTouchHelper?.isRawDrawingRenderEnabled = true
+            }
             isDrawingInProgress = false
             enableFingerTouch()
         }
@@ -402,6 +409,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
             Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
+            if (skipNextStroke) {
+                skipNextStroke = false
+                return
+            }
             if (EditorState.currentMode.value == AppMode.SELECTION) {
                 touchPointList?.let { tpl ->
                     when (selectionSubState) {
