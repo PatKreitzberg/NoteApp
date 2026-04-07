@@ -9,17 +9,18 @@ import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.DrawingCanvas
 import com.wyldsoft.notes.touchhandling.GestureDisplay
 import com.wyldsoft.notes.ui.toolbar.PenPropertiesPanel
-import com.wyldsoft.notes.ui.toolbar.PenToolbar
+import com.wyldsoft.notes.ui.toolbar.Toolbar
 
 /**
  * Top-level Compose layout for the editor screen.
- * Hosts the PenToolbar, DrawingCanvas, and optional settings panels
+ * Hosts the Toolbar, DrawingCanvas, and optional settings panels
  * with a fullscreen scrim for dismissal.
  */
 @Composable
 fun EditorView(
     onSurfaceViewCreated: (android.view.SurfaceView) -> Unit = {},
-    gestureLabel: MutableState<String> = remember { mutableStateOf("") }
+    gestureLabel: MutableState<String> = remember { mutableStateOf("") },
+    resetViewport: () -> Unit = {}
 ) {
     remember { EditorState() }
 
@@ -33,11 +34,12 @@ fun EditorView(
             .padding(16.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            PenToolbar(
+            Toolbar(
                 expanded = menuExpanded,
                 onExpandedChange = { menuExpanded = it },
                 settingsExpanded = settingsExpanded,
-                onSettingsExpandedChange = { settingsExpanded = it }
+                onSettingsExpandedChange = { settingsExpanded = it },
+                resetViewport = { resetViewport() }
             )
 
             DrawingCanvas(

@@ -122,7 +122,11 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                         onSurfaceViewCreated = { sv ->
                             handleSurfaceViewCreated(sv)
                         },
-                        gestureLabel = gestureLabel
+                        gestureLabel = gestureLabel,
+                        resetViewport = {
+                            viewportManager.resetViewport()
+                            forceScreenRefresh()
+                        }
                     )
                 }
             }
