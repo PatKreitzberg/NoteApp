@@ -17,6 +17,7 @@ import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.ScrotesApp
 import com.wyldsoft.notes.data.database.repository.ShapeRepository
+import com.wyldsoft.notes.data.database.repository.UndoHistoryRepository
 import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.pen.PenProfile
@@ -81,7 +82,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var lastSelectionRenderTime = 0L
     private var savedPenProfile: PenProfile? = null
     private val selectionManager = SelectionManager()
-    private val actionManager = ActionManager()
+    private lateinit var actionManager: ActionManager
 
     private val SELECTION_LASSO_PROFILE = PenProfile(
         strokeWidth = 3f,
@@ -102,6 +103,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "initializeSDK")
         val db = (application as ScrotesApp).database
         val shapeRepo = ShapeRepository(db.shapeDao())
+        val undoHistoryRepo = UndoHistoryRepository(db.undoHistoryDao())
         val noteId = intent.getStringExtra("noteId")
 
         drawingPipeline = DrawingPipeline(
@@ -111,9 +113,17 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             noteId = noteId
         )
 
+        actionManager = ActionManager(
+            undoHistoryRepository = undoHistoryRepo,
+            noteId = noteId,
+            scope = lifecycleScope,
+            selectionManager = selectionManager
+        )
+
         if (noteId != null) {
             lifecycleScope.launch(Dispatchers.IO) {
                 drawingPipeline.loadShapes(noteId)
+                actionManager.loadFromDatabase(drawingPipeline)
                 shapesLoaded = true
                 launch(Dispatchers.Main) {
                     forceScreenRefresh()
@@ -305,6 +315,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun forceScreenRefresh() {
         Log.d(TAG, "forceScreenRefresh() called")
         surfaceView?.let { sv ->
+            if (sv.width <= 0 || sv.height <= 0) return
             cleanSurfaceView(sv)
             val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
             bitmap = state.bitmap
@@ -538,7 +549,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             selectionManager.translateShape(shape, dNoteX, dNoteY)
             drawingPipeline.updateShape(shape)
         }
-        actionManager.recordAction(MoveAction(shapesBeforeMove, dNoteX, dNoteY, drawingPipeline, selectionManager))
+        actionManager.recordAction(MoveAction(
+            shapeIds = shapesBeforeMove.mapNotNull { it.entityId },
+            dNoteX = dNoteX,
+            dNoteY = dNoteY,
+            pipeline = drawingPipeline,
+            selectionManager = selectionManager
+        ))
         selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
 
         onyxTouchHelper?.isRawDrawingRenderEnabled = true

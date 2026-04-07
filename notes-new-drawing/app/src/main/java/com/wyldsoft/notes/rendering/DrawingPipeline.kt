@@ -50,6 +50,8 @@ class DrawingPipeline(
 
     fun getShapes(): List<Shape> = drawnShapes.toList()
 
+    fun getShapeById(id: String): Shape? = drawnShapes.find { it.entityId == id }
+
     fun updateShape(shape: Shape) {
         Log.d(TAG, "updateShape entityId=${shape.entityId}")
         persistShape(shape)
@@ -90,7 +92,12 @@ class DrawingPipeline(
     /** Removes a shape from the in-memory list and deletes it from the DB. Used by undo/redo. */
     fun removeShape(shape: Shape) {
         Log.d(TAG, "removeShape entityId=${shape.entityId}")
-        drawnShapes.remove(shape)
+        val removed = if (shape.entityId != null) {
+            drawnShapes.removeAll { it.entityId == shape.entityId }
+        } else {
+            drawnShapes.remove(shape)
+        }
+        if (!removed) Log.w(TAG, "removeShape: shape not found entityId=${shape.entityId}")
         deleteErasedShapes(listOf(shape))
     }
 

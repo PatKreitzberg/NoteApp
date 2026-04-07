@@ -379,7 +379,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
                 updateActiveSurface()
-                bitmap?.let { renderToScreen(surfaceView, it) }
+                forceScreenRefresh()
             }
 
             override fun surfaceDestroyed(holder: SurfaceHolder) {

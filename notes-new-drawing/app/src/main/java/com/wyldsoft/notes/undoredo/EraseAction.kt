@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.undoredo
 
 import android.util.Log
+import com.aventrix.jnanoid.jnanoid.NanoIdUtils
 import com.wyldsoft.notes.rendering.DrawingPipeline
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
@@ -9,8 +10,9 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
  * Undo restores all erased shapes; redo removes them again.
  */
 class EraseAction(
-    private val erasedShapes: List<Shape>,
-    private val pipeline: DrawingPipeline
+    internal val erasedShapes: List<Shape>,
+    private val pipeline: DrawingPipeline,
+    override val id: String = NanoIdUtils.randomNanoId()
 ) : ActionInterface {
     private val TAG = "EraseAction"
 

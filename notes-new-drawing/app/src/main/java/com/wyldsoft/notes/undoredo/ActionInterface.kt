@@ -5,6 +5,7 @@ package com.wyldsoft.notes.undoredo
  * Implement this interface to create a new action type.
  */
 interface ActionInterface {
+    val id: String
     suspend fun undo()
     suspend fun redo()
 }

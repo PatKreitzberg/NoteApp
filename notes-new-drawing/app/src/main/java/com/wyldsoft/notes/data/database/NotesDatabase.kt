@@ -15,6 +15,7 @@ import com.wyldsoft.notes.data.database.dao.NotebookDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
 import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.dao.SyncStateDao
+import com.wyldsoft.notes.data.database.dao.UndoHistoryDao
 import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
@@ -22,7 +23,9 @@ import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRefEntity
 import com.wyldsoft.notes.data.database.entities.ShapeEntity
 import com.wyldsoft.notes.data.database.entities.SyncStateEntity
+import com.wyldsoft.notes.data.database.entities.UndoHistoryEntity
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_2_3
+import com.wyldsoft.notes.data.database.migrations.MIGRATION_3_4
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,9 +38,10 @@ import kotlinx.coroutines.launch
         NoteNotebookCrossRefEntity::class,
         ShapeEntity::class,
         SyncStateEntity::class,
-        DeletedItemEntity::class
+        DeletedItemEntity::class,
+        UndoHistoryEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -48,6 +52,7 @@ abstract class NotesDatabase : RoomDatabase() {
     abstract fun shapeDao(): ShapeDao
     abstract fun syncStateDao(): SyncStateDao
     abstract fun deletedItemDao(): DeletedItemDao
+    abstract fun undoHistoryDao(): UndoHistoryDao
 
     companion object {
         private const val TAG = "NotesDatabase"
@@ -88,7 +93,7 @@ abstract class NotesDatabase : RoomDatabase() {
                 NotesDatabase::class.java,
                 "notes_database"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(SeedCallback())
                 .build()
         }

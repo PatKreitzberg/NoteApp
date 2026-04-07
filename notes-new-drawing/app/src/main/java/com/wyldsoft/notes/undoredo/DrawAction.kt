@@ -1,6 +1,7 @@
 package com.wyldsoft.notes.undoredo
 
 import android.util.Log
+import com.aventrix.jnanoid.jnanoid.NanoIdUtils
 import com.wyldsoft.notes.rendering.DrawingPipeline
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
@@ -9,8 +10,9 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
  * Undo removes it; redo re-adds it.
  */
 class DrawAction(
-    private val shape: Shape,
-    private val pipeline: DrawingPipeline
+    internal val shape: Shape,
+    private val pipeline: DrawingPipeline,
+    override val id: String = NanoIdUtils.randomNanoId()
 ) : ActionInterface {
     private val TAG = "DrawAction"
 
