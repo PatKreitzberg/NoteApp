@@ -83,6 +83,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
     // Template methods - common implementation for all SDKs
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d(TAG, "onCreate()")
         super.onCreate(savedInstanceState)
 
         currentNoteId = intent.getStringExtra("noteId")
@@ -252,6 +253,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "onDestroy()")
         super.onDestroy()
         cleanupResources()
     }
