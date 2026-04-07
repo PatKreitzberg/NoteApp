@@ -44,8 +44,6 @@ fun PenToolbar(
     settingsExpanded: Boolean,
     onSettingsExpandedChange: (Boolean) -> Unit
 ) {
-    val currentProfile by EditorState.currentPenProfile.collectAsState()
-
     LaunchedEffect(Unit) {
         EditorState.dismissSettings.collect {
             Log.d(TAG, "dismissSettings received — closing panels")
@@ -63,23 +61,58 @@ fun PenToolbar(
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "${currentProfile.penType.displayName} · ${currentProfile.strokeWidth.toInt()}px",
-            fontSize = 14.sp
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        OutlinedButton(onClick = {
-            Log.d(TAG, "Pen settings button clicked, expanded=$expanded")
-            if (!expanded) {
-                onExpandedChange(true)
-                onSettingsExpandedChange(false)
-                EditorState.setMode(AppMode.SETTINGS)
-            } else {
-                onExpandedChange(false)
-                EditorState.setMode(AppMode.DRAWING)
-            }
-        }) {
-            Text("Pen Settings")
+        val penProfile1 by EditorState.penProfile1.collectAsState()
+        val penProfile2 by EditorState.penProfile2.collectAsState()
+        val activePenSlot by EditorState.activePenSlot.collectAsState()
+
+        val pen1Active = activePenSlot == 1
+        OutlinedButton(
+            onClick = {
+                Log.d(TAG, "Pen 1 clicked, pen1Active=$pen1Active, expanded=$expanded")
+                if (!pen1Active) {
+                    EditorState.switchToPenSlot(1)
+                    onExpandedChange(false)
+                    EditorState.setMode(AppMode.DRAWING)
+                } else {
+                    if (!expanded) {
+                        onExpandedChange(true)
+                        onSettingsExpandedChange(false)
+                        EditorState.setMode(AppMode.SETTINGS)
+                    } else {
+                        onExpandedChange(false)
+                        EditorState.setMode(AppMode.DRAWING)
+                    }
+                }
+            },
+            border = if (pen1Active) BorderStroke(2.dp, Color.DarkGray) else null
+        ) {
+            Text("${penProfile1.penType.displayName} · ${penProfile1.strokeWidth.toInt()}px", fontSize = 12.sp)
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        val pen2Active = activePenSlot == 2
+        OutlinedButton(
+            onClick = {
+                Log.d(TAG, "Pen 2 clicked, pen2Active=$pen2Active, expanded=$expanded")
+                if (!pen2Active) {
+                    EditorState.switchToPenSlot(2)
+                    onExpandedChange(false)
+                    EditorState.setMode(AppMode.DRAWING)
+                } else {
+                    if (!expanded) {
+                        onExpandedChange(true)
+                        onSettingsExpandedChange(false)
+                        EditorState.setMode(AppMode.SETTINGS)
+                    } else {
+                        onExpandedChange(false)
+                        EditorState.setMode(AppMode.DRAWING)
+                    }
+                }
+            },
+            border = if (pen2Active) BorderStroke(2.dp, Color.DarkGray) else null
+        ) {
+            Text("${penProfile2.penType.displayName} · ${penProfile2.strokeWidth.toInt()}px", fontSize = 12.sp)
         }
 
         Spacer(modifier = Modifier.width(12.dp))

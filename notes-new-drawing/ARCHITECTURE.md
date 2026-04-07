@@ -1,6 +1,6 @@
 # Notes App — Deep Architecture Reference
 
-> Last updated: 2026-03-06
+> Last updated: 2026-04-06
 > Purpose: Human-readable guide to how the app works end-to-end, written to help
 > developers (and AI assistants) understand, debug, and extend the codebase without
 > having to re-read every file from scratch.
@@ -334,6 +334,29 @@ EditorViewModel._uiState.isStrokeOptionsOpen changes
 
 This full reconfigure cycle is required whenever pen profile, exclusion zones, or drawing mode changes.
 
+### Stroke suppression pattern
+
+Sometimes a touch should be swallowed completely — no ink, no stroke data — and an action should fire when the pen lifts. `OnyxDrawingActivity` provides a helper for this:
+
+```kotlin
+private fun suppressCurrentStroke(onPenLift: () -> Unit)
+```
+
+It sets two independent flags (each owned by one callback) and disables ink rendering:
+
+| Flag | Cleared by | Effect |
+|------|-----------|--------|
+| `strokeDataSuppressed` | `onRawDrawingTouchPointListReceived` | skips `handleDrawing()` |
+| `strokeEndAction` | `onEndRawDrawing` | runs the deferred lambda on pen-lift |
+
+Two flags are needed because the two callbacks can fire in either order. `onBeginRawDrawing` clears both as a safety net at the top of each new stroke.
+
+**Current uses:** cancel selection by touching outside the bounding box (§10).
+
+**To add a new case:** call `suppressCurrentStroke { <action> }` from `onBeginRawDrawing` for the relevant mode/state condition.
+
+**Comparison to SETTINGS mode:** When the stroke options panel is open, drawing is already fully disabled via `setRawDrawingEnabled(false)`, so the stylus dismiss-touch never reaches the Onyx raw-drawing pipeline and no suppression is needed. Stroke suppression is only necessary when raw drawing must remain *on* during a mode (e.g., SELECTION needs it for lasso input) but a specific touch should still be ignored.
+
 **Exclusion zones** are screen `Rect`s where the Onyx SDK will NOT capture stylus input (the toolbar region, stroke options panel, page separator bands). They are maintained in `EditorViewModel.excludeRects` and updated by:
 - `Toolbar` when the stroke options panel opens/closes
 - `BaseDrawingActivity.updatePaginationExclusionZones()` when pagination state or viewport changes
@@ -404,6 +427,26 @@ During move: `onRawDrawingTouchPointMoveReceived()` fires `handleSelectionMoveUp
 On pen-up: `handleSelectionInput()` calls `finishDrag/finishScale/finishRotate()`, which returns the delta/factor/angle, then:
 1. `viewModel.recordMoveAction/recordTransformAction()` — adds to undo stack
 2. `viewModel.persistMovedShapes/persistScaledShapes/persistRotatedShapes()` — updates DB
+
+### Cancelling selection (touch outside bounding box)
+
+When the user touches outside the selection bounding box while in `SELECTED` sub-state, the touch must:
+1. Cancel selection and switch back to DRAWING mode.
+2. **Not** leave a visible ink mark.
+3. **Not** process the stroke data (no shape added).
+
+This is handled by the **stroke suppression pattern** (see §8 below). Specifically, in `onBeginRawDrawing`:
+
+```
+selectionSubState == SELECTED && touch outside bounding box
+  └─► suppressCurrentStroke { EditorState.setMode(AppMode.DRAWING) }
+        ├─ isRawDrawingRenderEnabled = false   // SDK draws no ink during this stroke
+        ├─ strokeDataSuppressed = true         // onRawDrawingTouchPointListReceived skips data
+        └─ strokeEndAction = { setMode(DRAWING) }  // deferred to pen-lift
+```
+
+**Why defer the mode change to pen-lift (`onEndRawDrawing`)?**  
+Calling `EditorState.setMode(DRAWING)` during `onBeginRawDrawing` immediately queues a coroutine that runs `updateTouchHelper()`. That method ends with `isRawDrawingRenderEnabled = true`, overriding our disable — mid-stroke — so the SDK would draw ink. Deferring to `onEndRawDrawing` means the pen has already lifted before `updateTouchHelper` runs.
 
 **`forceScreenRefresh()` during selection** draws the selection overlay on top of the bitmap:
 ```

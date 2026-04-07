@@ -2,18 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build & Run
-
-Only `gradlew.bat` exists (no Unix `gradlew`). Use the Gradle wrapper or Android Studio:
-
-```bash
-./gradlew assembleDebug          # Build debug APK
-./gradlew test                   # Unit tests (JVM)
-./gradlew connectedAndroidTest   # Instrumented tests (requires device/emulator)
-```
-
-No custom lint config. No CI/CD pipeline.
-
 ## Project Overview
 
 Android drawing/note-taking app targeting **Onyx e-ink devices**. Kotlin + Jetpack Compose + Onyx SDK.

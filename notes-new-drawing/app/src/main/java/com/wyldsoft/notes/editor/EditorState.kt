@@ -47,6 +47,20 @@ class EditorState {
         private val _currentPenProfile = MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN))
         val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
 
+        private val _penProfile1 = MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN))
+        private val _penProfile2 = MutableStateFlow(PenProfile.getDefaultProfile(PenType.MARKER))
+        val penProfile1: StateFlow<PenProfile> = _penProfile1.asStateFlow()
+        val penProfile2: StateFlow<PenProfile> = _penProfile2.asStateFlow()
+
+        private val _activePenSlot = MutableStateFlow(1)
+        val activePenSlot: StateFlow<Int> = _activePenSlot.asStateFlow()
+
+        fun switchToPenSlot(slot: Int) {
+            Log.d(TAG, "switchToPenSlot: $slot")
+            _activePenSlot.value = slot
+            _currentPenProfile.value = if (slot == 1) _penProfile1.value else _penProfile2.value
+        }
+
         private val _paginationEnabled = MutableStateFlow(false)
         val paginationEnabled: StateFlow<Boolean> = _paginationEnabled.asStateFlow()
 
@@ -96,6 +110,8 @@ class EditorState {
         fun setPenProfile(profile: PenProfile) {
             Log.d(TAG, "setPenProfile: ${profile.penType.displayName}, width=${profile.strokeWidth}")
             _currentPenProfile.value = profile
+            if (_activePenSlot.value == 1) _penProfile1.value = profile
+            else _penProfile2.value = profile
         }
 
         fun addExclusionRect(rect: Rect) {
