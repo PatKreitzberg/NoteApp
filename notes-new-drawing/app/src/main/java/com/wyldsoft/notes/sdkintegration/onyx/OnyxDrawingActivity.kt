@@ -81,7 +81,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var moveStartY = 0f
     private var lastSelectionRenderTime = 0L
     private var savedPenProfile: PenProfile? = null
-    private var skipNextStroke = false
+    // Set when outside-selection touch detected. Each flag is owned by one callback:
+    // suppressCurrentStrokeData → cleared by onRawDrawingTouchPointListReceived
+    // cancelSelectionOnStrokeEnd → cleared by onEndRawDrawing (defers mode change to pen-lift)
+    private var suppressCurrentStrokeData = false
+    private var cancelSelectionOnStrokeEnd = false
     private val selectionManager = SelectionManager()
     private lateinit var actionManager: ActionManager
 
@@ -358,6 +362,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private fun createOnyxCallback() = object : com.onyx.android.sdk.pen.RawInputCallback() {
         override fun onBeginRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onBeginRawDrawing mode=${EditorState.currentMode.value}")
+            // Safety net: clear any stale flags left from a previous stroke
+            suppressCurrentStrokeData = false
+            cancelSelectionOnStrokeEnd = false
             if (EditorState.currentMode.value == AppMode.SELECTION) {
                 val tp = touchPoint ?: run {
                     isDrawingInProgress = true
@@ -369,9 +376,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         if (isTouchInsideSelection(tp)) {
                             startGhostMove(tp)
                         } else {
+                            // Disable ink rendering for the duration of this stroke so the
+                            // SDK never draws a visible line. Do NOT call setMode() here —
+                            // that would queue updateTouchHelper() on the main thread, which
+                            // re-enables isRawDrawingRenderEnabled mid-stroke. Instead defer
+                            // the mode change to onEndRawDrawing (pen lift).
                             onyxTouchHelper?.isRawDrawingRenderEnabled = false
-                            skipNextStroke = true
-                            EditorState.setMode(AppMode.DRAWING)
+                            suppressCurrentStrokeData = true
+                            cancelSelectionOnStrokeEnd = true
                         }
                     }
                     else -> { /* DRAWING_LASSO: SDK renders lasso stroke naturally */ }
@@ -386,9 +398,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
-            if (skipNextStroke) {
-                skipNextStroke = false
-                onyxTouchHelper?.isRawDrawingRenderEnabled = true
+            if (cancelSelectionOnStrokeEnd) {
+                cancelSelectionOnStrokeEnd = false
+                // Pen has lifted — safe to change mode now. updateTouchHelper will
+                // re-enable isRawDrawingRenderEnabled as part of the mode transition.
+                EditorState.setMode(AppMode.DRAWING)
             }
             isDrawingInProgress = false
             enableFingerTouch()
@@ -409,8 +423,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         override fun onRawDrawingTouchPointListReceived(touchPointList: TouchPointList?) {
             Log.d(TAG, "createOnyxCallback.onRawDrawingTouchPointListReceived")
-            if (skipNextStroke) {
-                skipNextStroke = false
+            if (suppressCurrentStrokeData) {
+                suppressCurrentStrokeData = false
                 return
             }
             if (EditorState.currentMode.value == AppMode.SELECTION) {
