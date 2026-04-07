@@ -26,6 +26,7 @@ import com.wyldsoft.notes.data.database.entities.SyncStateEntity
 import com.wyldsoft.notes.data.database.entities.UndoHistoryEntity
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_2_3
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_3_4
+import com.wyldsoft.notes.data.database.migrations.MIGRATION_5_4
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -93,7 +94,7 @@ abstract class NotesDatabase : RoomDatabase() {
                 NotesDatabase::class.java,
                 "notes_database"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_5_4)
                 .addCallback(SeedCallback())
                 .build()
         }

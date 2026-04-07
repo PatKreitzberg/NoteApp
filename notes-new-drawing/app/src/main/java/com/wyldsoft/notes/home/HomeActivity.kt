@@ -93,7 +93,7 @@ class HomeActivity : ComponentActivity() {
 
     private fun openNotebook(notebookId: String) {
         Log.d(TAG, "openNotebook notebookId=$notebookId")
-        viewModel.getFirstNoteIdForNotebook(notebookId) { noteId ->
+        viewModel.getMostRecentNoteIdForNotebook(notebookId) { noteId ->
             if (noteId != null) {
                 val intent = Intent(this, MainActivity::class.java).apply {
                     putExtra("noteId", noteId)

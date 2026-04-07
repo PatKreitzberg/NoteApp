@@ -65,7 +65,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected val viewportManager = ViewportManager()
     protected var paginationManager: PaginationManager? = null
     protected var currentNoteId: String? = null
-    private var noteRepository: NoteRepository? = null
+    protected var noteRepository: NoteRepository? = null
 
     // Throttle for smooth scroll/zoom updates (ms between renders)
     private val GESTURE_RENDER_INTERVAL_MS = 150L
@@ -132,7 +132,78 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         observeAppMode()
         observePenProfile()
         observePagination()
+        loadNotesForNotebook()
+        observeNoteNavigation()
     }
+
+    private fun loadNotesForNotebook() {
+        val notebookId = EditorState.currentNotebookId ?: return
+        val noteId = currentNoteId ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val notes = noteRepository?.getByNotebook(notebookId) ?: return@launch
+            val noteIds = notes.map { it.id }
+            launch(Dispatchers.Main) {
+                EditorState.setNotesInNotebook(noteIds, noteId)
+            }
+        }
+    }
+
+    private fun observeNoteNavigation() {
+        lifecycleScope.launch {
+            EditorState.navigateToNote.collect { noteId ->
+                Log.d(TAG, "observeNoteNavigation: switching to noteId=$noteId")
+                switchToNote(noteId)
+            }
+        }
+        lifecycleScope.launch {
+            EditorState.createNewNote.collect {
+                Log.d(TAG, "observeNoteNavigation: creating new note")
+                createAndSwitchToNewNote()
+            }
+        }
+    }
+
+    fun switchToNote(noteId: String) {
+        Log.d(TAG, "switchToNote: $noteId")
+        saveViewportState()
+        currentNoteId = noteId
+        EditorState.currentNoteId = noteId
+        EditorState.updateCurrentNoteIndex(noteId)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val note = noteRepository?.getById(noteId)
+            launch(Dispatchers.Main) {
+                if (note != null) {
+                    viewportManager.restoreState(note.viewportScale, note.viewportScrollX, note.viewportScrollY)
+                } else {
+                    viewportManager.resetViewport()
+                }
+                bitmap?.recycle()
+                bitmap = null
+                bitmapCanvas = null
+                onSwitchNoteSDK(noteId)
+            }
+        }
+    }
+
+    fun createAndSwitchToNewNote() {
+        Log.d(TAG, "createAndSwitchToNewNote")
+        val notebookId = EditorState.currentNotebookId ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val pageNumber = EditorState.notesInNotebook.value.size + 1
+            val newNote = noteRepository?.createNote(
+                title = "Page $pageNumber",
+                notebookId = notebookId
+            ) ?: return@launch
+            val newNoteIds = EditorState.notesInNotebook.value + newNote.id
+            launch(Dispatchers.Main) {
+                EditorState.setNotesInNotebook(newNoteIds, newNote.id)
+                switchToNote(newNote.id)
+            }
+        }
+    }
+
+    protected open fun onSwitchNoteSDK(noteId: String) {}
 
     private fun observePenProfile() {
         lifecycleScope.launch {
@@ -239,7 +310,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         saveViewportState()
     }
 
-    private fun saveViewportState() {
+    protected fun saveViewportState() {
         val noteId = currentNoteId ?: return
         val repo = noteRepository ?: return
         lifecycleScope.launch(Dispatchers.IO) {

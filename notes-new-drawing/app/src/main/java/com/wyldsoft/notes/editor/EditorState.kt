@@ -86,6 +86,50 @@ class EditorState {
         var currentNoteId: String? = null
         var currentNotebookId: String? = null
 
+        // Note navigation within a notebook
+        private val _notesInNotebook = MutableStateFlow<List<String>>(emptyList())
+        val notesInNotebook: StateFlow<List<String>> = _notesInNotebook.asStateFlow()
+
+        private val _currentNoteIndex = MutableStateFlow(0)
+        val currentNoteIndex: StateFlow<Int> = _currentNoteIndex.asStateFlow()
+
+        private val _navigateToNote = MutableSharedFlow<String>(extraBufferCapacity = 1)
+        val navigateToNote = _navigateToNote.asSharedFlow()
+
+        private val _createNewNote = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val createNewNote = _createNewNote.asSharedFlow()
+
+        fun setNotesInNotebook(noteIds: List<String>, currentNoteId: String) {
+            Log.d(TAG, "setNotesInNotebook count=${noteIds.size} currentNoteId=$currentNoteId")
+            _notesInNotebook.value = noteIds
+            val idx = noteIds.indexOf(currentNoteId)
+            _currentNoteIndex.value = if (idx >= 0) idx else 0
+        }
+
+        fun updateCurrentNoteIndex(noteId: String) {
+            Log.d(TAG, "updateCurrentNoteIndex noteId=$noteId")
+            val idx = _notesInNotebook.value.indexOf(noteId)
+            if (idx >= 0) _currentNoteIndex.value = idx
+        }
+
+        fun requestNavigatePrev() {
+            Log.d(TAG, "requestNavigatePrev")
+            val idx = _currentNoteIndex.value
+            val notes = _notesInNotebook.value
+            if (idx > 0) _navigateToNote.tryEmit(notes[idx - 1])
+        }
+
+        fun requestNavigateNext() {
+            Log.d(TAG, "requestNavigateNext")
+            val idx = _currentNoteIndex.value
+            val notes = _notesInNotebook.value
+            if (idx < notes.size - 1) {
+                _navigateToNote.tryEmit(notes[idx + 1])
+            } else {
+                _createNewNote.tryEmit(Unit)
+            }
+        }
+
         private var toolbarRect: Rect? = null
         var exclusionRects = mutableListOf<Rect>()
 

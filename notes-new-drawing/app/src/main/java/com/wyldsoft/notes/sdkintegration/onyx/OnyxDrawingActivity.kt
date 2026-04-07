@@ -68,6 +68,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var onyxDeviceReceiver: GlobalDeviceReceiver? = null
     private lateinit var drawingPipeline: DrawingPipeline
     private var shapesLoaded = false
+    private lateinit var shapeRepo: ShapeRepository
+    private lateinit var undoHistoryRepo: UndoHistoryRepository
 
     // ── Selection state ───────────────────────────────────────────────────────
     private enum class SelectionSubState { DRAWING_LASSO, SELECTED, MOVING }
@@ -107,8 +109,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun initializeSDK() {
         Log.d(TAG, "initializeSDK")
         val db = (application as ScrotesApp).database
-        val shapeRepo = ShapeRepository(db.shapeDao())
-        val undoHistoryRepo = UndoHistoryRepository(db.undoHistoryDao())
+        shapeRepo = ShapeRepository(db.shapeDao())
+        undoHistoryRepo = UndoHistoryRepository(db.undoHistoryDao())
         val noteId = intent.getStringExtra("noteId")
 
         drawingPipeline = DrawingPipeline(
@@ -137,6 +139,33 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         observeUndoRedo()
+    }
+
+    override fun onSwitchNoteSDK(noteId: String) {
+        Log.d(TAG, "onSwitchNoteSDK: $noteId")
+        drawingPipeline = DrawingPipeline(
+            viewportManager = viewportManager,
+            scope = lifecycleScope,
+            shapeRepository = shapeRepo,
+            noteId = noteId
+        )
+        actionManager = ActionManager(
+            undoHistoryRepository = undoHistoryRepo,
+            noteId = noteId,
+            scope = lifecycleScope,
+            selectionManager = selectionManager
+        )
+        EditorState.setUndoRedoState(false, false)
+        shapesLoaded = false
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            drawingPipeline.loadShapes(noteId)
+            actionManager.loadFromDatabase(drawingPipeline)
+            shapesLoaded = true
+            launch(Dispatchers.Main) {
+                forceScreenRefresh()
+            }
+        }
     }
 
     private fun observeUndoRedo() {

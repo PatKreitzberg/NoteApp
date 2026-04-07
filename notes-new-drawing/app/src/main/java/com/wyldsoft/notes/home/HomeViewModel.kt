@@ -157,14 +157,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun getFirstNoteIdForNotebook(
+    fun getMostRecentNoteIdForNotebook(
         notebookId: String,
         onResult: (noteId: String?) -> Unit
     ) {
-        Log.d(TAG, "getFirstNoteIdForNotebook notebookId=$notebookId")
+        Log.d(TAG, "getMostRecentNoteIdForNotebook notebookId=$notebookId")
         viewModelScope.launch(Dispatchers.IO) {
             val notes = db.noteDao().getByNotebook(notebookId)
-            val noteId = notes.firstOrNull()?.id
+            // Open the most recently modified note (updated on draw/viewport save)
+            val noteId = notes.maxByOrNull { it.modifiedAt }?.id ?: notes.firstOrNull()?.id
             launch(Dispatchers.Main) {
                 onResult(noteId)
             }
