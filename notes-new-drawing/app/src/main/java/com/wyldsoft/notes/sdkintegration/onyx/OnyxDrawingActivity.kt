@@ -171,6 +171,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             shapeRepository = shapeRepo,
             noteId = noteId
         )
+        drawingPipeline.paginationManager = paginationManager
         actionManager = ActionManager(
             undoHistoryRepository = undoHistoryRepo,
             noteId = noteId,

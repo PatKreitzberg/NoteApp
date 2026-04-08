@@ -256,13 +256,15 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                 viewportManager.paginationEnabled = enabled
                 if (enabled) {
                     viewportManager.resetViewport()
-                    surfaceView?.let { sv ->
-                        paginationManager = PaginationManager(
-                            screenWidthPx = sv.width,
-                            screenHeightPx = sv.height,
-                            density = resources.displayMetrics.density
-                        )
-                    }
+                    val sv = surfaceView
+                    val dm = resources.displayMetrics
+                    val width = sv?.width?.takeIf { it > 0 } ?: dm.widthPixels
+                    val height = sv?.height?.takeIf { it > 0 } ?: dm.heightPixels
+                    paginationManager = PaginationManager(
+                        screenWidthPx = width,
+                        screenHeightPx = height,
+                        density = dm.density
+                    )
                 } else {
                     paginationManager = null
                 }

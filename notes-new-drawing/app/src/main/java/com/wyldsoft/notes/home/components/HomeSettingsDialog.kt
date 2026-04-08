@@ -1,18 +1,19 @@
 package com.wyldsoft.notes.home.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.AlertDialog
+import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
@@ -28,7 +29,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.gestures.GestureBindings
 
@@ -43,16 +50,41 @@ fun HomeSettingsDialog(
     var pagination by remember { mutableStateOf(defaultPaginationEnabled) }
     var mappings by remember(gestureMappings) { mutableStateOf(gestureMappings) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Default Settings") },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+    // Swallows any scroll that the inner gesture list doesn't consume,
+    // preventing it from propagating to any outer scroll container.
+    val scrollBarrier = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset = available
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, Color.Black, RoundedCornerShape(4.dp)),
+            shape = RoundedCornerShape(4.dp),
+            elevation = 8.dp
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Title
+                Text(
+                    text = "Default Settings",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
                 Text(
                     text = "These settings apply to newly created notebooks.",
                     style = MaterialTheme.typography.body2,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
+
+                // Pagination toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -69,8 +101,8 @@ fun HomeSettingsDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Divider()
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = Color.Black)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
@@ -84,7 +116,7 @@ fun HomeSettingsDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Header row
+                // Column header
                 Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
                     Text(
                         text = "Gesture",
@@ -98,40 +130,53 @@ fun HomeSettingsDialog(
                     )
                 }
 
-                // Scrollable gesture list capped at 300dp
-                Column(
+                // Scrollable gesture list — fixed height, outlined, scroll-isolated
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .verticalScroll(rememberScrollState())
+                        .height(300.dp)
+                        .border(1.dp, Color.Black)
+                        .nestedScroll(scrollBarrier)
                 ) {
-                    GestureBindings.ALL_GESTURE_KEYS.forEach { (key, displayName) ->
-                        GestureRow(
-                            gestureName = displayName,
-                            selectedAction = mappings[key] ?: GestureAction.NONE,
-                            onActionSelected = { action ->
-                                mappings = mappings + (key to action)
-                            }
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                        GestureBindings.ALL_GESTURE_KEYS.forEach { (key, displayName) ->
+                            GestureRow(
+                                gestureName = displayName,
+                                selectedAction = mappings[key] ?: GestureAction.NONE,
+                                onActionSelected = { action ->
+                                    mappings = mappings + (key to action)
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Buttons
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = {
+                        onDefaultPaginationChanged(pagination)
+                        onGestureMappingsChanged(mappings)
+                        onDismiss()
+                    }) {
+                        Text("Save")
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onDefaultPaginationChanged(pagination)
-                onGestureMappingsChanged(mappings)
-                onDismiss()
-            }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }
 
 @Composable
