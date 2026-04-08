@@ -31,8 +31,7 @@ class DrawingPipeline(
     private val viewportManager: ViewportManager,
     private val scope: CoroutineScope? = null,
     var shapeRepository: ShapeRepository? = null,
-    var noteId: String? = null,
-    density: Float = 1f
+    var noteId: String? = null
 ) {
     private val TAG = "DrawingPipeline"
 
@@ -41,7 +40,7 @@ class DrawingPipeline(
     private val partialEraseRefresh = PartialEraseRefresh()
     var paginationManager: PaginationManager? = null
     var currentTemplate: PaperTemplate = PaperTemplate.BLANK
-    private val templateRenderer = TemplateRenderer(density)
+    private val templateRenderer = TemplateRenderer()
 
     /** The shapes removed during the most recent erase stroke, for undo recording. */
     var lastErasedShapes: List<Shape> = emptyList()

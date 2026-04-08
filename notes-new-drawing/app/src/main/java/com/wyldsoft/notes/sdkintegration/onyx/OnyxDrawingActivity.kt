@@ -118,8 +118,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             viewportManager = viewportManager,
             scope = lifecycleScope,
             shapeRepository = shapeRepo,
-            noteId = noteId,
-            density = resources.displayMetrics.density
+            noteId = noteId
         )
 
         actionManager = ActionManager(
@@ -149,8 +148,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             viewportManager = viewportManager,
             scope = lifecycleScope,
             shapeRepository = shapeRepo,
-            noteId = noteId,
-            density = resources.displayMetrics.density
+            noteId = noteId
         )
         actionManager = ActionManager(
             undoHistoryRepository = undoHistoryRepo,

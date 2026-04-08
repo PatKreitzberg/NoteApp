@@ -11,39 +11,44 @@ import kotlin.math.ceil
 /**
  * Draws paper templates (grid, ruled lines) onto a canvas in viewport space.
  *
- * Template lines are defined in note-space (using mm-based measurements) and then
- * projected into viewport space via ViewportManager, so they scale correctly on zoom.
+ * Template lines are defined proportionally to the page width rather than using
+ * absolute physical measurements. The canvas width represents the full paper width
+ * (8.5" for Letter), so all spacing is expressed as a fraction of that width.
+ * This ensures the template looks correct regardless of the physical screen size.
  *
  * For pagination mode, a list of page rects (in note-space) is supplied so that
  * template lines are only drawn within page boundaries, not in the gaps between pages.
+ * For non-pagination mode, pageRects is null and the template is drawn across the
+ * visible area using the canvas width as the page width reference.
  */
-class TemplateRenderer(private val density: Float) {
+class TemplateRenderer {
     companion object {
         private const val TAG = "TemplateRenderer"
 
-        // mm to note-pixels: 1mm ≈ density * 6.299 px (at 160 dpi baseline)
-        private fun mmToNotePx(mm: Float, density: Float): Float = mm * density * 6.299f
+        // All spacings are expressed as a fraction of the page width (8.5" Letter baseline).
+        // Letter paper is 8.5 inches wide, 11 inches tall.
+        private const val LETTER_WIDTH_IN = 8.5f
+        private const val LETTER_HEIGHT_IN = 11.0f
 
-        // Standard measurements
-        private const val GRID_SPACING_MM = 5f          // 5mm graph paper
-        private const val COLLEGE_RULED_MM = 7.127f     // 9/32 inch
-        private const val WIDE_RULED_MM = 8.731f        // 11/32 inch
-        private const val MARGIN_MM = 31.75f            // 1.25 inch left margin for ruled
-
-        // Line colour: semi-transparent grey
-        private val LINE_COLOR = Color.argb(80, 100, 100, 100)
-        private val MARGIN_COLOR = Color.argb(70, 210, 80, 80)
+        // College ruled: 9/32" line spacing
+        private const val COLLEGE_RULED_FRACTION = (9f / 32f) / LETTER_WIDTH_IN   // ≈ 0.0331
+        // Wide ruled: 11/32" line spacing
+        private const val WIDE_RULED_FRACTION = (11f / 32f) / LETTER_WIDTH_IN     // ≈ 0.0405
+        // Grid: 5mm on 215.9mm (8.5") wide paper
+        private const val GRID_FRACTION = 5f / 215.9f                              // ≈ 0.02316
+        // Left margin: 1.25" from left edge
+        private const val MARGIN_FRACTION = 1.25f / LETTER_WIDTH_IN               // ≈ 0.1471
     }
 
     private val linePaint = Paint().apply {
-        color = LINE_COLOR
+        color = Color.BLACK
         strokeWidth = 1f
         style = Paint.Style.STROKE
         isAntiAlias = false
     }
 
     private val marginPaint = Paint().apply {
-        color = MARGIN_COLOR
+        color = Color.BLACK
         strokeWidth = 1f
         style = Paint.Style.STROKE
         isAntiAlias = false
@@ -54,7 +59,7 @@ class TemplateRenderer(private val density: Float) {
      *
      * @param canvasWidth  width of the bitmap/canvas in pixels
      * @param canvasHeight height of the bitmap/canvas in pixels
-     * @param pageRects    page boundaries in NOTE space; null means no pagination (infinite canvas)
+     * @param pageRects    page boundaries in NOTE space; null means no pagination (use canvas width as page width)
      */
     fun drawTemplate(
         canvas: Canvas,
@@ -68,17 +73,18 @@ class TemplateRenderer(private val density: Float) {
         if (template == PaperTemplate.BLANK) return
 
         if (pageRects == null) {
-            // No pagination: draw over the visible note area
+            // No pagination: use visible note area; page width = note-space width of canvas
             val noteLeft = viewportManager.viewportToNoteX(0f)
             val noteTop = viewportManager.viewportToNoteY(0f)
             val noteRight = viewportManager.viewportToNoteX(canvasWidth.toFloat())
             val noteBottom = viewportManager.viewportToNoteY(canvasHeight.toFloat())
+            val pageWidth = noteRight - noteLeft  // note-space width = "full paper width"
             val infinitePage = RectF(noteLeft, noteTop, noteRight, noteBottom)
-
-            drawTemplateInRect(canvas, template, viewportManager, canvasWidth, canvasHeight, infinitePage, clipToRect = false)
+            drawTemplateInRect(canvas, template, viewportManager, canvasWidth, canvasHeight, infinitePage, pageWidth, clipToRect = false)
         } else {
             for (pageRect in pageRects) {
-                drawTemplateInRect(canvas, template, viewportManager, canvasWidth, canvasHeight, pageRect, clipToRect = true)
+                val pageWidth = pageRect.width()
+                drawTemplateInRect(canvas, template, viewportManager, canvasWidth, canvasHeight, pageRect, pageWidth, clipToRect = true)
             }
         }
     }
@@ -90,12 +96,13 @@ class TemplateRenderer(private val density: Float) {
         canvasWidth: Int,
         canvasHeight: Int,
         pageNoteRect: RectF,
+        pageWidth: Float,   // note-space width of the page (used as the proportional reference)
         clipToRect: Boolean
     ) {
-        // Convert page rect to viewport space to check visibility
         val vpRect = vm.noteToViewport(pageNoteRect)
+        // Skip pages not visible on screen
         if (vpRect.bottom < 0 || vpRect.top > canvasHeight || vpRect.right < 0 || vpRect.left > canvasWidth) {
-            return  // page not visible
+            return
         }
 
         if (clipToRect) {
@@ -104,9 +111,9 @@ class TemplateRenderer(private val density: Float) {
         }
 
         when (template) {
-            PaperTemplate.GRID -> drawGrid(canvas, vm, canvasWidth, canvasHeight, pageNoteRect)
-            PaperTemplate.COLLEGE_RULED -> drawRuled(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, COLLEGE_RULED_MM)
-            PaperTemplate.WIDE_RULED -> drawRuled(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, WIDE_RULED_MM)
+            PaperTemplate.GRID -> drawGrid(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth)
+            PaperTemplate.COLLEGE_RULED -> drawRuled(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth, COLLEGE_RULED_FRACTION)
+            PaperTemplate.WIDE_RULED -> drawRuled(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth, WIDE_RULED_FRACTION)
             PaperTemplate.BLANK -> { /* nothing */ }
         }
 
@@ -120,9 +127,10 @@ class TemplateRenderer(private val density: Float) {
         vm: ViewportManager,
         canvasWidth: Int,
         canvasHeight: Int,
-        pageNoteRect: RectF
+        pageNoteRect: RectF,
+        pageWidth: Float
     ) {
-        val spacingNote = mmToNotePx(GRID_SPACING_MM, density)
+        val spacingNote = pageWidth * GRID_FRACTION
 
         // Horizontal lines
         val firstY = ceil(pageNoteRect.top / spacingNote) * spacingNote
@@ -153,9 +161,10 @@ class TemplateRenderer(private val density: Float) {
         canvasWidth: Int,
         canvasHeight: Int,
         pageNoteRect: RectF,
-        spacingMm: Float
+        pageWidth: Float,
+        spacingFraction: Float
     ) {
-        val spacingNote = mmToNotePx(spacingMm, density)
+        val spacingNote = pageWidth * spacingFraction
 
         // Horizontal ruled lines
         val firstY = ceil(pageNoteRect.top / spacingNote) * spacingNote
@@ -168,8 +177,8 @@ class TemplateRenderer(private val density: Float) {
             y += spacingNote
         }
 
-        // Left margin vertical line (1.25" from the left edge of the page)
-        val marginNoteX = pageNoteRect.left + mmToNotePx(MARGIN_MM, density)
+        // Left margin vertical line — proportional to page width (1.25" on 8.5" paper)
+        val marginNoteX = pageNoteRect.left + pageWidth * MARGIN_FRACTION
         val marginVx = vm.noteToViewportX(marginNoteX)
         if (marginVx in -1f..canvasWidth + 1f) {
             val topVy = vm.noteToViewportY(pageNoteRect.top).coerceAtLeast(0f)
