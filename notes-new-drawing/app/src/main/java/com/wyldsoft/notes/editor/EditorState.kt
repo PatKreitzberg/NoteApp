@@ -3,6 +3,7 @@ package com.wyldsoft.notes.editor
 import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.util.Log
+import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
@@ -76,8 +77,82 @@ class EditorState {
             _currentPenProfile.value = penProfileForSlot(slot)
         }
 
+        // Effective pagination (observed by activity to drive PaginationManager)
         private val _paginationEnabled = MutableStateFlow(false)
         val paginationEnabled: StateFlow<Boolean> = _paginationEnabled.asStateFlow()
+
+        // Notebook-level defaults
+        private val _notebookPaginationEnabled = MutableStateFlow(false)
+        val notebookPaginationEnabled: StateFlow<Boolean> = _notebookPaginationEnabled.asStateFlow()
+        private val _notebookTemplate = MutableStateFlow(PaperTemplate.BLANK)
+        val notebookTemplate: StateFlow<PaperTemplate> = _notebookTemplate.asStateFlow()
+
+        // Note-level values (used when overrideNotebookSettings is true)
+        private val _notePaginationEnabled = MutableStateFlow(false)
+        val notePaginationEnabled: StateFlow<Boolean> = _notePaginationEnabled.asStateFlow()
+        private val _noteTemplate = MutableStateFlow(PaperTemplate.BLANK)
+        val noteTemplate: StateFlow<PaperTemplate> = _noteTemplate.asStateFlow()
+
+        // Override flag: if true, note uses its own template/pagination instead of notebook's
+        private val _overrideNotebookSettings = MutableStateFlow(false)
+        val overrideNotebookSettings: StateFlow<Boolean> = _overrideNotebookSettings.asStateFlow()
+
+        // Effective template (observed by activity to drive TemplateRenderer)
+        private val _currentTemplate = MutableStateFlow(PaperTemplate.BLANK)
+        val currentTemplate: StateFlow<PaperTemplate> = _currentTemplate.asStateFlow()
+
+        private fun updateEffectiveSettings() {
+            val override = _overrideNotebookSettings.value
+            _paginationEnabled.value = if (override) _notePaginationEnabled.value else _notebookPaginationEnabled.value
+            _currentTemplate.value = if (override) _noteTemplate.value else _notebookTemplate.value
+        }
+
+        fun setNotebookTemplate(template: PaperTemplate) {
+            Log.d(TAG, "setNotebookTemplate: $template")
+            _notebookTemplate.value = template
+            updateEffectiveSettings()
+        }
+
+        fun setNotebookPagination(enabled: Boolean) {
+            Log.d(TAG, "setNotebookPagination: $enabled")
+            _notebookPaginationEnabled.value = enabled
+            updateEffectiveSettings()
+        }
+
+        fun setNoteTemplate(template: PaperTemplate) {
+            Log.d(TAG, "setNoteTemplate: $template")
+            _noteTemplate.value = template
+            updateEffectiveSettings()
+        }
+
+        fun setNotePagination(enabled: Boolean) {
+            Log.d(TAG, "setNotePagination: $enabled")
+            _notePaginationEnabled.value = enabled
+            updateEffectiveSettings()
+        }
+
+        fun setOverrideNotebook(enabled: Boolean) {
+            Log.d(TAG, "setOverrideNotebook: $enabled")
+            _overrideNotebookSettings.value = enabled
+            updateEffectiveSettings()
+        }
+
+        /** Load settings from the current note and its parent notebook. Called on note open/switch. */
+        fun loadNoteAndNotebookSettings(
+            notePagination: Boolean,
+            noteTemplate: PaperTemplate,
+            overrideNotebook: Boolean,
+            notebookPagination: Boolean,
+            notebookTemplate: PaperTemplate
+        ) {
+            Log.d(TAG, "loadNoteAndNotebookSettings")
+            _notePaginationEnabled.value = notePagination
+            _noteTemplate.value = noteTemplate
+            _overrideNotebookSettings.value = overrideNotebook
+            _notebookPaginationEnabled.value = notebookPagination
+            _notebookTemplate.value = notebookTemplate
+            updateEffectiveSettings()
+        }
 
         fun togglePagination() {
             _paginationEnabled.value = !_paginationEnabled.value

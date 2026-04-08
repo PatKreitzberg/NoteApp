@@ -21,8 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.core.graphics.createBitmap
 import com.wyldsoft.notes.ScrotesApp
 import com.wyldsoft.notes.data.database.repository.NoteRepository
+import com.wyldsoft.notes.data.database.repository.NotebookRepository
 import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
+import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.editor.EditorView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -66,6 +68,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected var paginationManager: PaginationManager? = null
     protected var currentNoteId: String? = null
     protected var noteRepository: NoteRepository? = null
+    protected var notebookRepository: NotebookRepository? = null
 
     // Throttle for smooth scroll/zoom updates (ms between renders)
     private val GESTURE_RENDER_INTERVAL_MS = 150L
@@ -92,17 +95,27 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         EditorState.currentNotebookId = currentNotebookId
         val db = (application as ScrotesApp).database
         noteRepository = NoteRepository(db.noteDao())
+        notebookRepository = NotebookRepository(db.notebookDao(), db.noteDao())
 
-        // Restore viewport state from the note if available
+        // Restore viewport state and settings from the note if available
         currentNoteId?.let { noteId ->
             lifecycleScope.launch(Dispatchers.IO) {
                 val note = noteRepository?.getById(noteId)
+                val notebookId = EditorState.currentNotebookId
+                val notebook = if (notebookId != null) notebookRepository?.getById(notebookId) else null
                 if (note != null) {
                     launch(Dispatchers.Main) {
                         viewportManager.restoreState(
                             note.viewportScale,
                             note.viewportScrollX,
                             note.viewportScrollY
+                        )
+                        EditorState.loadNoteAndNotebookSettings(
+                            notePagination = note.isPaginationEnabled,
+                            noteTemplate = PaperTemplate.fromString(note.paperTemplate),
+                            overrideNotebook = note.overrideNotebookSettings,
+                            notebookPagination = notebook?.isPaginationEnabled ?: false,
+                            notebookTemplate = PaperTemplate.fromString(notebook?.template ?: "BLANK")
                         )
                     }
                 }
@@ -136,6 +149,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         observeAppMode()
         observePenProfile()
         observePagination()
+        observeTemplate()
         loadNotesForNotebook()
         observeNoteNavigation()
     }
@@ -176,9 +190,18 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             val note = noteRepository?.getById(noteId)
+            val notebookId = EditorState.currentNotebookId
+            val notebook = if (notebookId != null) notebookRepository?.getById(notebookId) else null
             launch(Dispatchers.Main) {
                 if (note != null) {
                     viewportManager.restoreState(note.viewportScale, note.viewportScrollX, note.viewportScrollY)
+                    EditorState.loadNoteAndNotebookSettings(
+                        notePagination = note.isPaginationEnabled,
+                        noteTemplate = PaperTemplate.fromString(note.paperTemplate),
+                        overrideNotebook = note.overrideNotebookSettings,
+                        notebookPagination = notebook?.isPaginationEnabled ?: false,
+                        notebookTemplate = PaperTemplate.fromString(notebook?.template ?: "BLANK")
+                    )
                 } else {
                     viewportManager.resetViewport()
                 }
@@ -245,6 +268,18 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     }
 
     protected open fun onPaginationChanged(enabled: Boolean) {}
+
+    private fun observeTemplate() {
+        lifecycleScope.launch {
+            EditorState.currentTemplate.collect { template ->
+                Log.d(TAG, "Template changed: $template")
+                onTemplateChanged(template)
+                forceScreenRefresh()
+            }
+        }
+    }
+
+    protected open fun onTemplateChanged(template: PaperTemplate) {}
 
     private fun checkLazyPageCreation() {
         paginationManager?.let { pm ->

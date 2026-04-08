@@ -10,6 +10,7 @@ import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.data.database.repository.ShapeRepository
 import com.wyldsoft.notes.data.mappers.ShapeMapper
+import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
@@ -30,7 +31,8 @@ class DrawingPipeline(
     private val viewportManager: ViewportManager,
     private val scope: CoroutineScope? = null,
     var shapeRepository: ShapeRepository? = null,
-    var noteId: String? = null
+    var noteId: String? = null,
+    density: Float = 1f
 ) {
     private val TAG = "DrawingPipeline"
 
@@ -38,6 +40,8 @@ class DrawingPipeline(
     private val eraseManager = EraseManager()
     private val partialEraseRefresh = PartialEraseRefresh()
     var paginationManager: PaginationManager? = null
+    var currentTemplate: PaperTemplate = PaperTemplate.BLANK
+    private val templateRenderer = TemplateRenderer(density)
 
     /** The shapes removed during the most recent erase stroke, for undo recording. */
     var lastErasedShapes: List<Shape> = emptyList()
@@ -190,6 +194,13 @@ class DrawingPipeline(
             canvas = Canvas(bmp)
             canvas.drawColor(Color.WHITE)
         }
+
+        val pageRects = paginationManager?.let { pm ->
+            (0 until pm.pageCount).map { i ->
+                android.graphics.RectF(0f, pm.pageTopY(i), pm.pageWidth, pm.pageBottomY(i))
+            }
+        }
+        templateRenderer.drawTemplate(canvas, currentTemplate, viewportManager, width, height, pageRects)
 
         val renderContext = RenderContext.createForBitmap(bmp, canvas)
 

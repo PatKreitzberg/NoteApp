@@ -34,6 +34,12 @@ interface NotebookDao {
     @Query("UPDATE notebooks SET name = :name, modifiedAt = :now WHERE id = :id")
     suspend fun renameNotebook(id: String, name: String, now: Long)
 
+    @Query("UPDATE notebooks SET template = :template, modifiedAt = :now WHERE id = :id")
+    suspend fun updateTemplate(id: String, template: String, now: Long = System.currentTimeMillis())
+
+    @Query("UPDATE notebooks SET isPaginationEnabled = :enabled, modifiedAt = :now WHERE id = :id")
+    suspend fun updatePagination(id: String, enabled: Boolean, now: Long = System.currentTimeMillis())
+
     // Sync methods
     @Query("SELECT * FROM notebooks WHERE modifiedAt > :timestamp")
     suspend fun getNotebooksModifiedAfter(timestamp: Long): List<NotebookEntity>

@@ -20,6 +20,7 @@ import com.wyldsoft.notes.data.database.repository.ShapeRepository
 import com.wyldsoft.notes.data.database.repository.UndoHistoryRepository
 import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
+import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.rendering.DrawingPipeline
@@ -117,7 +118,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             viewportManager = viewportManager,
             scope = lifecycleScope,
             shapeRepository = shapeRepo,
-            noteId = noteId
+            noteId = noteId,
+            density = resources.displayMetrics.density
         )
 
         actionManager = ActionManager(
@@ -147,7 +149,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             viewportManager = viewportManager,
             scope = lifecycleScope,
             shapeRepository = shapeRepo,
-            noteId = noteId
+            noteId = noteId,
+            density = resources.displayMetrics.density
         )
         actionManager = ActionManager(
             undoHistoryRepository = undoHistoryRepo,
@@ -247,6 +250,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onPaginationChanged(enabled: Boolean) {
         Log.d(TAG, "onPaginationChanged: $enabled")
         drawingPipeline.paginationManager = paginationManager
+    }
+
+    override fun onTemplateChanged(template: PaperTemplate) {
+        Log.d(TAG, "onTemplateChanged: $template")
+        drawingPipeline.currentTemplate = template
     }
 
     override fun enterNewMode(mode: AppMode) {

@@ -35,6 +35,12 @@ interface NoteDao {
     @Query("UPDATE notes SET isPaginationEnabled = :enabled, modifiedAt = :modifiedAt WHERE id = :noteId")
     suspend fun updatePagination(noteId: String, enabled: Boolean, modifiedAt: Long = System.currentTimeMillis())
 
+    @Query("UPDATE notes SET paperTemplate = :template, modifiedAt = :modifiedAt WHERE id = :noteId")
+    suspend fun updateTemplate(noteId: String, template: String, modifiedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE notes SET overrideNotebookSettings = :override, modifiedAt = :modifiedAt WHERE id = :noteId")
+    suspend fun updateOverrideNotebook(noteId: String, override: Boolean, modifiedAt: Long = System.currentTimeMillis())
+
     @Query("UPDATE notes SET title = :title, modifiedAt = :now WHERE id = :id")
     suspend fun renameNote(id: String, title: String, now: Long)
 

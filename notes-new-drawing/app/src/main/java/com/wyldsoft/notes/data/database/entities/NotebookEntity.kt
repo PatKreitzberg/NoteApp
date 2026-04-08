@@ -27,5 +27,7 @@ data class NotebookEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val modifiedAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "trashedFromId")
-    val trashedFromId: String? = null
+    val trashedFromId: String? = null,
+    val template: String = "BLANK",
+    val isPaginationEnabled: Boolean = false
 )

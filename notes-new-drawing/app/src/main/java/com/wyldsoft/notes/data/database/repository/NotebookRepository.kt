@@ -63,6 +63,16 @@ class NotebookRepository(
         notebookDao.renameNotebook(id, newName, System.currentTimeMillis())
     }
 
+    suspend fun updateTemplate(id: String, template: String) {
+        Log.d(TAG, "updateTemplate id=$id template=$template")
+        notebookDao.updateTemplate(id, template)
+    }
+
+    suspend fun updatePagination(id: String, enabled: Boolean) {
+        Log.d(TAG, "updatePagination id=$id enabled=$enabled")
+        notebookDao.updatePagination(id, enabled)
+    }
+
     suspend fun moveNotebook(id: String, newFolderId: String) {
         Log.d(TAG, "moveNotebook id=$id newFolderId=$newFolderId")
         notebookDao.moveNotebook(id, newFolderId, null, System.currentTimeMillis())

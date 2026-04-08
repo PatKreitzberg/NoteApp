@@ -49,6 +49,16 @@ class NoteRepository(private val noteDao: NoteDao) {
         noteDao.updatePagination(noteId, enabled)
     }
 
+    suspend fun updateTemplate(noteId: String, template: String) {
+        Log.d(TAG, "updateTemplate noteId=$noteId template=$template")
+        noteDao.updateTemplate(noteId, template)
+    }
+
+    suspend fun updateOverrideNotebook(noteId: String, override: Boolean) {
+        Log.d(TAG, "updateOverrideNotebook noteId=$noteId override=$override")
+        noteDao.updateOverrideNotebook(noteId, override)
+    }
+
     suspend fun update(note: NoteEntity) {
         Log.d(TAG, "update noteId=${note.id}")
         noteDao.update(note)
