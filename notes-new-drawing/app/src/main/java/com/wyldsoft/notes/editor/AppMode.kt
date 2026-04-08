@@ -13,6 +13,7 @@ enum class AppMode {
     HOME,
     DRAWING,
     SELECTION,
+    SEPARATION,
     TEXT,
     SETTINGS
 }

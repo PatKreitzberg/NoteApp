@@ -7,6 +7,7 @@ import com.wyldsoft.notes.data.database.repository.UndoHistoryRepository
 import com.wyldsoft.notes.data.mappers.ShapeMapper
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.rendering.DrawingPipeline
+import com.wyldsoft.notes.rendering.PaginationManager
 import com.wyldsoft.notes.selection.SelectionManager
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +32,8 @@ class ActionManager(
     private val undoHistoryRepository: UndoHistoryRepository? = null,
     private val noteId: String? = null,
     private val scope: CoroutineScope? = null,
-    private val selectionManager: SelectionManager? = null
+    private val selectionManager: SelectionManager? = null,
+    private val paginationManager: PaginationManager? = null
 ) {
     private val TAG = "ActionManager"
     private val json = Json { ignoreUnknownKeys = true }
@@ -182,6 +184,16 @@ class ActionManager(
                 sequenceNumber = System.currentTimeMillis(),
                 shapesJson = serializeShapes(action.pastedShapes, nId)
             )
+            is SeparationAction -> UndoHistoryEntity(
+                id = action.id,
+                noteId = nId,
+                actionType = "SEPARATION",
+                isUndoStack = isUndoStack,
+                sequenceNumber = System.currentTimeMillis(),
+                shapesJson = json.encodeToString(action.shapeIds),
+                dNoteX = action.pagesAdded.toFloat(),
+                dNoteY = action.deltaY
+            )
             else -> {
                 Log.w(TAG, "serializeAction: unknown action type ${action::class.simpleName}")
                 null
@@ -271,6 +283,20 @@ class ActionManager(
                 "PASTE" -> {
                     val shapes = deserializeShapes(entry.shapesJson, nId)
                     PasteAction(pastedShapes = shapes, pipeline = pipeline, id = entry.id)
+                }
+                "SEPARATION" -> {
+                    val sm = selectionManager ?: return null
+                    val pm = paginationManager ?: return null
+                    val shapeIds: List<String> = json.decodeFromString(entry.shapesJson)
+                    SeparationAction(
+                        shapeIds = shapeIds,
+                        deltaY = entry.dNoteY,
+                        pagesAdded = entry.dNoteX.toInt(),
+                        pipeline = pipeline,
+                        paginationManager = pm,
+                        selectionManager = sm,
+                        id = entry.id
+                    )
                 }
                 else -> {
                     Log.w(TAG, "reconstructAction: unknown actionType=${entry.actionType}")

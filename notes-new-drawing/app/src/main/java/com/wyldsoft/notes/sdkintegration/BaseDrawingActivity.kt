@@ -24,6 +24,9 @@ import com.wyldsoft.notes.data.database.repository.NoteRepository
 import com.wyldsoft.notes.data.database.repository.NotebookRepository
 import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
+import com.wyldsoft.notes.gestures.GestureAction
+import com.wyldsoft.notes.gestures.GestureBindings.toKey
+import com.wyldsoft.notes.settings.AppSettings
 import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.editor.EditorView
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +73,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected var noteRepository: NoteRepository? = null
     protected var notebookRepository: NotebookRepository? = null
 
+    protected lateinit var appSettings: AppSettings
+
     // Throttle for smooth scroll/zoom updates (ms between renders)
     private val GESTURE_RENDER_INTERVAL_MS = 150L
     private var lastGestureRenderTime = 0L
@@ -89,6 +94,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         Log.d(TAG, "onCreate()")
         super.onCreate(savedInstanceState)
 
+        appSettings = (application as ScrotesApp).appSettings
         currentNoteId = intent.getStringExtra("noteId")
         val currentNotebookId = intent.getStringExtra("notebookId")
         EditorState.currentNoteId = currentNoteId
@@ -398,9 +404,26 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             onGestureEvent = { event ->
                 gestureLabel.value = event.displayName()
                 handleGestureThatTransformsViewport(event)
+                executeGestureAction(event)
             }
         )
         sv.setOnTouchListener(gestureHandler)
+    }
+
+    private fun executeGestureAction(event: GestureEvent) {
+        val key = event.toKey() ?: return
+        when (appSettings.getGestureAction(key)) {
+            GestureAction.NONE -> Unit
+            GestureAction.RESET_VIEWPORT -> {
+                viewportManager.resetViewport()
+                forceScreenRefresh()
+            }
+            GestureAction.UNDO -> EditorState.requestUndo()
+            GestureAction.REDO -> EditorState.requestRedo()
+            GestureAction.ENTER_SELECTION_MODE -> EditorState.setMode(AppMode.SELECTION)
+            GestureAction.NEXT_NOTE -> EditorState.requestNavigateNext()
+            GestureAction.PREVIOUS_NOTE -> EditorState.requestNavigatePrev()
+        }
     }
 
     private fun handleGestureThatTransformsViewport(event: GestureEvent) {

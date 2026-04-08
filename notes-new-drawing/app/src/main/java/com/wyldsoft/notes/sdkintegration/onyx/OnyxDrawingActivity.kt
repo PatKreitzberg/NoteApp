@@ -35,6 +35,7 @@ import com.wyldsoft.notes.undoredo.DrawAction
 import com.wyldsoft.notes.undoredo.EraseAction
 import com.wyldsoft.notes.undoredo.MoveAction
 import com.wyldsoft.notes.undoredo.PasteAction
+import com.wyldsoft.notes.undoredo.SeparationAction
 import com.onyx.android.sdk.api.device.epd.EpdController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -108,6 +109,22 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
         isAntiAlias = true
     }
+
+    // ── Separation state ──────────────────────────────────────────────────────
+    private enum class SeparationSubState { DRAWING_SPLIT_LINE, DRAGGING_OFFSET }
+    private var separationSubState = SeparationSubState.DRAWING_SPLIT_LINE
+    private var splitLineY = 0f                          // note-space Y of the drawn split line
+    private var separationShapes = listOf<com.wyldsoft.notes.shapemanagement.shapes.Shape>()
+    private var separationBackgroundBitmap: Bitmap? = null
+    private var separationGhostBitmap: Bitmap? = null
+    private var lastSeparationRenderTime = 0L
+    private val splitLinePaint = Paint().apply {
+        color = Color.DKGRAY
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        pathEffect = DashPathEffect(floatArrayOf(24f, 12f), 0f)
+        isAntiAlias = true
+    }
     // ─────────────────────────────────────────────────────────────────────────
 
     override fun initializeSDK() {
@@ -128,7 +145,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             undoHistoryRepository = undoHistoryRepo,
             noteId = noteId,
             scope = lifecycleScope,
-            selectionManager = selectionManager
+            selectionManager = selectionManager,
+            paginationManager = paginationManager
         )
 
         if (noteId != null) {
@@ -157,7 +175,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             undoHistoryRepository = undoHistoryRepo,
             noteId = noteId,
             scope = lifecycleScope,
-            selectionManager = selectionManager
+            selectionManager = selectionManager,
+            paginationManager = paginationManager
         )
         EditorState.setUndoRedoState(false, false)
         shapesLoaded = false
@@ -290,6 +309,18 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     handlePaste()
                 }
             }
+            AppMode.SEPARATION -> {
+                savedPenProfile = currentPenProfile
+                separationSubState = SeparationSubState.DRAWING_SPLIT_LINE
+                separationShapes = emptyList()
+                separationBackgroundBitmap?.recycle()
+                separationBackgroundBitmap = null
+                separationGhostBitmap?.recycle()
+                separationGhostBitmap = null
+                splitLineY = 0f
+                currentPenProfile = SELECTION_LASSO_PROFILE
+                EditorState.setPenProfile(SELECTION_LASSO_PROFILE)
+            }
             else -> {}
         }
     }
@@ -308,6 +339,20 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 EditorState.setHasSelection(false)
                 savedPenProfile?.let {
                     // Update field directly for timing safety before enterNewMode(DRAWING)
+                    currentPenProfile = it
+                    EditorState.setPenProfile(it)
+                }
+                savedPenProfile = null
+                forceScreenRefresh()
+            }
+            AppMode.SEPARATION -> {
+                separationShapes = emptyList()
+                separationBackgroundBitmap?.recycle()
+                separationBackgroundBitmap = null
+                separationGhostBitmap?.recycle()
+                separationGhostBitmap = null
+                separationSubState = SeparationSubState.DRAWING_SPLIT_LINE
+                savedPenProfile?.let {
                     currentPenProfile = it
                     EditorState.setPenProfile(it)
                 }
@@ -457,6 +502,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 disableFingerTouch()
                 return
             }
+            if (EditorState.currentMode.value == AppMode.SEPARATION) {
+                if (separationSubState == SeparationSubState.DRAGGING_OFFSET) {
+                    // Suppress ink rendering — we handle the ghost rendering ourselves
+                    onyxTouchHelper?.isRawDrawingRenderEnabled = false
+                }
+                isDrawingInProgress = true
+                disableFingerTouch()
+                return
+            }
             isDrawingInProgress = true
             disableFingerTouch()
         }
@@ -484,6 +538,20 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 touchPoint?.let { tp ->
                     renderBitmapWithGhost(tp.x - moveStartX, tp.y - moveStartY)
                 }
+                return
+            }
+            if (EditorState.currentMode.value == AppMode.SEPARATION
+                && separationSubState == SeparationSubState.DRAGGING_OFFSET
+            ) {
+                val now = SystemClock.uptimeMillis()
+                if (now - lastSeparationRenderTime < 150L) return
+                lastSeparationRenderTime = now
+                touchPoint?.let { tp ->
+                    val noteY = viewportManager.viewportToNoteY(tp.y)
+                    val offsetNoteY = maxOf(0f, noteY - splitLineY)
+                    val offsetViewportY = offsetNoteY * viewportManager.scale
+                    renderSeparationPreview(offsetViewportY)
+                }
             }
         }
 
@@ -499,6 +567,20 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         SelectionSubState.DRAWING_LASSO -> handleLassoComplete(tpl)
                         SelectionSubState.MOVING -> handleMoveComplete(tpl)
                         SelectionSubState.SELECTED -> { /* no-op */ }
+                    }
+                }
+                return
+            }
+            if (EditorState.currentMode.value == AppMode.SEPARATION) {
+                touchPointList?.let { tpl ->
+                    when (separationSubState) {
+                        SeparationSubState.DRAWING_SPLIT_LINE -> handleSplitLineDrawn(tpl)
+                        SeparationSubState.DRAGGING_OFFSET -> {
+                            val lastPt = tpl.points.lastOrNull()
+                            val noteY = viewportManager.viewportToNoteY(lastPt?.y ?: 0f)
+                            val offsetNoteY = maxOf(0f, noteY - splitLineY)
+                            commitSeparation(offsetNoteY)
+                        }
                     }
                 }
                 return
@@ -775,5 +857,125 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             vpRect.bottom + dY + 8f,
             selectionBoxPaint
         )
+    }
+
+    // ── Separation helpers ────────────────────────────────────────────────────
+
+    private fun handleSplitLineDrawn(touchPointList: TouchPointList) {
+        Log.d(TAG, "handleSplitLineDrawn points=${touchPointList.size()}")
+        val sv = surfaceView ?: return
+
+        // Compute average Y of the stroke in note-space
+        val notePoints = viewportManager.viewportToNoteTouchPoints(touchPointList)
+        splitLineY = notePoints.points.mapNotNull { it?.y }.average().toFloat()
+        Log.d(TAG, "handleSplitLineDrawn splitLineY=$splitLineY")
+
+        // Find all shapes with any part below the split line
+        separationShapes = drawingPipeline.getShapes()
+            .filter { (it.boundingRect?.bottom ?: 0f) > splitLineY }
+        Log.d(TAG, "handleSplitLineDrawn ${separationShapes.size} shapes below split")
+
+        // Build background (shapes above split only) and ghost (shapes below split only).
+        // Pass null so recreateBitmap allocates a fresh bitmap rather than reusing the
+        // main offscreen bitmap — we need separationBackgroundBitmap to be a separate object.
+        val bgState = drawingPipeline.recreateBitmapExcluding(separationShapes, null, sv.width, sv.height)
+        separationBackgroundBitmap = bgState.bitmap
+
+        val ghostState = drawingPipeline.recreateBitmapFromShapes(null, sv.width, sv.height, separationShapes)
+        separationGhostBitmap = ghostState.bitmap
+
+        separationSubState = SeparationSubState.DRAGGING_OFFSET
+        lastSeparationRenderTime = 0L
+
+        // Re-enable ink rendering for drawing the split line in step 1 was done by SDK;
+        // now disable it for step 2 dragging
+        onyxTouchHelper?.isRawDrawingRenderEnabled = false
+
+        renderSeparationPreview(0f)
+    }
+
+    private fun renderSeparationPreview(offsetViewportY: Float) {
+        val sv = surfaceView ?: return
+        EpdController.enablePost(sv, 1)
+        val canvas = sv.holder.lockCanvas() ?: return
+        try {
+            val splitViewportY = viewportManager.noteToViewportY(splitLineY)
+            canvas.drawColor(Color.WHITE)
+            // Draw background (shapes above split)
+            separationBackgroundBitmap?.let { canvas.drawBitmap(it, 0f, 0f, null) }
+            // Draw ghost (shapes below split) shifted down, clipped to below the split line
+            separationGhostBitmap?.let { ghost ->
+                canvas.save()
+                canvas.clipRect(0f, splitViewportY, sv.width.toFloat(), sv.height.toFloat())
+                canvas.drawBitmap(ghost, 0f, offsetViewportY, null)
+                canvas.restore()
+            }
+            // Draw split line indicator
+            canvas.drawLine(0f, splitViewportY, sv.width.toFloat(), splitViewportY, splitLinePaint)
+        } finally {
+            sv.holder.unlockCanvasAndPost(canvas)
+        }
+    }
+
+    private fun commitSeparation(rawOffsetY: Float) {
+        Log.d(TAG, "commitSeparation rawOffsetY=$rawOffsetY shapes=${separationShapes.size}")
+        if (separationShapes.isEmpty() || rawOffsetY <= 0f) {
+            EditorState.setMode(AppMode.DRAWING)
+            return
+        }
+        val pm = paginationManager ?: run {
+            EditorState.setMode(AppMode.DRAWING)
+            return
+        }
+
+        // Gap-snapping: find extra Y needed so no shape top lands inside a page gap.
+        // Apply the maximum avoidance uniformly to keep relative positions intact.
+        val gapAvoidance = separationShapes.maxOf { shape ->
+            val newTopY = (shape.boundingRect?.top ?: 0f) + rawOffsetY
+            var avoidance = 0f
+            for (p in 0 until pm.pageCount) {
+                val gapTop = pm.pageBottomY(p)
+                val gapBottom = pm.pageTopY(p + 1)
+                if (newTopY > gapTop && newTopY < gapBottom) {
+                    avoidance = maxOf(avoidance, gapBottom - newTopY)
+                }
+            }
+            avoidance
+        }
+        val actualOffsetY = rawOffsetY + gapAvoidance
+        Log.d(TAG, "commitSeparation actualOffsetY=$actualOffsetY (gapAvoidance=$gapAvoidance)")
+
+        // Auto-create pages if any shape overflows past the last page
+        val maxNewBottomY = separationShapes.maxOf { (it.boundingRect?.bottom ?: 0f) + actualOffsetY }
+        var pagesAdded = 0
+        while (maxNewBottomY > pm.pageBottomY(pm.pageCount - 1)) {
+            pm.addPages(1)
+            pagesAdded++
+        }
+
+        // Translate all shapes down
+        for (shape in separationShapes) {
+            selectionManager.translateShape(shape, 0f, actualOffsetY)
+            drawingPipeline.updateShape(shape)
+        }
+
+        // Record undo action
+        val shapeIds = separationShapes.mapNotNull { it.entityId }
+        actionManager.recordAction(SeparationAction(
+            shapeIds = shapeIds,
+            deltaY = actualOffsetY,
+            pagesAdded = pagesAdded,
+            pipeline = drawingPipeline,
+            paginationManager = pm,
+            selectionManager = selectionManager
+        ))
+
+        // Clean up bitmaps before triggering mode exit
+        separationShapes = emptyList()
+        separationBackgroundBitmap?.recycle()
+        separationBackgroundBitmap = null
+        separationGhostBitmap?.recycle()
+        separationGhostBitmap = null
+        EditorState.setMode(AppMode.DRAWING)
     }
 }

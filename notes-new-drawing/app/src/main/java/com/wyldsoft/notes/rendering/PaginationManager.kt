@@ -30,6 +30,16 @@ class PaginationManager(
     var pageCount: Int = 1
         private set
 
+    fun addPages(n: Int) {
+        pageCount += n
+        Log.d(TAG, "addPages $n: now $pageCount pages")
+    }
+
+    fun removePages(n: Int) {
+        pageCount = maxOf(1, pageCount - n)
+        Log.d(TAG, "removePages $n: now $pageCount pages")
+    }
+
     init {
         Log.d(TAG, "PaginationManager created: pageWidth=$pageWidth pageHeight=$pageHeight gapPx=$gapPx")
     }

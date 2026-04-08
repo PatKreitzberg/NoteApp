@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
+import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.home.components.BreadcrumbBar
 import com.wyldsoft.notes.home.components.CreateItemDialog
 import com.wyldsoft.notes.home.components.FolderCard
@@ -50,6 +51,8 @@ fun HomeView(
     onOpenNotebook: (notebookId: String) -> Unit,
     defaultPaginationEnabled: Boolean,
     onDefaultPaginationChanged: (Boolean) -> Unit,
+    gestureMappings: Map<String, GestureAction>,
+    onGestureMappingsChanged: (Map<String, GestureAction>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -259,6 +262,8 @@ fun HomeView(
         HomeSettingsDialog(
             defaultPaginationEnabled = defaultPaginationEnabled,
             onDefaultPaginationChanged = onDefaultPaginationChanged,
+            gestureMappings = gestureMappings,
+            onGestureMappingsChanged = onGestureMappingsChanged,
             onDismiss = { showSettingsDialog = false }
         )
     }

@@ -96,8 +96,10 @@ fun Toolbar(
 
         val currentMode by EditorState.currentMode.collectAsState()
         val inSelection = currentMode == AppMode.SELECTION
+        val inSeparation = currentMode == AppMode.SEPARATION
         val hasSelection by EditorState.hasSelection.collectAsState()
         val hasCopied by EditorState.hasCopied.collectAsState()
+        val paginationEnabled by EditorState.paginationEnabled.collectAsState()
 
         IconButton(
             onClick = {
@@ -111,6 +113,26 @@ fun Toolbar(
                 imageVector = ImageVector.vectorResource(id = drawable.lasso_select),
                 contentDescription = "Selection Tool",
                 tint = if (inSelection) Color.Black else Color.Gray
+            )
+        }
+
+        IconButton(
+            onClick = {
+                Log.d(TAG, "Separation button clicked, inSeparation=$inSeparation")
+                if (inSeparation) EditorState.setMode(AppMode.DRAWING)
+                else EditorState.setMode(AppMode.SEPARATION)
+            },
+            enabled = paginationEnabled,
+            modifier = Modifier.then(if (inSeparation) Modifier.border(2.dp, Color.Black) else Modifier)
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(id = drawable.ic_separation),
+                contentDescription = "Separation Mode",
+                tint = when {
+                    inSeparation -> Color.Black
+                    paginationEnabled -> Color.Gray
+                    else -> Color.LightGray
+                }
             )
         }
 

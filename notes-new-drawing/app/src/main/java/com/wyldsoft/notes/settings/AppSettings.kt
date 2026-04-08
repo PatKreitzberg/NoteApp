@@ -3,12 +3,15 @@ package com.wyldsoft.notes.settings
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.wyldsoft.notes.gestures.GestureAction
+import com.wyldsoft.notes.gestures.GestureBindings
 
 class AppSettings(context: Context) {
     companion object {
         private const val TAG = "AppSettings"
         private const val PREFS_NAME = "app_settings"
         private const val KEY_DEFAULT_PAGINATION = "default_pagination_enabled"
+        private const val KEY_GESTURE_PREFIX = "gesture_"
     }
 
     private val prefs: SharedPreferences =
@@ -20,4 +23,24 @@ class AppSettings(context: Context) {
             Log.d(TAG, "setDefaultPaginationEnabled value=$value")
             prefs.edit().putBoolean(KEY_DEFAULT_PAGINATION, value).apply()
         }
+
+    fun getGestureAction(gestureKey: String): GestureAction {
+        val name = prefs.getString("$KEY_GESTURE_PREFIX$gestureKey", GestureAction.NONE.name)
+        return GestureAction.entries.find { it.name == name } ?: GestureAction.NONE
+    }
+
+    fun getAllGestureMappings(): Map<String, GestureAction> {
+        return GestureBindings.ALL_GESTURE_KEYS.associate { (key, _) ->
+            key to getGestureAction(key)
+        }
+    }
+
+    fun saveGestureMappings(mappings: Map<String, GestureAction>) {
+        Log.d(TAG, "saveGestureMappings count=${mappings.size}")
+        val editor = prefs.edit()
+        mappings.forEach { (key, action) ->
+            editor.putString("$KEY_GESTURE_PREFIX$key", action.name)
+        }
+        editor.apply()
+    }
 }

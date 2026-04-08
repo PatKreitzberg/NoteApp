@@ -64,6 +64,7 @@ class HomeActivity : ComponentActivity() {
                 ) {
                     val appSettings = (application as ScrotesApp).appSettings
                     var defaultPagination by remember { mutableStateOf(appSettings.defaultPaginationEnabled) }
+                    var gestureMappings by remember { mutableStateOf(appSettings.getAllGestureMappings()) }
                     HomeView(
                         viewModel = viewModel,
                         syncViewModel = syncViewModel,
@@ -84,6 +85,11 @@ class HomeActivity : ComponentActivity() {
                         onDefaultPaginationChanged = { enabled ->
                             appSettings.defaultPaginationEnabled = enabled
                             defaultPagination = enabled
+                        },
+                        gestureMappings = gestureMappings,
+                        onGestureMappingsChanged = { mappings ->
+                            appSettings.saveGestureMappings(mappings)
+                            gestureMappings = appSettings.getAllGestureMappings()
                         }
                     )
                 }
