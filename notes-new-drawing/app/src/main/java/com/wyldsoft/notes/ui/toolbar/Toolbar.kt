@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Redo
@@ -94,6 +96,8 @@ fun Toolbar(
 
         val currentMode by EditorState.currentMode.collectAsState()
         val inSelection = currentMode == AppMode.SELECTION
+        val hasSelection by EditorState.hasSelection.collectAsState()
+        val hasCopied by EditorState.hasCopied.collectAsState()
 
         IconButton(
             onClick = {
@@ -110,12 +114,41 @@ fun Toolbar(
             )
         }
 
+        if (hasSelection) {
+            IconButton(
+                onClick = {
+                    Log.d(TAG, "Copy button clicked")
+                    EditorState.requestCopy()
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        if (hasCopied) {
+            IconButton(
+                onClick = {
+                    Log.d(TAG, "Paste button clicked")
+                    EditorState.requestPaste()
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentPaste,
+                    contentDescription = "Paste",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
         IconButton(
             onClick = {
-                Log.d(TAG, "Selection button clicked, inSelection=$inSelection")
+                Log.d(TAG, "Reset viewport button clicked")
                 resetViewport()
-            },
-            modifier = Modifier.then(if (inSelection) Modifier.border(2.dp, Color.Black) else Modifier)
+            }
         ) {
             Icon(
                 imageVector = Icons.Default.CenterFocusStrong,

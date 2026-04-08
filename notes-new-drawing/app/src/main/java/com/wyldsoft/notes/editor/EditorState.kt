@@ -45,6 +45,18 @@ class EditorState {
         private val _redoRequested = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val redoRequested = _redoRequested.asSharedFlow()
 
+        private val _hasSelection = MutableStateFlow(false)
+        val hasSelection: StateFlow<Boolean> = _hasSelection.asStateFlow()
+
+        private val _hasCopied = MutableStateFlow(false)
+        val hasCopied: StateFlow<Boolean> = _hasCopied.asStateFlow()
+
+        private val _copyRequested = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val copyRequested = _copyRequested.asSharedFlow()
+
+        private val _pasteRequested = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val pasteRequested = _pasteRequested.asSharedFlow()
+
         private val _currentPenProfile = MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN))
         val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
 
@@ -234,6 +246,26 @@ class EditorState {
         fun requestRedo() {
             Log.d(TAG, "requestRedo")
             _redoRequested.tryEmit(Unit)
+        }
+
+        fun setHasSelection(has: Boolean) {
+            Log.d(TAG, "setHasSelection: $has")
+            _hasSelection.value = has
+        }
+
+        fun setHasCopied(has: Boolean) {
+            Log.d(TAG, "setHasCopied: $has")
+            _hasCopied.value = has
+        }
+
+        fun requestCopy() {
+            Log.d(TAG, "requestCopy")
+            _copyRequested.tryEmit(Unit)
+        }
+
+        fun requestPaste() {
+            Log.d(TAG, "requestPaste")
+            _pasteRequested.tryEmit(Unit)
         }
 
         fun emitDismissSettings() {

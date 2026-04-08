@@ -84,6 +84,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var moveStartY = 0f
     private var lastSelectionRenderTime = 0L
     private var savedPenProfile: PenProfile? = null
+    private var copiedShapes = listOf<com.wyldsoft.notes.shapemanagement.shapes.Shape>()
+    private var pendingPaste = false
     // Stroke suppression: used when a touch should be swallowed without drawing,
     // then an action triggered on pen-lift (e.g. cancel selection, dismiss a panel).
     // Two separate fields because the callbacks that consume them can fire in either order.
@@ -181,6 +183,19 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 actionManager.redo(lifecycleScope, ::onUndoRedoComplete)
             }
         }
+        lifecycleScope.launch {
+            EditorState.copyRequested.collect { handleCopy() }
+        }
+        lifecycleScope.launch {
+            EditorState.pasteRequested.collect {
+                if (EditorState.currentMode.value == AppMode.SELECTION) {
+                    handlePaste()
+                } else {
+                    pendingPaste = true
+                    EditorState.setMode(AppMode.SELECTION)
+                }
+            }
+        }
     }
 
     private fun onUndoRedoComplete() {
@@ -264,10 +279,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 selectionSubState = SelectionSubState.DRAWING_LASSO
                 selectedShapes.clear()
                 selectionBoundingRectNote = null
+                EditorState.setHasSelection(false)
                 // Update field directly for timing safety, then emit to StateFlow for UI
                 currentPenProfile = SELECTION_LASSO_PROFILE
                 EditorState.setPenProfile(SELECTION_LASSO_PROFILE)
                 // observePenProfile triggers updateTouchHelperWithProfile → re-enables raw drawing
+                if (pendingPaste) {
+                    pendingPaste = false
+                    handlePaste()
+                }
             }
             else -> {}
         }
@@ -284,6 +304,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 ghostBitmap?.recycle()
                 ghostBitmap = null
                 selectionSubState = SelectionSubState.DRAWING_LASSO
+                EditorState.setHasSelection(false)
                 savedPenProfile?.let {
                     // Update field directly for timing safety before enterNewMode(DRAWING)
                     currentPenProfile = it
@@ -558,9 +579,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             selectedShapes = found.toMutableList()
             selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
             selectionSubState = SelectionSubState.SELECTED
+            EditorState.setHasSelection(true)
             Log.d(TAG, "handleLassoComplete selected ${selectedShapes.size} shapes")
         } else {
             selectionSubState = SelectionSubState.DRAWING_LASSO
+            EditorState.setHasSelection(false)
             Log.d(TAG, "handleLassoComplete no shapes selected")
         }
         // SDK drew lasso to surface but NOT to our bitmap → re-render bitmap to clear it
@@ -666,6 +689,78 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             sv.holder.unlockCanvasAndPost(canvas)
         }
     }
+
+    // ── Copy / Paste ──────────────────────────────────────────────────────────
+
+    private fun cloneShape(original: com.wyldsoft.notes.shapemanagement.shapes.Shape): com.wyldsoft.notes.shapemanagement.shapes.Shape {
+        Log.d(TAG, "cloneShape entityId=${original.entityId}")
+        val clone = com.wyldsoft.notes.shapemanagement.ShapeFactory.createShape(original.shapeType)
+        clone.shapeType = original.shapeType
+        clone.texture = original.texture
+        clone.strokeColor = original.strokeColor
+        clone.strokeWidth = original.strokeWidth
+        clone.penType = original.penType
+        val newList = com.onyx.android.sdk.pen.data.TouchPointList()
+        original.touchPointList?.points?.forEach { pt ->
+            if (pt != null) {
+                val newPt = TouchPoint()
+                newPt.x = pt.x
+                newPt.y = pt.y
+                newPt.pressure = pt.pressure
+                newPt.tiltX = pt.tiltX
+                newPt.tiltY = pt.tiltY
+                newPt.timestamp = pt.timestamp
+                newList.add(newPt)
+            }
+        }
+        clone.touchPointList = newList
+        clone.updateShapeRect()
+        // entityId left null — assigned by ShapeMapper.toEntity when persisted
+        return clone
+    }
+
+    private fun handleCopy() {
+        Log.d(TAG, "handleCopy selectedShapes=${selectedShapes.size}")
+        if (selectedShapes.isEmpty()) return
+        copiedShapes = selectedShapes.map { cloneShape(it) }
+        EditorState.setHasCopied(true)
+    }
+
+    private fun handlePaste() {
+        Log.d(TAG, "handlePaste copiedShapes=${copiedShapes.size}")
+        if (copiedShapes.isEmpty()) return
+        val sv = surfaceView ?: return
+
+        val centerNoteX = viewportManager.viewportToNoteX(sv.width / 2f)
+        val centerNoteY = viewportManager.viewportToNoteY(sv.height / 2f)
+
+        val copyBounds = selectionManager.computeBoundingRect(copiedShapes) ?: return
+        val deltaX = centerNoteX - copyBounds.centerX()
+        val deltaY = centerNoteY - copyBounds.centerY()
+
+        val pastedShapes = copiedShapes.map { original ->
+            val clone = cloneShape(original)
+            selectionManager.translateShape(clone, deltaX, deltaY)
+            clone
+        }
+
+        for (shape in pastedShapes) {
+            drawingPipeline.addShape(shape)
+        }
+
+        selectedShapes = pastedShapes.toMutableList()
+        selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
+        selectionSubState = SelectionSubState.SELECTED
+        EditorState.setHasSelection(true)
+
+        val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+        bitmap = state.bitmap
+        bitmapCanvas = state.canvas
+        EpdController.enablePost(sv, 1)
+        renderBitmapWithSelectionOverlay()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     private fun drawSelectionBox(canvas: Canvas, dX: Float, dY: Float) {
         val noteRect = selectionBoundingRectNote ?: return
