@@ -174,6 +174,14 @@ class ActionManager(
                 dNoteX = action.dNoteX,
                 dNoteY = action.dNoteY
             )
+            is PasteAction -> UndoHistoryEntity(
+                id = action.id,
+                noteId = nId,
+                actionType = "PASTE",
+                isUndoStack = isUndoStack,
+                sequenceNumber = System.currentTimeMillis(),
+                shapesJson = serializeShapes(action.pastedShapes, nId)
+            )
             else -> {
                 Log.w(TAG, "serializeAction: unknown action type ${action::class.simpleName}")
                 null
@@ -259,6 +267,10 @@ class ActionManager(
                         selectionManager = sm,
                         id = entry.id
                     )
+                }
+                "PASTE" -> {
+                    val shapes = deserializeShapes(entry.shapesJson, nId)
+                    PasteAction(pastedShapes = shapes, pipeline = pipeline, id = entry.id)
                 }
                 else -> {
                     Log.w(TAG, "reconstructAction: unknown actionType=${entry.actionType}")

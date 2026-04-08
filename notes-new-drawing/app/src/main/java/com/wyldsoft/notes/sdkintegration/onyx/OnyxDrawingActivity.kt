@@ -34,6 +34,7 @@ import com.wyldsoft.notes.undoredo.ActionManager
 import com.wyldsoft.notes.undoredo.DrawAction
 import com.wyldsoft.notes.undoredo.EraseAction
 import com.wyldsoft.notes.undoredo.MoveAction
+import com.wyldsoft.notes.undoredo.PasteAction
 import com.onyx.android.sdk.api.device.epd.EpdController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -747,6 +748,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         for (shape in pastedShapes) {
             drawingPipeline.addShape(shape)
         }
+
+        actionManager.recordAction(PasteAction(pastedShapes, drawingPipeline))
 
         selectedShapes = pastedShapes.toMutableList()
         selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
