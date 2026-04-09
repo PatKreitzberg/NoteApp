@@ -47,6 +47,7 @@ import com.wyldsoft.notes.undoredo.PasteAction
 import com.wyldsoft.notes.undoredo.SeparationAction
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
+import com.wyldsoft.notes.htr.HTRRunManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -83,6 +84,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var shapesLoaded = false
     private lateinit var shapeRepo: ShapeRepository
     private lateinit var undoHistoryRepo: UndoHistoryRepository
+    private val htrRunManager = HTRRunManager()
 
     // ── Selection state ───────────────────────────────────────────────────────
     private enum class SelectionSubState { DRAWING_LASSO, SELECTED, MOVING }
@@ -454,6 +456,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onCleanupSDK() {
         onyxTouchHelper?.closeRawDrawing()
         drawingPipeline.clearShapes()
+        htrRunManager.close()
     }
 
     override fun updateActiveSurface() {
@@ -712,6 +715,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 val shape = drawingPipeline.drawScribbleToBitmap(touchPointList, bmp, currentPenProfile)
                 actionManager.recordAction(DrawAction(shape, drawingPipeline))
                 renderToScreen(sv, bitmap)
+                val noteId = drawingPipeline.noteId
+                if (noteId != null) {
+                    htrRunManager.addShapeForRecognition(noteId, shape)
+                }
             }
         }
     }
