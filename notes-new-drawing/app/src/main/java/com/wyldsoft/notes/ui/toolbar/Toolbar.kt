@@ -52,6 +52,8 @@ fun Toolbar(
     onSettingsExpandedChange: (Boolean) -> Unit,
     textExpanded: Boolean,
     onTextExpandedChange: (Boolean) -> Unit,
+    geometryExpanded: Boolean,
+    onGeometryExpandedChange: (Boolean) -> Unit,
     resetViewport: () -> Unit = {}
 ) {
     LaunchedEffect(Unit) {
@@ -60,6 +62,7 @@ fun Toolbar(
             onExpandedChange(false)
             onSettingsExpandedChange(false)
             onTextExpandedChange(false)
+            onGeometryExpandedChange(false)
             EditorState.setMode(AppMode.DRAWING)
         }
     }
@@ -139,6 +142,11 @@ fun Toolbar(
                 }
             )
         }
+
+        GeometryButton(
+            geometryExpanded = geometryExpanded,
+            onGeometryExpandedChange = onGeometryExpandedChange
+        )
 
         val inText = currentMode == AppMode.TEXT
         IconButton(

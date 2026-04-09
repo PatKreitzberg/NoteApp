@@ -15,5 +15,6 @@ enum class AppMode {
     SELECTION,
     SEPARATION,
     TEXT,
+    GEOMETRY,
     SETTINGS
 }

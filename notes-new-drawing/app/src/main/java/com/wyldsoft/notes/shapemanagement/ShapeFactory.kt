@@ -6,12 +6,16 @@ import com.onyx.android.sdk.pen.NeoPenConfigWrapper
 import com.onyx.android.sdk.pen.TouchHelper
 import com.wyldsoft.notes.shapemanagement.shapes.BrushScribbleShape
 import com.wyldsoft.notes.shapemanagement.shapes.CharcoalScribbleShape
+import com.wyldsoft.notes.shapemanagement.shapes.CircleGeometryShape
+import com.wyldsoft.notes.shapemanagement.shapes.LineGeometryShape
 import com.wyldsoft.notes.shapemanagement.shapes.MarkerScribbleShape
 import com.wyldsoft.notes.shapemanagement.shapes.NewBrushScribbleShape
 import com.wyldsoft.notes.shapemanagement.shapes.DashPencilShape
 import com.wyldsoft.notes.shapemanagement.shapes.NormalPencilShape
+import com.wyldsoft.notes.shapemanagement.shapes.RectangleGeometryShape
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
+import com.wyldsoft.notes.shapemanagement.shapes.TriangleGeometryShape
 
 /**
  * Factory that creates the correct Shape subclass for a given pen type constant.
@@ -35,6 +39,10 @@ object ShapeFactory {
     const val SHAPE_CHARCOAL_SCRIBBLE: Int = 4
     const val SHAPE_DASH_SCRIBBLE: Int = 5
     const val SHAPE_TEXT: Int = 6
+    const val SHAPE_GEOMETRY_CIRCLE: Int = 7
+    const val SHAPE_GEOMETRY_LINE: Int = 8
+    const val SHAPE_GEOMETRY_RECTANGLE: Int = 9
+    const val SHAPE_GEOMETRY_TRIANGLE: Int = 10
 
     const val ERASER_STROKE: Int = 0
 
@@ -52,6 +60,10 @@ object ShapeFactory {
             }
             SHAPE_DASH_SCRIBBLE -> return TouchHelper.STROKE_STYLE_PENCIL
             SHAPE_TEXT -> return TouchHelper.STROKE_STYLE_PENCIL
+            SHAPE_GEOMETRY_CIRCLE,
+            SHAPE_GEOMETRY_LINE,
+            SHAPE_GEOMETRY_RECTANGLE,
+            SHAPE_GEOMETRY_TRIANGLE -> return TouchHelper.STROKE_STYLE_PENCIL
 
             else -> return TouchHelper.STROKE_STYLE_PENCIL
         }
@@ -68,6 +80,10 @@ object ShapeFactory {
             SHAPE_CHARCOAL_SCRIBBLE -> shape = CharcoalScribbleShape()
             SHAPE_DASH_SCRIBBLE -> shape = DashPencilShape()
             SHAPE_TEXT -> shape = TextShape()
+            SHAPE_GEOMETRY_CIRCLE -> shape = CircleGeometryShape()
+            SHAPE_GEOMETRY_LINE -> shape = LineGeometryShape()
+            SHAPE_GEOMETRY_RECTANGLE -> shape = RectangleGeometryShape()
+            SHAPE_GEOMETRY_TRIANGLE -> shape = TriangleGeometryShape()
             else -> shape = NormalPencilShape()
         }
         return shape

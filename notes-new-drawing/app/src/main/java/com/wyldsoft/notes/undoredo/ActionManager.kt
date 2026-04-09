@@ -194,6 +194,23 @@ class ActionManager(
                 dNoteX = action.pagesAdded.toFloat(),
                 dNoteY = action.deltaY
             )
+            is ScribbleEraseAction -> UndoHistoryEntity(
+                id = action.id,
+                noteId = nId,
+                actionType = "SCRIBBLE_ERASE",
+                isUndoStack = isUndoStack,
+                sequenceNumber = System.currentTimeMillis(),
+                // First shape is the scribble stroke; remaining are the erased shapes
+                shapesJson = serializeShapes(listOf(action.scribbleShape) + action.erasedShapes, nId)
+            )
+            is CircleSelectAction -> UndoHistoryEntity(
+                id = action.id,
+                noteId = nId,
+                actionType = "CIRCLE_SELECT",
+                isUndoStack = isUndoStack,
+                sequenceNumber = System.currentTimeMillis(),
+                shapesJson = serializeShapes(listOf(action.circleShape), nId)
+            )
             else -> {
                 Log.w(TAG, "serializeAction: unknown action type ${action::class.simpleName}")
                 null
@@ -295,6 +312,30 @@ class ActionManager(
                         pipeline = pipeline,
                         paginationManager = pm,
                         selectionManager = sm,
+                        id = entry.id
+                    )
+                }
+                "SCRIBBLE_ERASE" -> {
+                    val shapes = deserializeShapes(entry.shapesJson, nId)
+                    if (shapes.isEmpty()) return null
+                    val scribble = shapes.first()
+                    val erased = shapes.drop(1)
+                    ScribbleEraseAction(
+                        scribbleShape = scribble,
+                        erasedShapes = erased,
+                        pipeline = pipeline,
+                        id = entry.id
+                    )
+                }
+                "CIRCLE_SELECT" -> {
+                    val shapes = deserializeShapes(entry.shapesJson, nId)
+                    if (shapes.isEmpty()) return null
+                    val circle = shapes.first()
+                    // Callbacks are volatile — not persisted. Shape add/remove still works on replay.
+                    CircleSelectAction(
+                        circleShape = circle,
+                        encircledShapeIds = emptyList(),
+                        pipeline = pipeline,
                         id = entry.id
                     )
                 }

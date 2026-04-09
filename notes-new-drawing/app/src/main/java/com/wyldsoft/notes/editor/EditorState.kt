@@ -3,6 +3,7 @@ package com.wyldsoft.notes.editor
 import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.util.Log
+import com.wyldsoft.notes.geometry.GeometryShapeType
 import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
@@ -88,6 +89,14 @@ class EditorState {
             Log.d(TAG, "switchToPenSlot: $slot")
             _activePenSlot.value = slot
             _currentPenProfile.value = penProfileForSlot(slot)
+        }
+
+        private val _activeGeometryShape = MutableStateFlow(GeometryShapeType.CIRCLE)
+        val activeGeometryShape: StateFlow<GeometryShapeType> = _activeGeometryShape.asStateFlow()
+
+        fun setActiveGeometryShape(type: GeometryShapeType) {
+            Log.d(TAG, "setActiveGeometryShape: $type")
+            _activeGeometryShape.value = type
         }
 
         private val _textProfile = MutableStateFlow(TextProfile())

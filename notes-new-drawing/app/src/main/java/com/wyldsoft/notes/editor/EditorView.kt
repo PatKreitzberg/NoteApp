@@ -28,6 +28,7 @@ fun EditorView(
     var menuExpanded by remember { mutableStateOf(false) }
     var settingsExpanded by remember { mutableStateOf(false) }
     var textExpanded by remember { mutableStateOf(false) }
+    var geometryExpanded by remember { mutableStateOf(false) }
     val currentProfile by EditorState.currentPenProfile.collectAsState()
     val textProfile by EditorState.textProfile.collectAsState()
     val currentMode by EditorState.currentMode.collectAsState()
@@ -45,6 +46,8 @@ fun EditorView(
                 onSettingsExpandedChange = { settingsExpanded = it },
                 textExpanded = textExpanded,
                 onTextExpandedChange = { textExpanded = it },
+                geometryExpanded = geometryExpanded,
+                onGeometryExpandedChange = { geometryExpanded = it },
                 resetViewport = { resetViewport() }
             )
 

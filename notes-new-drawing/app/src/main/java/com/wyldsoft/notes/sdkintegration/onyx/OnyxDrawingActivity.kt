@@ -36,14 +36,17 @@ import com.wyldsoft.notes.selection.SelectionManager
 import com.wyldsoft.notes.touchhandling.TouchUtils
 import androidx.compose.ui.graphics.toArgb
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils
+import com.wyldsoft.notes.geometry.GeometryShapeType
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import com.wyldsoft.notes.touchhandling.GestureEvent
 import com.wyldsoft.notes.undoredo.ActionManager
+import com.wyldsoft.notes.undoredo.CircleSelectAction
 import com.wyldsoft.notes.undoredo.DrawAction
 import com.wyldsoft.notes.undoredo.EraseAction
 import com.wyldsoft.notes.undoredo.MoveAction
 import com.wyldsoft.notes.undoredo.PasteAction
+import com.wyldsoft.notes.undoredo.ScribbleEraseAction
 import com.wyldsoft.notes.undoredo.SeparationAction
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
@@ -140,6 +143,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         pathEffect = DashPathEffect(floatArrayOf(24f, 12f), 0f)
         isAntiAlias = true
     }
+
+    // ── Geometry state ────────────────────────────────────────────────────────
+    private var geometryStartPoint: com.onyx.android.sdk.data.note.TouchPoint? = null
+    private var geometrySnapshotBitmap: Bitmap? = null
+    private var lastGeometryRenderTime = 0L
     // ─────────────────────────────────────────────────────────────────────────
 
     override fun initializeSDK() {
@@ -360,6 +368,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 savedPenProfile = currentPenProfile
                 disableRawDrawing()
             }
+            AppMode.GEOMETRY -> {
+                savedPenProfile = currentPenProfile
+                // Enable raw drawing to capture touch points, but suppress Onyx ink rendering
+                updateTouchHelperWithProfile()
+                onyxTouchHelper?.isRawDrawingRenderEnabled = false
+            }
             else -> {}
         }
     }
@@ -399,6 +413,17 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 forceScreenRefresh()
             }
             AppMode.TEXT -> {
+                savedPenProfile?.let {
+                    currentPenProfile = it
+                    EditorState.setPenProfile(it)
+                }
+                savedPenProfile = null
+                forceScreenRefresh()
+            }
+            AppMode.GEOMETRY -> {
+                geometrySnapshotBitmap?.recycle()
+                geometrySnapshotBitmap = null
+                geometryStartPoint = null
                 savedPenProfile?.let {
                     currentPenProfile = it
                     EditorState.setPenProfile(it)
@@ -614,6 +639,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 disableFingerTouch()
                 return
             }
+            if (EditorState.currentMode.value == AppMode.GEOMETRY) {
+                onyxTouchHelper?.isRawDrawingRenderEnabled = false
+                createDrawingBitmap()
+                geometryStartPoint = touchPoint
+                geometrySnapshotBitmap?.recycle()
+                geometrySnapshotBitmap = bitmap?.copy(bitmap!!.config, false)
+                isDrawingInProgress = true
+                disableFingerTouch()
+                return
+            }
             isDrawingInProgress = true
             disableFingerTouch()
         }
@@ -655,6 +690,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     val offsetViewportY = offsetNoteY * viewportManager.scale
                     renderSeparationPreview(offsetViewportY)
                 }
+                return
+            }
+            if (EditorState.currentMode.value == AppMode.GEOMETRY) {
+                val now = SystemClock.uptimeMillis()
+                if (now - lastGeometryRenderTime < 50L) return
+                lastGeometryRenderTime = now
+                touchPoint?.let { tp -> renderGeometryPreview(tp) }
             }
         }
 
@@ -686,6 +728,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         }
                     }
                 }
+                return
+            }
+            if (EditorState.currentMode.value == AppMode.GEOMETRY) {
+                if (strokeDataSuppressed) {
+                    strokeDataSuppressed = false
+                    return
+                }
+                val startPt = geometryStartPoint ?: return
+                val endPt = touchPointList?.points?.lastOrNull() ?: return
+                commitGeometryShape(startPt, endPt)
                 return
             }
             touchPointList?.points?.let { points ->
@@ -743,7 +795,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         for (coveredShape in covered) {
                             drawingPipeline.removeShape(coveredShape)
                         }
-                        actionManager.recordAction(EraseAction(covered, drawingPipeline))
+                        actionManager.recordAction(DrawAction(shape, drawingPipeline))
+                        actionManager.recordAction(ScribbleEraseAction(shape, covered, drawingPipeline))
                         val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
                         bitmap = state.bitmap
                         bitmapCanvas = state.canvas
@@ -769,6 +822,28 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         EditorState.setHasSelection(true)
                         circleSelectPreloaded = true
                         EditorState.setMode(AppMode.SELECTION)
+                        val encircledIds = encircled.mapNotNull { it.entityId }
+                        actionManager.recordAction(DrawAction(shape, drawingPipeline))
+                        actionManager.recordAction(CircleSelectAction(
+                            circleShape = shape,
+                            encircledShapeIds = encircledIds,
+                            pipeline = drawingPipeline,
+                            onUndoCallback = {
+                                withContext(Dispatchers.Main) {
+                                    EditorState.setMode(AppMode.DRAWING)
+                                }
+                            },
+                            onRedoCallback = { encircledShapes ->
+                                withContext(Dispatchers.Main) {
+                                    selectedShapes = encircledShapes.toMutableList()
+                                    selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
+                                    selectionSubState = SelectionSubState.SELECTED
+                                    EditorState.setHasSelection(true)
+                                    circleSelectPreloaded = true
+                                    EditorState.setMode(AppMode.SELECTION)
+                                }
+                            }
+                        ))
                         val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
                         bitmap = state.bitmap
                         bitmapCanvas = state.canvas
@@ -804,6 +879,142 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 }
             }
         }
+    }
+
+    // ── Geometry helpers ──────────────────────────────────────────────────────
+
+    private fun renderGeometryPreview(currentVpPt: com.onyx.android.sdk.data.note.TouchPoint) {
+        Log.d(TAG, "renderGeometryPreview")
+        val sv = surfaceView ?: return
+        val snapshot = geometrySnapshotBitmap ?: return
+        val startVpPt = geometryStartPoint ?: return
+        val bmp = bitmap ?: return
+
+        // Restore snapshot onto current bitmap
+        val canvas = android.graphics.Canvas(bmp)
+        canvas.drawBitmap(snapshot, 0f, 0f, null)
+
+        // Convert viewport → note coords for storage, then back to viewport for drawing
+        // Since we draw directly on the bitmap (already in viewport space), use vp coords
+        val shapeType = EditorState.activeGeometryShape.value
+        val paint = android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = currentPenProfile.getColorAsInt()
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = currentPenProfile.strokeWidth * viewportManager.scale
+            strokeCap = android.graphics.Paint.Cap.ROUND
+        }
+        drawGeometryShapeOnCanvas(canvas, shapeType, startVpPt, currentVpPt, paint)
+
+        EpdController.enablePost(sv, 1)
+        renderToScreen(sv, bmp)
+    }
+
+    private fun drawGeometryShapeOnCanvas(
+        canvas: android.graphics.Canvas,
+        shapeType: GeometryShapeType,
+        startPt: com.onyx.android.sdk.data.note.TouchPoint,
+        endPt: com.onyx.android.sdk.data.note.TouchPoint,
+        paint: android.graphics.Paint
+    ) {
+        val sx = startPt.x; val sy = startPt.y
+        val ex = endPt.x;   val ey = endPt.y
+        val dx = ex - sx;   val dy = ey - sy
+        val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+        if (dist < 1f) return
+
+        when (shapeType) {
+            GeometryShapeType.CIRCLE -> {
+                canvas.drawCircle(sx, sy, dist, paint)
+            }
+            GeometryShapeType.LINE -> {
+                canvas.drawLine(sx, sy, ex, ey, paint)
+            }
+            GeometryShapeType.RECTANGLE -> {
+                val aspectRatio = 1.618f
+                val halfH = dist / kotlin.math.sqrt(1f + aspectRatio * aspectRatio)
+                val halfW = halfH * aspectRatio
+                val path = android.graphics.Path().apply {
+                    addRect(android.graphics.RectF(-halfW, -halfH, halfW, halfH), android.graphics.Path.Direction.CW)
+                }
+                val angleDeg = Math.toDegrees(kotlin.math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                val matrix = android.graphics.Matrix()
+                matrix.postRotate(angleDeg)
+                matrix.postTranslate(sx, sy)
+                path.transform(matrix)
+                canvas.drawPath(path, paint)
+            }
+            GeometryShapeType.TRIANGLE -> {
+                val baseAngle = kotlin.math.atan2(dy, dx)
+                val twoThirdsPi = (2.0 * Math.PI / 3.0).toFloat()
+                val x0 = sx + dist * kotlin.math.cos(baseAngle)
+                val y0 = sy + dist * kotlin.math.sin(baseAngle)
+                val x1 = sx + dist * kotlin.math.cos(baseAngle + twoThirdsPi)
+                val y1 = sy + dist * kotlin.math.sin(baseAngle + twoThirdsPi)
+                val x2 = sx + dist * kotlin.math.cos(baseAngle - twoThirdsPi)
+                val y2 = sy + dist * kotlin.math.sin(baseAngle - twoThirdsPi)
+                val path = android.graphics.Path().apply {
+                    moveTo(x0, y0); lineTo(x1, y1); lineTo(x2, y2); close()
+                }
+                canvas.drawPath(path, paint)
+            }
+        }
+    }
+
+    private fun commitGeometryShape(
+        vpStart: com.onyx.android.sdk.data.note.TouchPoint,
+        vpEnd: com.onyx.android.sdk.data.note.TouchPoint
+    ) {
+        Log.d(TAG, "commitGeometryShape")
+        val sv = surfaceView ?: return
+
+        // Restore clean snapshot before committing so pipeline recreates from shapes
+        geometrySnapshotBitmap?.let { snapshot ->
+            val bmp = bitmap
+            if (bmp != null) {
+                val canvas = android.graphics.Canvas(bmp)
+                canvas.drawBitmap(snapshot, 0f, 0f, null)
+            }
+            snapshot.recycle()
+            geometrySnapshotBitmap = null
+        }
+        geometryStartPoint = null
+
+        // Convert viewport to note coords
+        val noteStartX = viewportManager.viewportToNoteX(vpStart.x)
+        val noteStartY = viewportManager.viewportToNoteY(vpStart.y)
+        val noteEndX = viewportManager.viewportToNoteX(vpEnd.x)
+        val noteEndY = viewportManager.viewportToNoteY(vpEnd.y)
+
+        val geometryShapeType = EditorState.activeGeometryShape.value
+        val shapeTypeInt = when (geometryShapeType) {
+            GeometryShapeType.CIRCLE    -> ShapeFactory.SHAPE_GEOMETRY_CIRCLE
+            GeometryShapeType.LINE      -> ShapeFactory.SHAPE_GEOMETRY_LINE
+            GeometryShapeType.RECTANGLE -> ShapeFactory.SHAPE_GEOMETRY_RECTANGLE
+            GeometryShapeType.TRIANGLE  -> ShapeFactory.SHAPE_GEOMETRY_TRIANGLE
+        }
+
+        val tpl = TouchPointList()
+        tpl.add(com.onyx.android.sdk.data.note.TouchPoint(noteStartX, noteStartY, 1f, 0f, 0, 0, System.currentTimeMillis()))
+        tpl.add(com.onyx.android.sdk.data.note.TouchPoint(noteEndX, noteEndY, 1f, 0f, 0, 0, System.currentTimeMillis()))
+
+        val shape = ShapeFactory.createShape(shapeTypeInt).apply {
+            shapeType = shapeTypeInt
+            strokeColor = currentPenProfile.getColorAsInt()
+            strokeWidth = currentPenProfile.strokeWidth
+            touchPointList = tpl
+            updateShapeRect()
+            entityId = NanoIdUtils.randomNanoId()
+        }
+
+        drawingPipeline.addShape(shape)
+        actionManager.recordAction(DrawAction(shape, drawingPipeline))
+
+        val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+        bitmap = state.bitmap
+        bitmapCanvas = state.canvas
+        EpdController.enablePost(sv, 1)
+        renderToScreen(sv, bitmap)
     }
 
     // ── Selection helpers ─────────────────────────────────────────────────────
