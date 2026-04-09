@@ -7,7 +7,7 @@ package com.wyldsoft.notes.touchhandling
  */
 sealed class GestureEvent(val fingerCount: Int) {
 
-    class Tap(fingerCount: Int, val tapCount: Int) : GestureEvent(fingerCount)
+    class Tap(fingerCount: Int, val tapCount: Int, val x: Float = 0f, val y: Float = 0f) : GestureEvent(fingerCount)
 
     class LongPress(fingerCount: Int) : GestureEvent(fingerCount)
 

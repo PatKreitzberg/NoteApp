@@ -19,6 +19,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.graphics.createBitmap
+import com.onyx.android.sdk.api.device.epd.EpdController
+import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.wyldsoft.notes.ScrotesApp
 import com.wyldsoft.notes.data.database.repository.NoteRepository
 import com.wyldsoft.notes.data.database.repository.NotebookRepository
@@ -412,7 +414,11 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         sv.setOnTouchListener(gestureHandler)
     }
 
+    /** Subclasses can intercept gestures for mode-specific handling. Return true to consume. */
+    protected open fun handleModeSpecificGesture(event: GestureEvent): Boolean = false
+
     private fun executeGestureAction(event: GestureEvent) {
+        if (handleModeSpecificGesture(event)) return
         val key = event.toKey() ?: return
         when (appSettings.getGestureAction(key)) {
             GestureAction.NONE -> Unit
@@ -425,6 +431,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             GestureAction.ENTER_SELECTION_MODE -> EditorState.setMode(AppMode.SELECTION)
             GestureAction.NEXT_NOTE -> EditorState.requestNavigateNext()
             GestureAction.PREVIOUS_NOTE -> EditorState.requestNavigatePrev()
+            GestureAction.FULL_SCREEN_REFRESH -> postFullEinkRefresh()
         }
     }
 
@@ -525,6 +532,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         }
         surfaceView.holder.addCallback(surfaceCallback)
     }
+
+    protected open fun postFullEinkRefresh() {}
 
     protected open fun forceScreenRefresh() {
         Log.d("BaseDrawingActivity:", "forceScreenRefresh()")

@@ -7,7 +7,8 @@ enum class GestureAction {
     REDO,
     ENTER_SELECTION_MODE,
     NEXT_NOTE,
-    PREVIOUS_NOTE;
+    PREVIOUS_NOTE,
+    FULL_SCREEN_REFRESH;
 
     fun displayName(): String = when (this) {
         NONE -> "None"
@@ -17,5 +18,6 @@ enum class GestureAction {
         ENTER_SELECTION_MODE -> "Enter Selection Mode"
         NEXT_NOTE -> "Next Note"
         PREVIOUS_NOTE -> "Previous Note"
+        FULL_SCREEN_REFRESH -> "Full Screen Refresh"
     }
 }

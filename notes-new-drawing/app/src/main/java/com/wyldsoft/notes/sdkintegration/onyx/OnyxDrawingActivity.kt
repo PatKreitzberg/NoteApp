@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.sdkintegration.onyx
 
+import android.app.AlertDialog
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -8,8 +9,11 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.os.SystemClock
+import android.text.InputType
 import android.util.Log
 import android.view.SurfaceView
+import android.view.WindowManager
+import android.widget.EditText
 import androidx.lifecycle.lifecycleScope
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.TouchHelper
@@ -30,6 +34,10 @@ import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
 import com.wyldsoft.notes.selection.SelectionManager
 import com.wyldsoft.notes.touchhandling.TouchUtils
+import com.aventrix.jnanoid.jnanoid.NanoIdUtils
+import com.wyldsoft.notes.shapemanagement.ShapeFactory
+import com.wyldsoft.notes.shapemanagement.shapes.TextShape
+import com.wyldsoft.notes.touchhandling.GestureEvent
 import com.wyldsoft.notes.undoredo.ActionManager
 import com.wyldsoft.notes.undoredo.DrawAction
 import com.wyldsoft.notes.undoredo.EraseAction
@@ -37,6 +45,7 @@ import com.wyldsoft.notes.undoredo.MoveAction
 import com.wyldsoft.notes.undoredo.PasteAction
 import com.wyldsoft.notes.undoredo.SeparationAction
 import com.onyx.android.sdk.api.device.epd.EpdController
+import com.onyx.android.sdk.api.device.epd.UpdateMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -271,6 +280,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
     }
 
+    override fun postFullEinkRefresh() {
+        Log.d(TAG, "postFullEinkRefresh")
+        val sv = surfaceView ?: return
+        getRxManager().enqueue(object : com.onyx.android.sdk.rx.RxRequest() {
+            override fun execute() {
+                EpdController.refreshScreen(sv, UpdateMode.GC)
+            }
+        }, null)
+    }
+
     override fun onResumeDrawing() {
         if (isInMode(AppMode.DRAWING)) {
             onyxTouchHelper?.setRawDrawingEnabled(true)
@@ -322,6 +341,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 currentPenProfile = SELECTION_LASSO_PROFILE
                 EditorState.setPenProfile(SELECTION_LASSO_PROFILE)
             }
+            AppMode.TEXT -> {
+                savedPenProfile = currentPenProfile
+                disableRawDrawing()
+            }
             else -> {}
         }
     }
@@ -360,8 +383,69 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 savedPenProfile = null
                 forceScreenRefresh()
             }
+            AppMode.TEXT -> {
+                savedPenProfile?.let {
+                    currentPenProfile = it
+                    EditorState.setPenProfile(it)
+                }
+                savedPenProfile = null
+                forceScreenRefresh()
+            }
             else -> {}
         }
+    }
+
+    // ── Text mode ─────────────────────────────────────────────────────────────
+
+    override fun handleModeSpecificGesture(event: GestureEvent): Boolean {
+        Log.d(TAG, "handleModeSpecificGesture mode=${EditorState.currentMode.value}")
+        if (EditorState.currentMode.value == AppMode.TEXT &&
+            event is GestureEvent.Tap &&
+            event.fingerCount == 1
+        ) {
+            showTextInputDialog(event.x, event.y)
+            return true
+        }
+        return false
+    }
+
+    private fun showTextInputDialog(screenX: Float, screenY: Float) {
+        Log.d(TAG, "showTextInputDialog screenX=$screenX screenY=$screenY")
+        val editText = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setPadding(32, 16, 32, 16)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Enter text")
+            .setView(editText)
+            .setPositiveButton("OK") { _, _ ->
+                val text = editText.text.toString()
+                if (text.isNotBlank()) placeText(text, screenX, screenY)
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+    }
+
+    private fun placeText(text: String, screenX: Float, screenY: Float) {
+        Log.d(TAG, "placeText text='$text' screenX=$screenX screenY=$screenY")
+        val noteX = viewportManager.viewportToNoteX(screenX)
+        val noteY = viewportManager.viewportToNoteY(screenY)
+        val shape = TextShape().apply {
+            this.text = text
+            strokeWidth = 32f
+            strokeColor = Color.BLACK
+            shapeType = ShapeFactory.SHAPE_TEXT
+            val tpl = TouchPointList()
+            tpl.add(TouchPoint(noteX, noteY, 1f, 0f, 0, 0, System.currentTimeMillis()))
+            touchPointList = tpl
+            updateShapeRect()
+            entityId = NanoIdUtils.randomNanoId()
+        }
+        drawingPipeline.addShape(shape)
+        actionManager.recordAction(DrawAction(shape, drawingPipeline))
+        forceScreenRefresh()
     }
 
     override fun onCleanupSDK() {

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -133,6 +134,22 @@ fun Toolbar(
                     paginationEnabled -> Color.Gray
                     else -> Color.LightGray
                 }
+            )
+        }
+
+        val inText = currentMode == AppMode.TEXT
+        IconButton(
+            onClick = {
+                Log.d(TAG, "Text mode button clicked, inText=$inText")
+                if (inText) EditorState.setMode(AppMode.DRAWING)
+                else EditorState.setMode(AppMode.TEXT)
+            },
+            modifier = Modifier.then(if (inText) Modifier.border(2.dp, Color.Black) else Modifier)
+        ) {
+            Icon(
+                imageVector = Icons.Default.TextFields,
+                contentDescription = "Text Mode",
+                tint = if (inText) Color.Black else Color.Gray
             )
         }
 

@@ -11,6 +11,7 @@ import com.wyldsoft.notes.shapemanagement.shapes.NewBrushScribbleShape
 import com.wyldsoft.notes.shapemanagement.shapes.DashPencilShape
 import com.wyldsoft.notes.shapemanagement.shapes.NormalPencilShape
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
+import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 
 /**
  * Factory that creates the correct Shape subclass for a given pen type constant.
@@ -33,6 +34,7 @@ object ShapeFactory {
     const val SHAPE_NEO_BRUSH_SCRIBBLE: Int = 3
     const val SHAPE_CHARCOAL_SCRIBBLE: Int = 4
     const val SHAPE_DASH_SCRIBBLE: Int = 5
+    const val SHAPE_TEXT: Int = 6
 
     const val ERASER_STROKE: Int = 0
 
@@ -49,6 +51,7 @@ object ShapeFactory {
                 return TouchHelper.STROKE_STYLE_CHARCOAL
             }
             SHAPE_DASH_SCRIBBLE -> return TouchHelper.STROKE_STYLE_PENCIL
+            SHAPE_TEXT -> return TouchHelper.STROKE_STYLE_PENCIL
 
             else -> return TouchHelper.STROKE_STYLE_PENCIL
         }
@@ -64,6 +67,7 @@ object ShapeFactory {
             SHAPE_NEO_BRUSH_SCRIBBLE -> shape = NewBrushScribbleShape()
             SHAPE_CHARCOAL_SCRIBBLE -> shape = CharcoalScribbleShape()
             SHAPE_DASH_SCRIBBLE -> shape = DashPencilShape()
+            SHAPE_TEXT -> shape = TextShape()
             else -> shape = NormalPencilShape()
         }
         return shape

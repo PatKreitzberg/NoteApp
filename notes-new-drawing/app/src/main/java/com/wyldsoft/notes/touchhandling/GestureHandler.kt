@@ -67,6 +67,8 @@ class GestureHandler(
     // Tap tracking
     private var tapCount = 0
     private var tapFingerCount = 0
+    private var tapDownX = 0f
+    private var tapDownY = 0f
     private var tapTimeoutRunnable: Runnable? = null
 
     // Long press
@@ -259,6 +261,13 @@ class GestureHandler(
             finalizePendingTaps()
         }
 
+        // Capture tap position at start of a new tap sequence
+        if (tapCount == 0) {
+            val firstTrack = activePointers.values.firstOrNull()
+            tapDownX = firstTrack?.downX ?: 0f
+            tapDownY = firstTrack?.downY ?: 0f
+        }
+
         cancelTapTimeout()
         tapFingerCount = maxPointersInGesture
         tapCount++
@@ -276,9 +285,11 @@ class GestureHandler(
     private fun finalizePendingTaps() {
         cancelTapTimeout()
         if (tapCount > 0) {
-            emitGesture(GestureEvent.Tap(tapFingerCount, tapCount))
+            emitGesture(GestureEvent.Tap(tapFingerCount, tapCount, tapDownX, tapDownY))
             tapCount = 0
             tapFingerCount = 0
+            tapDownX = 0f
+            tapDownY = 0f
         }
     }
 

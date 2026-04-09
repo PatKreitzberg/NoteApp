@@ -9,6 +9,7 @@ import com.wyldsoft.notes.data.database.entities.ShapeEntity
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
+import com.wyldsoft.notes.shapemanagement.shapes.TextShape
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -44,6 +45,9 @@ object ShapeMapper {
         val entityId = shape.entityId ?: NanoIdUtils.randomNanoId()
         shape.entityId = entityId
 
+        val textContent = if (shape is TextShape) shape.text else null
+        val fontSize = if (shape is TextShape) shape.strokeWidth else 32f
+
         return ShapeEntity(
             id = entityId,
             noteId = noteId,
@@ -57,6 +61,8 @@ object ShapeMapper {
             tiltY = json.encodeToString(tiltYs.toList()),
             pointTimestamps = json.encodeToString(timestamps.toList()),
             timestamp = System.currentTimeMillis(),
+            text = textContent,
+            fontSize = fontSize,
             layer = 1
         )
     }
@@ -102,6 +108,11 @@ object ShapeMapper {
             val tiltY = tiltYs.getOrElse(i) { 0 }
             val timestamp = timestamps.getOrElse(i) { 0L }
             touchPointList.add(TouchPoint(x, y, pressure, 0f, tiltX, tiltY, timestamp))
+        }
+
+        if (shape is TextShape) {
+            shape.text = entity.text ?: ""
+            shape.strokeWidth = entity.fontSize
         }
 
         shape.touchPointList = touchPointList
