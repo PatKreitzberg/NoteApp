@@ -50,6 +50,8 @@ fun Toolbar(
     onExpandedChange: (Boolean) -> Unit,
     settingsExpanded: Boolean,
     onSettingsExpandedChange: (Boolean) -> Unit,
+    textExpanded: Boolean,
+    onTextExpandedChange: (Boolean) -> Unit,
     resetViewport: () -> Unit = {}
 ) {
     LaunchedEffect(Unit) {
@@ -57,6 +59,7 @@ fun Toolbar(
             Log.d(TAG, "dismissSettings received — closing panels")
             onExpandedChange(false)
             onSettingsExpandedChange(false)
+            onTextExpandedChange(false)
             EditorState.setMode(AppMode.DRAWING)
         }
     }
@@ -140,9 +143,15 @@ fun Toolbar(
         val inText = currentMode == AppMode.TEXT
         IconButton(
             onClick = {
-                Log.d(TAG, "Text mode button clicked, inText=$inText")
-                if (inText) EditorState.setMode(AppMode.DRAWING)
-                else EditorState.setMode(AppMode.TEXT)
+                Log.d(TAG, "Text mode button clicked, inText=$inText textExpanded=$textExpanded")
+                when {
+                    !inText -> {
+                        EditorState.setMode(AppMode.TEXT)
+                        onTextExpandedChange(false)
+                    }
+                    !textExpanded -> onTextExpandedChange(true)
+                    else -> onTextExpandedChange(false)
+                }
             },
             modifier = Modifier.then(if (inText) Modifier.border(2.dp, Color.Black) else Modifier)
         ) {

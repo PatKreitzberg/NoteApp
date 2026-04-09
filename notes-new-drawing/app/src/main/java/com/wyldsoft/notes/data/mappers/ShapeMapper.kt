@@ -47,6 +47,7 @@ object ShapeMapper {
 
         val textContent = if (shape is TextShape) shape.text else null
         val fontSize = if (shape is TextShape) shape.strokeWidth else 32f
+        val fontFamily = if (shape is TextShape) shape.fontFamily else "sans-serif"
 
         return ShapeEntity(
             id = entityId,
@@ -63,6 +64,7 @@ object ShapeMapper {
             timestamp = System.currentTimeMillis(),
             text = textContent,
             fontSize = fontSize,
+            fontFamily = fontFamily,
             layer = 1
         )
     }
@@ -113,6 +115,7 @@ object ShapeMapper {
         if (shape is TextShape) {
             shape.text = entity.text ?: ""
             shape.strokeWidth = entity.fontSize
+            shape.fontFamily = entity.fontFamily
         }
 
         shape.touchPointList = touchPointList

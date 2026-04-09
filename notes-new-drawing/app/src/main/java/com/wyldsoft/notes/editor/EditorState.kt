@@ -7,6 +7,7 @@ import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
+import com.wyldsoft.notes.text.TextProfile
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,6 +88,14 @@ class EditorState {
             Log.d(TAG, "switchToPenSlot: $slot")
             _activePenSlot.value = slot
             _currentPenProfile.value = penProfileForSlot(slot)
+        }
+
+        private val _textProfile = MutableStateFlow(TextProfile())
+        val textProfile: StateFlow<TextProfile> = _textProfile.asStateFlow()
+
+        fun setTextProfile(profile: TextProfile) {
+            Log.d(TAG, "setTextProfile fontSize=${profile.fontSize} font=${profile.fontFamily}")
+            _textProfile.value = profile
         }
 
         // Effective pagination (observed by activity to drive PaginationManager)

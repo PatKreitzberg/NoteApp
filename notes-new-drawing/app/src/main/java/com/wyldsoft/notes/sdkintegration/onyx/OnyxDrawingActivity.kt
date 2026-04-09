@@ -34,6 +34,7 @@ import com.wyldsoft.notes.sdkintegration.BaseDrawingActivity
 import com.wyldsoft.notes.sdkintegration.GlobalDeviceReceiver
 import com.wyldsoft.notes.selection.SelectionManager
 import com.wyldsoft.notes.touchhandling.TouchUtils
+import androidx.compose.ui.graphics.toArgb
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.TextShape
@@ -430,12 +431,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     private fun placeText(text: String, screenX: Float, screenY: Float) {
         Log.d(TAG, "placeText text='$text' screenX=$screenX screenY=$screenY")
+        val profile = EditorState.textProfile.value
         val noteX = viewportManager.viewportToNoteX(screenX)
         val noteY = viewportManager.viewportToNoteY(screenY)
         val shape = TextShape().apply {
             this.text = text
-            strokeWidth = 32f
-            strokeColor = Color.BLACK
+            strokeWidth = profile.fontSize
+            strokeColor = profile.color.toArgb()
+            fontFamily = profile.fontFamily
             shapeType = ShapeFactory.SHAPE_TEXT
             val tpl = TouchPointList()
             tpl.add(TouchPoint(noteX, noteY, 1f, 0f, 0, 0, System.currentTimeMillis()))

@@ -1,10 +1,10 @@
 package com.wyldsoft.notes.ui.toolbar
 
 import android.util.Log
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,61 +16,39 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.wyldsoft.notes.pen.PenProfile
-import com.wyldsoft.notes.pen.PenType
+import com.wyldsoft.notes.text.TextProfile
 
-private const val TAG = "PenPropertiesPanel"
+private const val TAG = "TextPropertiesPanel"
 
+private val fontOptions = listOf(
+    "sans-serif" to "Sans-serif",
+    "serif" to "Serif",
+    "monospace" to "Monospace"
+)
 
-@Composable
-fun StrokePreview(profile: PenProfile, modifier: Modifier = Modifier) {
-    Log.d(TAG, "StrokePreview penType=${profile.penType} width=${profile.strokeWidth}")
-    Canvas(
-        modifier = modifier
-            .border(1.dp, Color.Gray)
-            .background(Color(0xFFF5F5F5))
-    ) {
-        val path = Path()
-        val w = size.width
-        val h = size.height
-        path.moveTo(w * 0.08f, h * 0.5f)
-        path.cubicTo(
-            w * 0.3f, h * 0.1f,
-            w * 0.6f, h * 0.9f,
-            w * 0.92f, h * 0.5f
-        )
-        val previewWidth = profile.strokeWidth.coerceIn(1f, h * 0.6f)
-        drawPath(
-            path = path,
-            color = profile.strokeColor,
-            style = Stroke(
-                width = previewWidth,
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
-        )
-    }
+private val sizePresets = listOf(16, 24, 32, 48, 64, 96)
+
+private fun fontFamilyFor(name: String): FontFamily = when (name) {
+    "serif" -> FontFamily.Serif
+    "monospace" -> FontFamily.Monospace
+    else -> FontFamily.SansSerif
 }
 
 @Composable
-fun PenPropertiesPanel(
-    currentProfile: PenProfile,
-    onProfileChanged: (PenProfile) -> Unit,
+fun TextPropertiesPanel(
+    textProfile: TextProfile,
+    onProfileChanged: (TextProfile) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -84,25 +62,24 @@ fun PenPropertiesPanel(
         shadowElevation = 4.dp
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("Pen Type", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            // ── Font ────────────────────────────────────────────────────────
+            Text("Font", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(4.dp))
 
-            PenType.entries.forEach { type ->
-                val isSelected = type == currentProfile.penType
+            fontOptions.forEach { (key, label) ->
+                val isSelected = textProfile.fontFamily == key
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            Log.d(TAG, "Selected pen type: ${type.displayName}")
-                            val newProfile = PenProfile
-                                .getDefaultProfile(type, currentProfile.profileId)
-                                .copy(strokeColor = currentProfile.strokeColor)
-                            onProfileChanged(newProfile)
+                            Log.d(TAG, "Selected font: $key")
+                            onProfileChanged(textProfile.copy(fontFamily = key))
                         }
                         .padding(vertical = 6.dp, horizontal = 8.dp)
                 ) {
                     Text(
-                        text = if (isSelected) "● ${type.displayName}" else type.displayName,
+                        text = if (isSelected) "● $label" else label,
+                        fontFamily = fontFamilyFor(key),
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     )
                 }
@@ -110,25 +87,38 @@ fun PenPropertiesPanel(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
+            // ── Size ────────────────────────────────────────────────────────
             Text(
-                "Width: ${currentProfile.strokeWidth.toInt()}",
+                "Size: ${textProfile.fontSize.toInt()}pt",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
-            Slider(
-                value = currentProfile.strokeWidth,
-                onValueChange = { width ->
-                    onProfileChanged(currentProfile.copy(strokeWidth = width))
-                },
-                onValueChangeFinished = {
-                    Log.d(TAG, "Stroke width set to: ${currentProfile.strokeWidth}")
-                },
-                valueRange = 1f..60f,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                sizePresets.forEach { size ->
+                    val isSelected = textProfile.fontSize == size.toFloat()
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(if (isSelected) Color.LightGray else Color.White)
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = Color.Black
+                            )
+                            .clickable {
+                                Log.d(TAG, "Selected size: $size")
+                                onProfileChanged(textProfile.copy(fontSize = size.toFloat()))
+                            }
+                    ) {
+                        Text(text = "$size", fontSize = 11.sp)
+                    }
+                }
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
+            // ── Color ───────────────────────────────────────────────────────
             Text("Color", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(4.dp))
             val rows = colorSwatches.chunked(8)
@@ -138,7 +128,7 @@ fun PenPropertiesPanel(
                     rows.forEach { rowItems ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             rowItems.forEach { (color, name) ->
-                                val isSelected = color == currentProfile.strokeColor
+                                val isSelected = color == textProfile.color
                                 Box(
                                     modifier = Modifier
                                         .size(36.dp)
@@ -149,7 +139,7 @@ fun PenPropertiesPanel(
                                         )
                                         .clickable {
                                             Log.d(TAG, "Selected color: $name")
-                                            onProfileChanged(currentProfile.copy(strokeColor = color))
+                                            onProfileChanged(textProfile.copy(color = color))
                                         }
                                 )
                             }
@@ -158,12 +148,24 @@ fun PenPropertiesPanel(
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                StrokePreview(
-                    profile = currentProfile,
+
+                // Preview
+                Box(
+                    contentAlignment = Alignment.CenterStart,
                     modifier = Modifier
                         .weight(1f)
                         .height(120.dp)
-                )
+                        .border(1.dp, Color.Gray)
+                        .background(Color(0xFFF5F5F5))
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = "Sample",
+                        color = textProfile.color,
+                        fontSize = textProfile.fontSize.coerceIn(10f, 48f).sp,
+                        fontFamily = fontFamilyFor(textProfile.fontFamily)
+                    )
+                }
             }
         }
     }

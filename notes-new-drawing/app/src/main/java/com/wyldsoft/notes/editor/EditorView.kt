@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.DrawingCanvas
 import com.wyldsoft.notes.touchhandling.GestureDisplay
 import com.wyldsoft.notes.ui.toolbar.PenPropertiesPanel
+import com.wyldsoft.notes.ui.toolbar.TextPropertiesPanel
 import com.wyldsoft.notes.ui.toolbar.Toolbar
 
 /**
@@ -26,7 +27,10 @@ fun EditorView(
 
     var menuExpanded by remember { mutableStateOf(false) }
     var settingsExpanded by remember { mutableStateOf(false) }
+    var textExpanded by remember { mutableStateOf(false) }
     val currentProfile by EditorState.currentPenProfile.collectAsState()
+    val textProfile by EditorState.textProfile.collectAsState()
+    val currentMode by EditorState.currentMode.collectAsState()
 
     Box(
         modifier = Modifier
@@ -39,6 +43,8 @@ fun EditorView(
                 onExpandedChange = { menuExpanded = it },
                 settingsExpanded = settingsExpanded,
                 onSettingsExpandedChange = { settingsExpanded = it },
+                textExpanded = textExpanded,
+                onTextExpandedChange = { textExpanded = it },
                 resetViewport = { resetViewport() }
             )
 
@@ -86,6 +92,25 @@ fun EditorView(
                         .align(androidx.compose.ui.Alignment.TopEnd)
                 )
             }
+        }
+
+        // Text properties panel overlay (separate from SETTINGS — stays in TEXT mode)
+        if (textExpanded && currentMode == AppMode.TEXT) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        textExpanded = false
+                    }
+            )
+            TextPropertiesPanel(
+                textProfile = textProfile,
+                onProfileChanged = { EditorState.setTextProfile(it) },
+                modifier = Modifier.padding(top = 48.dp)
+            )
         }
 
         // Gesture notification overlay
