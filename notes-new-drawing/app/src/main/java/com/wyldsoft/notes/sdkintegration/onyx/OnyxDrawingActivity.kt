@@ -93,6 +93,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var selectionSubState = SelectionSubState.DRAWING_LASSO
     private var selectedShapes = mutableListOf<com.wyldsoft.notes.shapemanagement.shapes.Shape>()
     private var selectionBoundingRectNote: RectF? = null  // note-space bounding rect
+    private var circleSelectPreloaded = false  // prevents enterNewMode from clearing circle-to-select state
     private var ghostBitmap: Bitmap? = null
     private var ghostBaseX = 0f
     private var ghostBaseY = 0f
@@ -321,10 +322,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             AppMode.DRAWING -> updateTouchHelperWithProfile()
             AppMode.SELECTION -> {
                 savedPenProfile = currentPenProfile
-                selectionSubState = SelectionSubState.DRAWING_LASSO
-                selectedShapes.clear()
-                selectionBoundingRectNote = null
-                EditorState.setHasSelection(false)
+                if (circleSelectPreloaded) {
+                    circleSelectPreloaded = false
+                    // Selection state already populated by circle gesture — don't reset it
+                } else {
+                    selectionSubState = SelectionSubState.DRAWING_LASSO
+                    selectedShapes.clear()
+                    selectionBoundingRectNote = null
+                    EditorState.setHasSelection(false)
+                }
                 // Update field directly for timing safety, then emit to StateFlow for UI
                 currentPenProfile = SELECTION_LASSO_PROFILE
                 EditorState.setPenProfile(SELECTION_LASSO_PROFILE)
@@ -332,6 +338,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 if (pendingPaste) {
                     pendingPaste = false
                     handlePaste()
+                }
+                // Re-render selection overlay after pen profile is configured (needed for circle-to-select)
+                if (selectionSubState == SelectionSubState.SELECTED) {
+                    renderBitmapWithSelectionOverlay()
                 }
             }
             AppMode.SEPARATION -> {
@@ -757,6 +767,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
                         selectionSubState = SelectionSubState.SELECTED
                         EditorState.setHasSelection(true)
+                        circleSelectPreloaded = true
                         EditorState.setMode(AppMode.SELECTION)
                         val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
                         bitmap = state.bitmap
