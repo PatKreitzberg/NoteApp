@@ -65,6 +65,8 @@ class HomeActivity : ComponentActivity() {
                     val appSettings = (application as ScrotesApp).appSettings
                     var defaultPagination by remember { mutableStateOf(appSettings.defaultPaginationEnabled) }
                     var gestureMappings by remember { mutableStateOf(appSettings.getAllGestureMappings()) }
+                    var scribbleToErase by remember { mutableStateOf(appSettings.scribbleToEraseEnabled) }
+                    var circleToSelect by remember { mutableStateOf(appSettings.circleToSelectEnabled) }
                     HomeView(
                         viewModel = viewModel,
                         syncViewModel = syncViewModel,
@@ -90,6 +92,16 @@ class HomeActivity : ComponentActivity() {
                         onGestureMappingsChanged = { mappings ->
                             appSettings.saveGestureMappings(mappings)
                             gestureMappings = appSettings.getAllGestureMappings()
+                        },
+                        scribbleToEraseEnabled = scribbleToErase,
+                        onScribbleToEraseToggle = { enabled ->
+                            appSettings.scribbleToEraseEnabled = enabled
+                            scribbleToErase = enabled
+                        },
+                        circleToSelectEnabled = circleToSelect,
+                        onCircleToSelectToggle = { enabled ->
+                            appSettings.circleToSelectEnabled = enabled
+                            circleToSelect = enabled
                         }
                     )
                 }

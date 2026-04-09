@@ -12,6 +12,8 @@ class AppSettings(context: Context) {
         private const val PREFS_NAME = "app_settings"
         private const val KEY_DEFAULT_PAGINATION = "default_pagination_enabled"
         private const val KEY_GESTURE_PREFIX = "gesture_"
+        private const val KEY_SCRIBBLE_TO_ERASE = "scribble_to_erase"
+        private const val KEY_CIRCLE_TO_SELECT = "circle_to_select"
     }
 
     private val prefs: SharedPreferences =
@@ -22,6 +24,20 @@ class AppSettings(context: Context) {
         set(value) {
             Log.d(TAG, "setDefaultPaginationEnabled value=$value")
             prefs.edit().putBoolean(KEY_DEFAULT_PAGINATION, value).apply()
+        }
+
+    var scribbleToEraseEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SCRIBBLE_TO_ERASE, true)
+        set(value) {
+            Log.d(TAG, "setScribbleToEraseEnabled value=$value")
+            prefs.edit().putBoolean(KEY_SCRIBBLE_TO_ERASE, value).apply()
+        }
+
+    var circleToSelectEnabled: Boolean
+        get() = prefs.getBoolean(KEY_CIRCLE_TO_SELECT, true)
+        set(value) {
+            Log.d(TAG, "setCircleToSelectEnabled value=$value")
+            prefs.edit().putBoolean(KEY_CIRCLE_TO_SELECT, value).apply()
         }
 
     fun getGestureAction(gestureKey: String): GestureAction {

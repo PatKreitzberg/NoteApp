@@ -5,7 +5,8 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import kotlinx.coroutines.*
 
 class HTRRunManager(
-    private val htrManager: HTRManager = HTRManager()
+    private val htrManager: HTRManager = HTRManager(),
+    private val gestureRecognitionManager: GestureRecognitionManager = GestureRecognitionManager()
 ) {
     companion object {
         private const val TAG = "HTRRunManager"
@@ -52,10 +53,33 @@ class HTRRunManager(
         }
     }
 
+    /**
+     * Immediately check if a single shape is a scribble gesture.
+     * Returns true if the top gesture candidate is "SCRIBBLE".
+     */
+    suspend fun isScribbleGesture(shape: Shape): Boolean {
+        Log.d(TAG, "isScribbleGesture")
+        if (!gestureRecognitionManager.isReady()) return false
+        val gesture = gestureRecognitionManager.recognizeSingleShapeGesture(shape)
+        return gesture?.uppercase() == "SCRIBBLE"
+    }
+
+    /**
+     * Immediately check if a single shape is a circle gesture.
+     * Returns true if the top gesture candidate is "CIRCLE".
+     */
+    suspend fun isCircleGesture(shape: Shape): Boolean {
+        Log.d(TAG, "isCircleGesture")
+        if (!gestureRecognitionManager.isReady()) return false
+        val gesture = gestureRecognitionManager.recognizeSingleShapeGesture(shape)
+        return gesture?.uppercase() == "CIRCLE"
+    }
+
     fun close() {
         Log.d(TAG, "close")
         debounceJob?.cancel()
         scope.cancel()
+        gestureRecognitionManager.close()
         htrManager.close()
     }
 }

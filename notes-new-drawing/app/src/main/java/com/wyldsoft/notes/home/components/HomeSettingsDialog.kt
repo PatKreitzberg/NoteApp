@@ -45,10 +45,16 @@ fun HomeSettingsDialog(
     onDefaultPaginationChanged: (Boolean) -> Unit,
     gestureMappings: Map<String, GestureAction>,
     onGestureMappingsChanged: (Map<String, GestureAction>) -> Unit,
+    scribbleToEraseEnabled: Boolean,
+    onScribbleToEraseToggle: (Boolean) -> Unit,
+    circleToSelectEnabled: Boolean,
+    onCircleToSelectToggle: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     var pagination by remember { mutableStateOf(defaultPaginationEnabled) }
     var mappings by remember(gestureMappings) { mutableStateOf(gestureMappings) }
+    var scribbleToErase by remember { mutableStateOf(scribbleToEraseEnabled) }
+    var circleToSelect by remember { mutableStateOf(circleToSelectEnabled) }
 
     // Swallows any scroll that the inner gesture list doesn't consume,
     // preventing it from propagating to any outer scroll container.
@@ -98,6 +104,46 @@ fun HomeSettingsDialog(
                     Switch(
                         checked = pagination,
                         onCheckedChange = { pagination = it }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = Color.Black)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Ink Gestures",
+                    style = MaterialTheme.typography.subtitle1,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Scribble to erase",
+                        style = MaterialTheme.typography.body1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(
+                        checked = scribbleToErase,
+                        onCheckedChange = { scribbleToErase = it }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Circle to select",
+                        style = MaterialTheme.typography.body1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(
+                        checked = circleToSelect,
+                        onCheckedChange = { circleToSelect = it }
                     )
                 }
 
@@ -169,6 +215,8 @@ fun HomeSettingsDialog(
                     TextButton(onClick = {
                         onDefaultPaginationChanged(pagination)
                         onGestureMappingsChanged(mappings)
+                        onScribbleToEraseToggle(scribbleToErase)
+                        onCircleToSelectToggle(circleToSelect)
                         onDismiss()
                     }) {
                         Text("Save")

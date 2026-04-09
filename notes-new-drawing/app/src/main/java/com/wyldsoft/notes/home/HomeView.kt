@@ -53,6 +53,10 @@ fun HomeView(
     onDefaultPaginationChanged: (Boolean) -> Unit,
     gestureMappings: Map<String, GestureAction>,
     onGestureMappingsChanged: (Map<String, GestureAction>) -> Unit,
+    scribbleToEraseEnabled: Boolean,
+    onScribbleToEraseToggle: (Boolean) -> Unit,
+    circleToSelectEnabled: Boolean,
+    onCircleToSelectToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -264,6 +268,10 @@ fun HomeView(
             onDefaultPaginationChanged = onDefaultPaginationChanged,
             gestureMappings = gestureMappings,
             onGestureMappingsChanged = onGestureMappingsChanged,
+            scribbleToEraseEnabled = scribbleToEraseEnabled,
+            onScribbleToEraseToggle = onScribbleToEraseToggle,
+            circleToSelectEnabled = circleToSelectEnabled,
+            onCircleToSelectToggle = onCircleToSelectToggle,
             onDismiss = { showSettingsDialog = false }
         )
     }

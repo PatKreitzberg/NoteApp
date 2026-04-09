@@ -48,8 +48,10 @@ import com.wyldsoft.notes.undoredo.SeparationAction
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.wyldsoft.notes.htr.HTRRunManager
+import com.wyldsoft.notes.htr.ShapeGeometryUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Onyx SDK implementation of BaseDrawingActivity. This is the core drawing engine.
@@ -709,13 +711,66 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     private fun handleDrawing(points: List<TouchPoint>, touchPointList: TouchPointList) {
         Log.d(TAG, "handleDrawing")
-        surfaceView?.let { sv ->
-            createDrawingBitmap()
-            bitmap?.let { bmp ->
-                val shape = drawingPipeline.drawScribbleToBitmap(touchPointList, bmp, currentPenProfile)
+        val sv = surfaceView ?: return
+        createDrawingBitmap()
+        val bmp = bitmap ?: return
+        val shape = drawingPipeline.drawScribbleToBitmap(touchPointList, bmp, currentPenProfile)
+        renderToScreen(sv, bitmap)
+
+        val noteId = drawingPipeline.noteId
+        val appSettings = (application as ScrotesApp).appSettings
+
+        lifecycleScope.launch(Dispatchers.Default) {
+            // Check scribble-to-erase
+            if (appSettings.scribbleToEraseEnabled && htrRunManager.isScribbleGesture(shape)) {
+                val covered = ShapeGeometryUtils.findShapesCoveredByScribble(
+                    shape, drawingPipeline.getShapes()
+                )
+                if (covered.isNotEmpty()) {
+                    Log.d(TAG, "Scribble-to-erase: erasing ${covered.size} shape(s)")
+                    withContext(Dispatchers.Main) {
+                        drawingPipeline.removeShape(shape)
+                        for (coveredShape in covered) {
+                            drawingPipeline.removeShape(coveredShape)
+                        }
+                        actionManager.recordAction(EraseAction(covered, drawingPipeline))
+                        val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+                        bitmap = state.bitmap
+                        bitmapCanvas = state.canvas
+                        EpdController.enablePost(sv, 1)
+                        renderToScreen(sv, bitmap)
+                    }
+                    return@launch
+                }
+            }
+
+            // Check circle-to-select
+            if (appSettings.circleToSelectEnabled && htrRunManager.isCircleGesture(shape)) {
+                val encircled = ShapeGeometryUtils.findShapesEncircledBy(
+                    shape, drawingPipeline.getShapes()
+                )
+                if (encircled.isNotEmpty()) {
+                    Log.d(TAG, "Circle-to-select: selecting ${encircled.size} shape(s)")
+                    withContext(Dispatchers.Main) {
+                        drawingPipeline.removeShape(shape)
+                        selectedShapes = encircled.toMutableList()
+                        selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
+                        selectionSubState = SelectionSubState.SELECTED
+                        EditorState.setHasSelection(true)
+                        EditorState.setMode(AppMode.SELECTION)
+                        val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+                        bitmap = state.bitmap
+                        bitmapCanvas = state.canvas
+                        EpdController.enablePost(sv, 1)
+                        renderBitmapWithSelectionOverlay()
+                    }
+                    return@launch
+                }
+            }
+
+            // Normal shape
+            withContext(Dispatchers.Main) {
                 actionManager.recordAction(DrawAction(shape, drawingPipeline))
-                renderToScreen(sv, bitmap)
-                val noteId = drawingPipeline.noteId
                 if (noteId != null) {
                     htrRunManager.addShapeForRecognition(noteId, shape)
                 }
