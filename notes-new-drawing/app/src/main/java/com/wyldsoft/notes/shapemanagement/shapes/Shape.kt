@@ -45,7 +45,7 @@ open class Shape {
         return this
     }
 
-    fun updateShapeRect() {
+    open fun updateShapeRect() {
         Log.d(TAG, "updateShapeRect")
         val list = touchPointList!!.points
         for (touchPoint in list) {

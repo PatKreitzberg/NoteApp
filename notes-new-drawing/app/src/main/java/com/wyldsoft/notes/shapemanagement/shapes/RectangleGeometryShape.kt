@@ -23,6 +23,19 @@ class RectangleGeometryShape : Shape() {
         private const val ASPECT_RATIO = 1.618f
     }
 
+    override fun updateShapeRect() {
+        Log.d(TAG, "updateShapeRect")
+        val pts = touchPointList?.points ?: return
+        if (pts.size < 2) return
+        val cx = pts[0].x; val cy = pts[0].y
+        val dx = pts[1].x - cx; val dy = pts[1].y - cy
+        // Diagonal from center to corner — the rotated rect always fits inside this circumscribed square
+        val diagonal = sqrt(dx * dx + dy * dy)
+        val pad = strokeWidth / 2f
+        originRect = RectF(cx - diagonal - pad, cy - diagonal - pad, cx + diagonal + pad, cy + diagonal + pad)
+        boundingRect = RectF(originRect)
+    }
+
     override fun render(renderContext: RenderContext) {
         Log.d(TAG, "render")
         val canvas = renderContext.canvas ?: return
