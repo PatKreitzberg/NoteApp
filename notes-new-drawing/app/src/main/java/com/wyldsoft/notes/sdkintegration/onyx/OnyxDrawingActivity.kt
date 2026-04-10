@@ -48,6 +48,12 @@ import com.wyldsoft.notes.undoredo.MoveAction
 import com.wyldsoft.notes.undoredo.PasteAction
 import com.wyldsoft.notes.undoredo.ScribbleEraseAction
 import com.wyldsoft.notes.undoredo.SeparationAction
+import com.wyldsoft.notes.undoredo.TransformAction
+import android.graphics.Matrix
+import android.graphics.PointF
+import kotlin.math.atan2
+import kotlin.math.hypot
+import kotlin.math.sqrt
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.wyldsoft.notes.htr.HTRRunManager
@@ -92,7 +98,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private val htrRunManager = HTRRunManager()
 
     // ── Selection state ───────────────────────────────────────────────────────
-    private enum class SelectionSubState { DRAWING_LASSO, SELECTED, MOVING }
+    private enum class SelectionSubState { DRAWING_LASSO, SELECTED, MOVING, STRETCHING, ROTATING }
+    private enum class HandleType {
+        CORNER_TL, CORNER_TR, CORNER_BL, CORNER_BR,
+        MIDPOINT_T, MIDPOINT_B, MIDPOINT_L, MIDPOINT_R,
+        ROTATE
+    }
     private var selectionSubState = SelectionSubState.DRAWING_LASSO
     private var selectedShapes = mutableListOf<com.wyldsoft.notes.shapemanagement.shapes.Shape>()
     private var selectionBoundingRectNote: RectF? = null  // note-space bounding rect
@@ -103,6 +114,15 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var moveStartX = 0f
     private var moveStartY = 0f
     private var lastSelectionRenderTime = 0L
+    // Transform (stretch / rotate) state
+    private var activeHandle: HandleType? = null
+    private var transformSnapshotBitmap: Bitmap? = null   // full bitmap before transform started
+    private var selectionCropBitmap: Bitmap? = null        // cropped selection region
+    private var selectionCropLeft = 0f
+    private var selectionCropTop = 0f
+    private var transformStartX = 0f
+    private var transformStartY = 0f
+    private var originalBoundingRectNote: RectF? = null    // note-space bounds before transform
     private var savedPenProfile: PenProfile? = null
     private var copiedShapes = listOf<com.wyldsoft.notes.shapemanagement.shapes.Shape>()
     private var pendingPaste = false
@@ -127,6 +147,26 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
         isAntiAlias = true
     }
+    private val handleFillPaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    private val handleStrokePaint = Paint().apply {
+        color = Color.DKGRAY
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        isAntiAlias = true
+    }
+    private val handleStemPaint = Paint().apply {
+        color = Color.DKGRAY
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        isAntiAlias = true
+    }
+    private val HANDLE_RADIUS = 22f
+    private val HANDLE_HIT_RADIUS = 40f
+    private val ROTATE_HANDLE_OFFSET = 70f
 
     // ── Separation state ──────────────────────────────────────────────────────
     private enum class SeparationSubState { DRAWING_SPLIT_LINE, DRAGGING_OFFSET }
@@ -388,6 +428,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 selectionBoundingRectNote = null
                 ghostBitmap?.recycle()
                 ghostBitmap = null
+                selectionCropBitmap?.recycle()
+                selectionCropBitmap = null
+                transformSnapshotBitmap?.recycle()
+                transformSnapshotBitmap = null
+                activeHandle = null
                 selectionSubState = SelectionSubState.DRAWING_LASSO
                 EditorState.setHasSelection(false)
                 savedPenProfile?.let {
@@ -618,7 +663,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 }
                 when (selectionSubState) {
                     SelectionSubState.SELECTED -> {
-                        if (isTouchInsideSelection(tp)) {
+                        val handle = findHandleAtPoint(tp.x, tp.y)
+                        if (handle != null) {
+                            startTransform(tp, handle)
+                        } else if (isTouchInsideSelection(tp)) {
                             startGhostMove(tp)
                         } else {
                             suppressCurrentStroke { EditorState.setMode(AppMode.DRAWING) }
@@ -678,6 +726,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 }
                 return
             }
+            if (EditorState.currentMode.value == AppMode.SELECTION
+                && (selectionSubState == SelectionSubState.STRETCHING
+                    || selectionSubState == SelectionSubState.ROTATING)
+            ) {
+                val now = SystemClock.uptimeMillis()
+                if (now - lastSelectionRenderTime < 80L) return
+                lastSelectionRenderTime = now
+                touchPoint?.let { tp -> renderTransformPreview(tp) }
+                return
+            }
             if (EditorState.currentMode.value == AppMode.SEPARATION
                 && separationSubState == SeparationSubState.DRAGGING_OFFSET
             ) {
@@ -711,6 +769,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                     when (selectionSubState) {
                         SelectionSubState.DRAWING_LASSO -> handleLassoComplete(tpl)
                         SelectionSubState.MOVING -> handleMoveComplete(tpl)
+                        SelectionSubState.STRETCHING -> handleTransformComplete(tpl, isRotation = false)
+                        SelectionSubState.ROTATING -> handleTransformComplete(tpl, isRotation = true)
                         SelectionSubState.SELECTED -> { /* no-op */ }
                     }
                 }
@@ -1192,6 +1252,238 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
     }
 
+    // ── Transform (stretch / rotate) helpers ─────────────────────────────────
+
+    /** Returns handle centers in viewport space for the current selection bounding rect. */
+    private fun computeHandleCenters(vpRect: RectF, dX: Float = 0f, dY: Float = 0f): Map<HandleType, PointF> {
+        val left = vpRect.left + dX - 8f
+        val top = vpRect.top + dY - 8f
+        val right = vpRect.right + dX + 8f
+        val bottom = vpRect.bottom + dY + 8f
+        val cx = (left + right) / 2f
+        val cy = (top + bottom) / 2f
+        return mapOf(
+            HandleType.CORNER_TL to PointF(left, top),
+            HandleType.CORNER_TR to PointF(right, top),
+            HandleType.CORNER_BL to PointF(left, bottom),
+            HandleType.CORNER_BR to PointF(right, bottom),
+            HandleType.MIDPOINT_T to PointF(cx, top),
+            HandleType.MIDPOINT_B to PointF(cx, bottom),
+            HandleType.MIDPOINT_L to PointF(left, cy),
+            HandleType.MIDPOINT_R to PointF(right, cy),
+            HandleType.ROTATE to PointF(cx, top - ROTATE_HANDLE_OFFSET)
+        )
+    }
+
+    /** Returns the handle under (vx, vy) if within hit radius, or null. */
+    private fun findHandleAtPoint(vx: Float, vy: Float): HandleType? {
+        val noteRect = selectionBoundingRectNote ?: return null
+        val vpRect = viewportManager.noteToViewport(noteRect)
+        val centers = computeHandleCenters(vpRect)
+        // Check ROTATE first so it takes priority over potential overlap
+        val ordered = listOf(HandleType.ROTATE) + centers.keys.filter { it != HandleType.ROTATE }
+        for (handle in ordered) {
+            val pt = centers[handle] ?: continue
+            if (hypot(vx - pt.x, vy - pt.y) <= HANDLE_HIT_RADIUS) return handle
+        }
+        return null
+    }
+
+    /**
+     * Returns (scaleX, scaleY, anchorVpX, anchorVpY) for the current drag point and handle.
+     * The anchor is the viewport point that stays fixed during the stretch.
+     */
+    private fun computeStretchTransform(currentTp: com.onyx.android.sdk.data.note.TouchPoint, vpRect: RectF): FloatArray {
+        val origRect = originalBoundingRectNote?.let { viewportManager.noteToViewport(it) } ?: vpRect
+        val left = origRect.left - 8f; val top = origRect.top - 8f
+        val right = origRect.right + 8f; val bottom = origRect.bottom + 8f
+        val cx = (left + right) / 2f; val cy = (top + bottom) / 2f
+        val origW = right - left; val origH = bottom - top
+        val handle = activeHandle ?: return floatArrayOf(1f, 1f, cx, cy)
+
+        val dragX = currentTp.x; val dragY = currentTp.y
+
+        return when (handle) {
+            HandleType.CORNER_TL -> {
+                val scaleX = (right - dragX) / origW
+                val scaleY = (bottom - dragY) / origH
+                floatArrayOf(scaleX, scaleY, right, bottom)
+            }
+            HandleType.CORNER_TR -> {
+                val scaleX = (dragX - left) / origW
+                val scaleY = (bottom - dragY) / origH
+                floatArrayOf(scaleX, scaleY, left, bottom)
+            }
+            HandleType.CORNER_BL -> {
+                val scaleX = (right - dragX) / origW
+                val scaleY = (dragY - top) / origH
+                floatArrayOf(scaleX, scaleY, right, top)
+            }
+            HandleType.CORNER_BR -> {
+                val scaleX = (dragX - left) / origW
+                val scaleY = (dragY - top) / origH
+                floatArrayOf(scaleX, scaleY, left, top)
+            }
+            HandleType.MIDPOINT_T -> floatArrayOf(1f, (bottom - dragY) / origH, cx, bottom)
+            HandleType.MIDPOINT_B -> floatArrayOf(1f, (dragY - top) / origH, cx, top)
+            HandleType.MIDPOINT_L -> floatArrayOf((right - dragX) / origW, 1f, right, cy)
+            HandleType.MIDPOINT_R -> floatArrayOf((dragX - left) / origW, 1f, left, cy)
+            HandleType.ROTATE -> floatArrayOf(1f, 1f, cx, cy)
+        }
+    }
+
+    /** Returns the rotation delta in radians from initial touch to [currentTp] around box center. */
+    private fun computeRotationDelta(currentTp: com.onyx.android.sdk.data.note.TouchPoint, vpRect: RectF): Float {
+        val origRect = originalBoundingRectNote?.let { viewportManager.noteToViewport(it) } ?: vpRect
+        val cx = origRect.centerX(); val cy = origRect.centerY()
+        val startAngle = atan2(transformStartY - cy, transformStartX - cx)
+        val currentAngle = atan2(currentTp.y - cy, currentTp.x - cx)
+        return currentAngle - startAngle
+    }
+
+    private fun startTransform(tp: com.onyx.android.sdk.data.note.TouchPoint, handle: HandleType) {
+        Log.d(TAG, "startTransform handle=$handle x=${tp.x} y=${tp.y}")
+        onyxTouchHelper?.isRawDrawingRenderEnabled = false
+        activeHandle = handle
+        transformStartX = tp.x
+        transformStartY = tp.y
+        originalBoundingRectNote = selectionBoundingRectNote?.let { RectF(it) } ?: return
+        lastSelectionRenderTime = 0L
+
+        val noteRect = selectionBoundingRectNote ?: return
+        val sv = surfaceView ?: return
+        val bmp = bitmap ?: return
+
+        // Snapshot the full bitmap (including selected shapes) for the crop
+        val snapshot = bmp.copy(bmp.config ?: Bitmap.Config.ARGB_8888, false)
+
+        // Crop the selection region from the snapshot
+        val vpRect = viewportManager.noteToViewport(noteRect)
+        val l = (vpRect.left - 8f).coerceAtLeast(0f).toInt()
+        val t = (vpRect.top - 8f).coerceAtLeast(0f).toInt()
+        val w = (vpRect.width() + 16f).toInt()
+            .coerceAtLeast(1).coerceAtMost(snapshot.width - l)
+        val h = (vpRect.height() + 16f).toInt()
+            .coerceAtLeast(1).coerceAtMost(snapshot.height - t)
+        if (w <= 0 || h <= 0) { snapshot.recycle(); return }
+        selectionCropBitmap = Bitmap.createBitmap(snapshot, l, t, w, h)
+        selectionCropLeft = l.toFloat()
+        selectionCropTop = t.toFloat()
+        snapshot.recycle()
+
+        // Recreate background bitmap without selected shapes
+        val bgState = drawingPipeline.recreateBitmapExcluding(selectedShapes, bitmap, sv.width, sv.height)
+        bitmap = bgState.bitmap
+        bitmapCanvas = bgState.canvas
+
+        selectionSubState = if (handle == HandleType.ROTATE) SelectionSubState.ROTATING else SelectionSubState.STRETCHING
+    }
+
+    private fun renderTransformPreview(currentTp: com.onyx.android.sdk.data.note.TouchPoint) {
+        val sv = surfaceView ?: return
+        val bg = bitmap ?: return
+        val crop = selectionCropBitmap ?: return
+        val noteRect = originalBoundingRectNote ?: return
+        val vpRect = viewportManager.noteToViewport(noteRect)
+
+        EpdController.enablePost(sv, 1)
+        val canvas = sv.holder.lockCanvas() ?: return
+        try {
+            canvas.drawColor(Color.WHITE)
+            canvas.drawBitmap(bg, 0f, 0f, null)
+            canvas.save()
+            when (selectionSubState) {
+                SelectionSubState.STRETCHING -> {
+                    val p = computeStretchTransform(currentTp, vpRect)
+                    // p = [scaleX, scaleY, anchorX, anchorY]
+                    canvas.scale(p[0], p[1], p[2], p[3])
+                }
+                SelectionSubState.ROTATING -> {
+                    val angleRad = computeRotationDelta(currentTp, vpRect)
+                    val degrees = Math.toDegrees(angleRad.toDouble()).toFloat()
+                    canvas.rotate(degrees, vpRect.centerX(), vpRect.centerY())
+                }
+                else -> {}
+            }
+            canvas.drawBitmap(crop, selectionCropLeft, selectionCropTop, null)
+            canvas.restore()
+        } finally {
+            sv.holder.unlockCanvasAndPost(canvas)
+        }
+    }
+
+    private fun handleTransformComplete(touchPointList: TouchPointList, isRotation: Boolean) {
+        Log.d(TAG, "handleTransformComplete isRotation=$isRotation")
+        val lastPt = touchPointList.points.lastOrNull() ?: run {
+            cleanupTransform()
+            return
+        }
+        val noteRect = originalBoundingRectNote ?: run {
+            cleanupTransform()
+            return
+        }
+        val vpRect = viewportManager.noteToViewport(noteRect)
+
+        // Snapshot original points before applying transform
+        val originalPoints = selectedShapes
+            .filter { it.entityId != null && it.touchPointList != null }
+            .associate { shape ->
+                shape.entityId!! to TransformAction.copyTouchPointList(shape.touchPointList!!)
+            }
+
+        if (isRotation) {
+            val angleRad = computeRotationDelta(lastPt, vpRect)
+            selectionManager.rotateShapes(selectedShapes, noteRect.centerX(), noteRect.centerY(), angleRad)
+        } else {
+            val p = computeStretchTransform(lastPt, vpRect)
+            // Convert viewport anchor to note-space for the actual point transform
+            val anchorNoteX = viewportManager.viewportToNoteX(p[2])
+            val anchorNoteY = viewportManager.viewportToNoteY(p[3])
+            // Compute note-space scale: viewport scale factors map directly (no additional scaling)
+            selectionManager.scaleShapes(selectedShapes, anchorNoteX, anchorNoteY, p[0], p[1])
+        }
+
+        for (shape in selectedShapes) { drawingPipeline.updateShape(shape) }
+
+        val newPoints = selectedShapes
+            .filter { it.entityId != null && it.touchPointList != null }
+            .associate { shape ->
+                shape.entityId!! to TransformAction.copyTouchPointList(shape.touchPointList!!)
+            }
+
+        if (originalPoints.isNotEmpty()) {
+            actionManager.recordAction(TransformAction(
+                shapeIds = selectedShapes.mapNotNull { it.entityId },
+                originalPoints = originalPoints,
+                newPoints = newPoints,
+                pipeline = drawingPipeline
+            ))
+        }
+
+        selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
+        cleanupTransform()
+
+        surfaceView?.let { sv ->
+            val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+            bitmap = state.bitmap
+            bitmapCanvas = state.canvas
+            EpdController.enablePost(sv, 1)
+            renderBitmapWithSelectionOverlay()
+        }
+    }
+
+    private fun cleanupTransform() {
+        onyxTouchHelper?.isRawDrawingRenderEnabled = true
+        selectionCropBitmap?.recycle()
+        selectionCropBitmap = null
+        transformSnapshotBitmap?.recycle()
+        transformSnapshotBitmap = null
+        activeHandle = null
+        selectionSubState = SelectionSubState.SELECTED
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     private fun renderBitmapWithGhost(dX: Float, dY: Float) {
         val sv = surfaceView ?: return
         EpdController.enablePost(sv, 1)
@@ -1295,12 +1587,41 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private fun drawSelectionBox(canvas: Canvas, dX: Float, dY: Float) {
         val noteRect = selectionBoundingRectNote ?: return
         val vpRect = viewportManager.noteToViewport(noteRect)
-        canvas.drawRect(
-            vpRect.left + dX - 8f,
-            vpRect.top + dY - 8f,
-            vpRect.right + dX + 8f,
-            vpRect.bottom + dY + 8f,
-            selectionBoxPaint
+        val left = vpRect.left + dX - 8f
+        val top = vpRect.top + dY - 8f
+        val right = vpRect.right + dX + 8f
+        val bottom = vpRect.bottom + dY + 8f
+        val cx = (left + right) / 2f
+        val cy = (top + bottom) / 2f
+        canvas.drawRect(left, top, right, bottom, selectionBoxPaint)
+
+        // Stretch handles at corners and midpoints
+        val handlePositions = listOf(
+            left to top,    // TL
+            right to top,   // TR
+            left to bottom, // BL
+            right to bottom,// BR
+            cx to top,      // T
+            cx to bottom,   // B
+            left to cy,     // L
+            right to cy     // R
+        )
+        for ((hx, hy) in handlePositions) {
+            canvas.drawCircle(hx, hy, HANDLE_RADIUS, handleFillPaint)
+            canvas.drawCircle(hx, hy, HANDLE_RADIUS, handleStrokePaint)
+        }
+
+        // Rotate handle: above top-center with a stem line
+        val rotateY = top - ROTATE_HANDLE_OFFSET
+        canvas.drawLine(cx, top, cx, rotateY + HANDLE_RADIUS, handleStemPaint)
+        canvas.drawCircle(cx, rotateY, HANDLE_RADIUS, handleFillPaint)
+        canvas.drawCircle(cx, rotateY, HANDLE_RADIUS, handleStrokePaint)
+        // Draw a curved arrow indicator inside the rotate handle
+        val arrowPaint = Paint(handleStrokePaint).apply { strokeWidth = 2f }
+        canvas.drawArc(
+            cx - HANDLE_RADIUS * 0.55f, rotateY - HANDLE_RADIUS * 0.55f,
+            cx + HANDLE_RADIUS * 0.55f, rotateY + HANDLE_RADIUS * 0.55f,
+            -30f, 240f, false, arrowPaint
         )
     }
 

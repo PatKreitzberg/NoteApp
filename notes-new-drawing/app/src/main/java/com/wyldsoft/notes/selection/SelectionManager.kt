@@ -5,6 +5,8 @@ import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Manages lasso selection logic: point-in-polygon containment testing,
@@ -72,6 +74,75 @@ class SelectionManager {
         shape.originRect = null
         shape.boundingRect = null
         shape.updateShapeRect()
+    }
+
+    /**
+     * Scales all touch points in each shape around ([anchorNoteX], [anchorNoteY]) in note-space.
+     * [scaleX] and [scaleY] are multipliers; values < 1 shrink, > 1 grow.
+     */
+    fun scaleShapes(
+        shapes: List<Shape>,
+        anchorNoteX: Float,
+        anchorNoteY: Float,
+        scaleX: Float,
+        scaleY: Float
+    ) {
+        Log.d(TAG, "scaleShapes shapes=${shapes.size} scaleX=$scaleX scaleY=$scaleY")
+        for (shape in shapes) {
+            val oldList = shape.touchPointList ?: continue
+            val newList = TouchPointList()
+            for (pt in oldList.points) {
+                if (pt == null) continue
+                val newPt = TouchPoint()
+                newPt.x = anchorNoteX + (pt.x - anchorNoteX) * scaleX
+                newPt.y = anchorNoteY + (pt.y - anchorNoteY) * scaleY
+                newPt.pressure = pt.pressure
+                newPt.tiltX = pt.tiltX
+                newPt.tiltY = pt.tiltY
+                newPt.timestamp = pt.timestamp
+                newList.add(newPt)
+            }
+            shape.touchPointList = newList
+            shape.boundingRect = null
+            shape.originRect = null
+            shape.updateShapeRect()
+        }
+    }
+
+    /**
+     * Rotates all touch points in each shape by [angleRad] radians around
+     * ([centerNoteX], [centerNoteY]) in note-space.
+     */
+    fun rotateShapes(
+        shapes: List<Shape>,
+        centerNoteX: Float,
+        centerNoteY: Float,
+        angleRad: Float
+    ) {
+        Log.d(TAG, "rotateShapes shapes=${shapes.size} angleRad=$angleRad")
+        val cosA = cos(angleRad)
+        val sinA = sin(angleRad)
+        for (shape in shapes) {
+            val oldList = shape.touchPointList ?: continue
+            val newList = TouchPointList()
+            for (pt in oldList.points) {
+                if (pt == null) continue
+                val dx = pt.x - centerNoteX
+                val dy = pt.y - centerNoteY
+                val newPt = TouchPoint()
+                newPt.x = centerNoteX + dx * cosA - dy * sinA
+                newPt.y = centerNoteY + dx * sinA + dy * cosA
+                newPt.pressure = pt.pressure
+                newPt.tiltX = pt.tiltX
+                newPt.tiltY = pt.tiltY
+                newPt.timestamp = pt.timestamp
+                newList.add(newPt)
+            }
+            shape.touchPointList = newList
+            shape.boundingRect = null
+            shape.originRect = null
+            shape.updateShapeRect()
+        }
     }
 
     private fun isShapeFullyInsideLasso(shape: Shape, poly: List<Pair<Float, Float>>): Boolean {
