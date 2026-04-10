@@ -67,13 +67,7 @@ fun Toolbar(
         }
     }
 
-    val penProfiles = listOf(
-        EditorState.penProfile1.collectAsState().value,
-        EditorState.penProfile2.collectAsState().value,
-        EditorState.penProfile3.collectAsState().value,
-        EditorState.penProfile4.collectAsState().value,
-        EditorState.penProfile5.collectAsState().value,
-    )
+    val penProfiles = EditorState.penProfiles.map { it.collectAsState().value }
     val activePenSlot by EditorState.activePenSlot.collectAsState()
 
     Row(

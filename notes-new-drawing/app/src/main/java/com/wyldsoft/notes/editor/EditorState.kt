@@ -62,28 +62,20 @@ class EditorState {
         private val _currentPenProfile = MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN))
         val currentPenProfile: StateFlow<PenProfile> = _currentPenProfile.asStateFlow()
 
-        private val _penProfile1 = MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN))
-        private val _penProfile2 = MutableStateFlow(PenProfile.getDefaultProfile(PenType.MARKER))
-        private val _penProfile3 = MutableStateFlow(PenProfile.getDefaultProfile(PenType.PENCIL))
-        private val _penProfile4 = MutableStateFlow(PenProfile.getDefaultProfile(PenType.FOUNTAIN))
-        private val _penProfile5 = MutableStateFlow(PenProfile.getDefaultProfile(PenType.CHARCOAL))
-        val penProfile1: StateFlow<PenProfile> = _penProfile1.asStateFlow()
-        val penProfile2: StateFlow<PenProfile> = _penProfile2.asStateFlow()
-        val penProfile3: StateFlow<PenProfile> = _penProfile3.asStateFlow()
-        val penProfile4: StateFlow<PenProfile> = _penProfile4.asStateFlow()
-        val penProfile5: StateFlow<PenProfile> = _penProfile5.asStateFlow()
+        private val _penProfiles = listOf(
+            MutableStateFlow(PenProfile.getDefaultProfile(PenType.BALLPEN)),
+            MutableStateFlow(PenProfile.getDefaultProfile(PenType.MARKER)),
+            MutableStateFlow(PenProfile.getDefaultProfile(PenType.PENCIL)),
+            MutableStateFlow(PenProfile.getDefaultProfile(PenType.FOUNTAIN)),
+            MutableStateFlow(PenProfile.getDefaultProfile(PenType.CHARCOAL)),
+        )
+        val penProfiles: List<StateFlow<PenProfile>> = _penProfiles.map { it.asStateFlow() }
 
         private val _activePenSlot = MutableStateFlow(1)
         val activePenSlot: StateFlow<Int> = _activePenSlot.asStateFlow()
 
-        private fun penProfileForSlot(slot: Int) = when (slot) {
-            1 -> _penProfile1.value
-            2 -> _penProfile2.value
-            3 -> _penProfile3.value
-            4 -> _penProfile4.value
-            5 -> _penProfile5.value
-            else -> _penProfile1.value
-        }
+        private fun penProfileForSlot(slot: Int) =
+            _penProfiles.getOrElse(slot - 1) { _penProfiles[0] }.value
 
         fun switchToPenSlot(slot: Int) {
             Log.d(TAG, "switchToPenSlot: $slot")
@@ -294,13 +286,7 @@ class EditorState {
         fun setPenProfile(profile: PenProfile) {
             Log.d(TAG, "setPenProfile: ${profile.penType.displayName}, width=${profile.strokeWidth}")
             _currentPenProfile.value = profile
-            when (_activePenSlot.value) {
-                1 -> _penProfile1.value = profile
-                2 -> _penProfile2.value = profile
-                3 -> _penProfile3.value = profile
-                4 -> _penProfile4.value = profile
-                5 -> _penProfile5.value = profile
-            }
+            _penProfiles.getOrNull(_activePenSlot.value - 1)?.value = profile
         }
 
         fun addExclusionRect(rect: Rect) {

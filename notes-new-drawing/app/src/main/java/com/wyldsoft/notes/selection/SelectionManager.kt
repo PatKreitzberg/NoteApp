@@ -53,21 +53,29 @@ class SelectionManager {
     }
 
     /**
-     * Translates all touch points in [shape] by ([deltaNoteX], [deltaNoteY]) in note-space.
-     * Rebuilds the TouchPointList and recomputes bounding rects.
+     * Applies [transform] to every (x, y) in [shape]'s TouchPointList, rebuilds the list,
+     * and recomputes the bounding rect. Shared by translate, scale, and rotate.
      */
-    fun translateShape(shape: Shape, deltaNoteX: Float, deltaNoteY: Float) {
-        Log.d(TAG, "translateShape dx=$deltaNoteX dy=$deltaNoteY")
+    private fun transformShapePoints(shape: Shape, transform: (Float, Float) -> Pair<Float, Float>) {
         val oldList = shape.touchPointList ?: return
         val newList = TouchPointList()
         for (pt in oldList.points) {
             if (pt == null) continue
-            newList.add(pt.copyWith(pt.x + deltaNoteX, pt.y + deltaNoteY))
+            val (newX, newY) = transform(pt.x, pt.y)
+            newList.add(pt.copyWith(newX, newY))
         }
         shape.touchPointList = newList
-        shape.originRect = null
         shape.boundingRect = null
+        shape.originRect = null
         shape.updateShapeRect()
+    }
+
+    /**
+     * Translates all touch points in [shape] by ([deltaNoteX], [deltaNoteY]) in note-space.
+     */
+    fun translateShape(shape: Shape, deltaNoteX: Float, deltaNoteY: Float) {
+        Log.d(TAG, "translateShape dx=$deltaNoteX dy=$deltaNoteY")
+        transformShapePoints(shape) { x, y -> Pair(x + deltaNoteX, y + deltaNoteY) }
     }
 
     /**
@@ -83,19 +91,12 @@ class SelectionManager {
     ) {
         Log.d(TAG, "scaleShapes shapes=${shapes.size} scaleX=$scaleX scaleY=$scaleY")
         for (shape in shapes) {
-            val oldList = shape.touchPointList ?: continue
-            val newList = TouchPointList()
-            for (pt in oldList.points) {
-                if (pt == null) continue
-                newList.add(pt.copyWith(
-                    anchorNoteX + (pt.x - anchorNoteX) * scaleX,
-                    anchorNoteY + (pt.y - anchorNoteY) * scaleY
-                ))
+            transformShapePoints(shape) { x, y ->
+                Pair(
+                    anchorNoteX + (x - anchorNoteX) * scaleX,
+                    anchorNoteY + (y - anchorNoteY) * scaleY
+                )
             }
-            shape.touchPointList = newList
-            shape.boundingRect = null
-            shape.originRect = null
-            shape.updateShapeRect()
         }
     }
 
@@ -113,21 +114,10 @@ class SelectionManager {
         val cosA = cos(angleRad)
         val sinA = sin(angleRad)
         for (shape in shapes) {
-            val oldList = shape.touchPointList ?: continue
-            val newList = TouchPointList()
-            for (pt in oldList.points) {
-                if (pt == null) continue
-                val dx = pt.x - centerNoteX
-                val dy = pt.y - centerNoteY
-                newList.add(pt.copyWith(
-                    centerNoteX + dx * cosA - dy * sinA,
-                    centerNoteY + dx * sinA + dy * cosA
-                ))
+            transformShapePoints(shape) { x, y ->
+                val dx = x - centerNoteX; val dy = y - centerNoteY
+                Pair(centerNoteX + dx * cosA - dy * sinA, centerNoteY + dx * sinA + dy * cosA)
             }
-            shape.touchPointList = newList
-            shape.boundingRect = null
-            shape.originRect = null
-            shape.updateShapeRect()
         }
     }
 

@@ -58,27 +58,10 @@ class EraseManager {
 
     fun calculateRefreshRect(erasedShapes: List<Shape>): RectF? {
         Log.d(TAG, "calculateRefreshRect")
-        if (erasedShapes.isEmpty()) return null
-
-        var refreshRect: RectF? = null // fixme start with non-null then can avoid if (refreshRect == null) {
-        
-        for (shape in erasedShapes) {
-            val boundingRect = shape.boundingRect
-            if (boundingRect != null) {
-                if (refreshRect == null) {
-                    refreshRect = RectF(boundingRect)
-                } else {
-                    refreshRect.union(boundingRect)
-                }
-            }
-        }
-
-        // Add some padding around the refresh area
-        refreshRect?.let { rect ->
-            val padding = 20f
-            rect.inset(-padding, -padding)
-        }
-
-        return refreshRect
+        val result = erasedShapes
+            .mapNotNull { it.boundingRect }
+            .reduceOrNull { acc, rect -> acc.apply { union(rect) } }
+            ?.let { RectF(it).apply { inset(-20f, -20f) } }
+        return result
     }
 }

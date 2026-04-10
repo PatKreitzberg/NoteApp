@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.Log
 import android.view.SurfaceView
+import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.data.database.repository.ShapeRepository
@@ -13,7 +14,6 @@ import com.wyldsoft.notes.data.mappers.ShapeMapper
 import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
-import com.wyldsoft.notes.refreshingscreen.PartialEraseRefresh
 import com.wyldsoft.notes.shapemanagement.EraseManager
 import com.wyldsoft.notes.shapemanagement.ShapeFactory
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
@@ -37,7 +37,6 @@ class DrawingPipeline(
 
     private val drawnShapes = mutableListOf<Shape>()
     private val eraseManager = EraseManager()
-    private val partialEraseRefresh = PartialEraseRefresh()
     var paginationManager: PaginationManager? = null
     var currentTemplate: PaperTemplate = PaperTemplate.BLANK
     private val templateRenderer = TemplateRenderer()
@@ -154,12 +153,10 @@ class DrawingPipeline(
             val refreshRect = eraseManager.calculateRefreshRect(intersectingShapes)
             if (refreshRect != null) {
                 val viewportRect = viewportManager.noteToViewport(refreshRect)
-                partialEraseRefresh.performPartialRefresh(
-                    surfaceView,
-                    viewportRect,
-                    drawnShapes.toList(),
-                    viewportManager,
-                    rxManager
+                EpdController.enablePost(surfaceView, 1)
+                rxManager.enqueue(
+                    PartialRefreshRequest(surfaceView, viewportRect, drawnShapes.toList(), viewportManager),
+                    null
                 )
             }
             return newState
