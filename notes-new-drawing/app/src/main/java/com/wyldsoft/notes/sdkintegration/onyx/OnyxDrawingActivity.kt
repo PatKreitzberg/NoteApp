@@ -58,6 +58,7 @@ import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
 import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.htr.ShapeGeometryUtils
+import com.wyldsoft.notes.utils.copyWith
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -395,7 +396,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 savedPenProfile = currentPenProfile
                 // Enable raw drawing to capture touch points, but suppress Onyx ink rendering
                 updateTouchHelperWithProfile()
-                onyxTouchHelper?.isRawDrawingRenderEnabled = false
+                disableInkRendering()
             }
             else -> {}
         }
@@ -587,13 +588,23 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
     }
 
-    override fun enableRawDrawing() {
+    /** Enables only the Onyx ink rendering layer. Input capture is unaffected. */
+    private fun enableInkRendering() {
         onyxTouchHelper?.isRawDrawingRenderEnabled = true
+    }
+
+    /** Disables only the Onyx ink rendering layer. Input capture is unaffected. */
+    private fun disableInkRendering() {
+        onyxTouchHelper?.isRawDrawingRenderEnabled = false
+    }
+
+    override fun enableRawDrawing() {
+        enableInkRendering()
         onyxTouchHelper?.setRawDrawingEnabled(true)
     }
 
     override fun disableRawDrawing() {
-        onyxTouchHelper?.isRawDrawingRenderEnabled = false
+        disableInkRendering()
         onyxTouchHelper?.setRawDrawingEnabled(false)
     }
 
@@ -615,7 +626,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
      * To add a new case: call suppressCurrentStroke { <action> } from onBeginRawDrawing.
      */
     private fun suppressCurrentStroke(onPenLift: () -> Unit) {
-        onyxTouchHelper?.isRawDrawingRenderEnabled = false
+        disableInkRendering()
         strokeDataSuppressed = true
         strokeEndAction = onPenLift
     }
@@ -654,14 +665,14 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             if (EditorState.currentMode.value == AppMode.SEPARATION) {
                 if (separationSubState == SeparationSubState.DRAGGING_OFFSET) {
                     // Suppress ink rendering — we handle the ghost rendering ourselves
-                    onyxTouchHelper?.isRawDrawingRenderEnabled = false
+                    disableInkRendering()
                 }
                 isDrawingInProgress = true
                 disableFingerTouch()
                 return
             }
             if (EditorState.currentMode.value == AppMode.GEOMETRY) {
-                onyxTouchHelper?.isRawDrawingRenderEnabled = false
+                disableInkRendering()
                 createDrawingBitmap()
                 geometryStartPoint = touchPoint
                 geometrySnapshotBitmap?.recycle()
@@ -1067,7 +1078,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private fun startGhostMove(tp: TouchPoint) {
         Log.d(TAG, "startGhostMove x=${tp.x} y=${tp.y}")
         // Disable ink rendering so the SDK does not draw a stroke during the drag
-        onyxTouchHelper?.isRawDrawingRenderEnabled = false
+        disableInkRendering()
         moveStartX = tp.x
         moveStartY = tp.y
         lastSelectionRenderTime = 0L
@@ -1118,7 +1129,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         ))
         selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
 
-        onyxTouchHelper?.isRawDrawingRenderEnabled = true
+        enableInkRendering()
         ghostBitmap?.recycle()
         ghostBitmap = null
         selectionSubState = SelectionSubState.SELECTED
@@ -1223,7 +1234,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     private fun startTransform(tp: com.onyx.android.sdk.data.note.TouchPoint, handle: HandleType) {
         Log.d(TAG, "startTransform handle=$handle x=${tp.x} y=${tp.y}")
-        onyxTouchHelper?.isRawDrawingRenderEnabled = false
+        disableInkRendering()
         activeHandle = handle
         transformStartX = tp.x
         transformStartY = tp.y
@@ -1353,7 +1364,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     }
 
     private fun cleanupTransform() {
-        onyxTouchHelper?.isRawDrawingRenderEnabled = true
+        enableInkRendering()
         selectionCropBitmap?.recycle()
         selectionCropBitmap = null
         transformSnapshotBitmap?.recycle()
@@ -1402,16 +1413,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         clone.penType = original.penType
         val newList = com.onyx.android.sdk.pen.data.TouchPointList()
         original.touchPointList?.points?.forEach { pt ->
-            if (pt != null) {
-                val newPt = TouchPoint()
-                newPt.x = pt.x
-                newPt.y = pt.y
-                newPt.pressure = pt.pressure
-                newPt.tiltX = pt.tiltX
-                newPt.tiltY = pt.tiltY
-                newPt.timestamp = pt.timestamp
-                newList.add(newPt)
-            }
+            if (pt != null) newList.add(pt.copyWith(pt.x, pt.y))
         }
         clone.touchPointList = newList
         clone.updateShapeRect()
@@ -1535,7 +1537,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         // Re-enable ink rendering for drawing the split line in step 1 was done by SDK;
         // now disable it for step 2 dragging
-        onyxTouchHelper?.isRawDrawingRenderEnabled = false
+        disableInkRendering()
 
         renderSeparationPreview(0f)
     }
