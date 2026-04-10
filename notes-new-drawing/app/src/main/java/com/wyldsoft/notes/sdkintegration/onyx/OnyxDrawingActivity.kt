@@ -196,38 +196,23 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         shapeRepo = ShapeRepository(db.shapeDao())
         undoHistoryRepo = UndoHistoryRepository(db.undoHistoryDao())
         val noteId = intent.getStringExtra("noteId")
-
-        drawingPipeline = DrawingPipeline(
-            viewportManager = viewportManager,
-            scope = lifecycleScope,
-            shapeRepository = shapeRepo,
-            noteId = noteId
-        )
-
-        actionManager = ActionManager(
-            undoHistoryRepository = undoHistoryRepo,
-            noteId = noteId,
-            scope = lifecycleScope,
-            selectionManager = selectionManager,
-            paginationManager = paginationManager
-        )
-
-        if (noteId != null) {
-            lifecycleScope.launch(Dispatchers.IO) {
-                drawingPipeline.loadShapes(noteId)
-                actionManager.loadFromDatabase(drawingPipeline)
-                shapesLoaded = true
-                launch(Dispatchers.Main) {
-                    forceScreenRefresh()
-                }
-            }
-        }
-
+        if (noteId != null) setupPipelineForNote(noteId)
         observeUndoRedo()
     }
 
     override fun onSwitchNoteSDK(noteId: String) {
         Log.d(TAG, "onSwitchNoteSDK: $noteId")
+        EditorState.setUndoRedoState(false, false)
+        setupPipelineForNote(noteId)
+    }
+
+    /**
+     * Creates a fresh DrawingPipeline and ActionManager for [noteId], then launches
+     * an IO coroutine to load shapes and action history from the database.
+     * Called both on initial launch (initializeSDK) and when switching notes (onSwitchNoteSDK).
+     */
+    private fun setupPipelineForNote(noteId: String) {
+        Log.d(TAG, "setupPipelineForNote: $noteId")
         drawingPipeline = DrawingPipeline(
             viewportManager = viewportManager,
             scope = lifecycleScope,
@@ -242,9 +227,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             selectionManager = selectionManager,
             paginationManager = paginationManager
         )
-        EditorState.setUndoRedoState(false, false)
         shapesLoaded = false
-
         lifecycleScope.launch(Dispatchers.IO) {
             drawingPipeline.loadShapes(noteId)
             actionManager.loadFromDatabase(drawingPipeline)
@@ -418,6 +401,17 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
     }
 
+    /** Restores the pen profile saved when a mode was entered, then triggers a screen refresh. */
+    private fun restoreSavedPenProfile() {
+        savedPenProfile?.let {
+            // Update field directly for timing safety before enterNewMode(DRAWING)
+            currentPenProfile = it
+            EditorState.setPenProfile(it)
+        }
+        savedPenProfile = null
+        forceScreenRefresh()
+    }
+
     override fun exitCurrentMode(mode: AppMode) {
         Log.d(TAG, "exitCurrentMode $mode")
         if (isInMode(mode)) return
@@ -435,13 +429,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 activeHandle = null
                 selectionSubState = SelectionSubState.DRAWING_LASSO
                 EditorState.setHasSelection(false)
-                savedPenProfile?.let {
-                    // Update field directly for timing safety before enterNewMode(DRAWING)
-                    currentPenProfile = it
-                    EditorState.setPenProfile(it)
-                }
-                savedPenProfile = null
-                forceScreenRefresh()
+                restoreSavedPenProfile()
             }
             AppMode.SEPARATION -> {
                 separationShapes = emptyList()
@@ -450,31 +438,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 separationGhostBitmap?.recycle()
                 separationGhostBitmap = null
                 separationSubState = SeparationSubState.DRAWING_SPLIT_LINE
-                savedPenProfile?.let {
-                    currentPenProfile = it
-                    EditorState.setPenProfile(it)
-                }
-                savedPenProfile = null
-                forceScreenRefresh()
+                restoreSavedPenProfile()
             }
             AppMode.TEXT -> {
-                savedPenProfile?.let {
-                    currentPenProfile = it
-                    EditorState.setPenProfile(it)
-                }
-                savedPenProfile = null
-                forceScreenRefresh()
+                restoreSavedPenProfile()
             }
             AppMode.GEOMETRY -> {
                 geometrySnapshotBitmap?.recycle()
                 geometrySnapshotBitmap = null
                 geometryStartPoint = null
-                savedPenProfile?.let {
-                    currentPenProfile = it
-                    EditorState.setPenProfile(it)
-                }
-                savedPenProfile = null
-                forceScreenRefresh()
+                restoreSavedPenProfile()
             }
             else -> {}
         }

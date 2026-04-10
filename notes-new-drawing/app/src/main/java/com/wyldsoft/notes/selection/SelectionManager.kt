@@ -5,6 +5,7 @@ import android.util.Log
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
+import com.wyldsoft.notes.utils.copyWith
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -61,14 +62,7 @@ class SelectionManager {
         val newList = TouchPointList()
         for (pt in oldList.points) {
             if (pt == null) continue
-            val newPt = TouchPoint()
-            newPt.x = pt.x + deltaNoteX
-            newPt.y = pt.y + deltaNoteY
-            newPt.pressure = pt.pressure
-            newPt.tiltX = pt.tiltX
-            newPt.tiltY = pt.tiltY
-            newPt.timestamp = pt.timestamp
-            newList.add(newPt)
+            newList.add(pt.copyWith(pt.x + deltaNoteX, pt.y + deltaNoteY))
         }
         shape.touchPointList = newList
         shape.originRect = null
@@ -93,14 +87,10 @@ class SelectionManager {
             val newList = TouchPointList()
             for (pt in oldList.points) {
                 if (pt == null) continue
-                val newPt = TouchPoint()
-                newPt.x = anchorNoteX + (pt.x - anchorNoteX) * scaleX
-                newPt.y = anchorNoteY + (pt.y - anchorNoteY) * scaleY
-                newPt.pressure = pt.pressure
-                newPt.tiltX = pt.tiltX
-                newPt.tiltY = pt.tiltY
-                newPt.timestamp = pt.timestamp
-                newList.add(newPt)
+                newList.add(pt.copyWith(
+                    anchorNoteX + (pt.x - anchorNoteX) * scaleX,
+                    anchorNoteY + (pt.y - anchorNoteY) * scaleY
+                ))
             }
             shape.touchPointList = newList
             shape.boundingRect = null
@@ -129,14 +119,10 @@ class SelectionManager {
                 if (pt == null) continue
                 val dx = pt.x - centerNoteX
                 val dy = pt.y - centerNoteY
-                val newPt = TouchPoint()
-                newPt.x = centerNoteX + dx * cosA - dy * sinA
-                newPt.y = centerNoteY + dx * sinA + dy * cosA
-                newPt.pressure = pt.pressure
-                newPt.tiltX = pt.tiltX
-                newPt.tiltY = pt.tiltY
-                newPt.timestamp = pt.timestamp
-                newList.add(newPt)
+                newList.add(pt.copyWith(
+                    centerNoteX + dx * cosA - dy * sinA,
+                    centerNoteY + dx * sinA + dy * cosA
+                ))
             }
             shape.touchPointList = newList
             shape.boundingRect = null

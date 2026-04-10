@@ -2,9 +2,9 @@ package com.wyldsoft.notes.undoredo
 
 import android.util.Log
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils
-import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.wyldsoft.notes.rendering.DrawingPipeline
+import com.wyldsoft.notes.utils.copyWith
 
 /**
  * Records a completed selection stretch or rotate operation.
@@ -49,14 +49,7 @@ class TransformAction(
             val dst = TouchPointList()
             for (pt in src.points) {
                 if (pt == null) continue
-                val newPt = TouchPoint()
-                newPt.x = pt.x
-                newPt.y = pt.y
-                newPt.pressure = pt.pressure
-                newPt.tiltX = pt.tiltX
-                newPt.tiltY = pt.tiltY
-                newPt.timestamp = pt.timestamp
-                dst.add(newPt)
+                dst.add(pt.copyWith(pt.x, pt.y))
             }
             return dst
         }
