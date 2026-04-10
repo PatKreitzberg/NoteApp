@@ -977,48 +977,9 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         endPt: com.onyx.android.sdk.data.note.TouchPoint,
         paint: android.graphics.Paint
     ) {
-        val sx = startPt.x; val sy = startPt.y
-        val ex = endPt.x;   val ey = endPt.y
-        val dx = ex - sx;   val dy = ey - sy
-        val dist = kotlin.math.sqrt(dx * dx + dy * dy)
-        if (dist < 1f) return
-
-        when (shapeType) {
-            GeometryShapeType.CIRCLE -> {
-                canvas.drawCircle(sx, sy, dist, paint)
-            }
-            GeometryShapeType.LINE -> {
-                canvas.drawLine(sx, sy, ex, ey, paint)
-            }
-            GeometryShapeType.RECTANGLE -> {
-                val aspectRatio = 1.618f
-                val halfH = dist / kotlin.math.sqrt(1f + aspectRatio * aspectRatio)
-                val halfW = halfH * aspectRatio
-                val path = android.graphics.Path().apply {
-                    addRect(android.graphics.RectF(-halfW, -halfH, halfW, halfH), android.graphics.Path.Direction.CW)
-                }
-                val angleDeg = Math.toDegrees(kotlin.math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
-                val matrix = android.graphics.Matrix()
-                matrix.postRotate(angleDeg)
-                matrix.postTranslate(sx, sy)
-                path.transform(matrix)
-                canvas.drawPath(path, paint)
-            }
-            GeometryShapeType.TRIANGLE -> {
-                val baseAngle = kotlin.math.atan2(dy, dx)
-                val twoThirdsPi = (2.0 * Math.PI / 3.0).toFloat()
-                val x0 = sx + dist * kotlin.math.cos(baseAngle)
-                val y0 = sy + dist * kotlin.math.sin(baseAngle)
-                val x1 = sx + dist * kotlin.math.cos(baseAngle + twoThirdsPi)
-                val y1 = sy + dist * kotlin.math.sin(baseAngle + twoThirdsPi)
-                val x2 = sx + dist * kotlin.math.cos(baseAngle - twoThirdsPi)
-                val y2 = sy + dist * kotlin.math.sin(baseAngle - twoThirdsPi)
-                val path = android.graphics.Path().apply {
-                    moveTo(x0, y0); lineTo(x1, y1); lineTo(x2, y2); close()
-                }
-                canvas.drawPath(path, paint)
-            }
-        }
+        com.wyldsoft.notes.geometry.GeometryShapeRenderer.draw(
+            canvas, shapeType, startPt.x, startPt.y, endPt.x, endPt.y, paint
+        )
     }
 
     private fun commitGeometryShape(
@@ -1093,61 +1054,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         ex: Float, ey: Float,
         ts: Long
     ) {
-        Log.d(TAG, "appendGeometryOutlinePoints shapeType=$shapeType")
-        val dx = ex - sx; val dy = ey - sy
-        val dist = kotlin.math.sqrt(dx * dx + dy * dy)
-        if (dist < 1f) return
-
-        fun addPt(x: Float, y: Float) {
-            tpl.add(com.onyx.android.sdk.data.note.TouchPoint(x, y, 1f, 0f, 0, 0, ts))
-        }
-
-        when (shapeType) {
-            GeometryShapeType.CIRCLE -> {
-                // 24 points evenly distributed around the circumference
-                val steps = 24
-                for (i in 0 until steps) {
-                    val angle = i * 2.0 * Math.PI / steps
-                    addPt(
-                        sx + dist * kotlin.math.cos(angle).toFloat(),
-                        sy + dist * kotlin.math.sin(angle).toFloat()
-                    )
-                }
-            }
-            GeometryShapeType.LINE -> {
-                // The 2 endpoints (pts[0], pts[1]) already fully define the lasso extent
-            }
-            GeometryShapeType.RECTANGLE -> {
-                val aspectRatio = 1.618f
-                val halfH = dist / kotlin.math.sqrt(1f + aspectRatio * aspectRatio)
-                val halfW = halfH * aspectRatio
-                val angle = kotlin.math.atan2(dy, dx)
-                val cosA = kotlin.math.cos(angle)
-                val sinA = kotlin.math.sin(angle)
-                // The 4 corners of the rotated rectangle
-                for ((lx, ly) in listOf(
-                    Pair(+halfW, +halfH), Pair(-halfW, +halfH),
-                    Pair(-halfW, -halfH), Pair(+halfW, -halfH)
-                )) {
-                    addPt(
-                        sx + lx * cosA - ly * sinA,
-                        sy + lx * sinA + ly * cosA
-                    )
-                }
-            }
-            GeometryShapeType.TRIANGLE -> {
-                // The 3 equilateral triangle vertices
-                val baseAngle = kotlin.math.atan2(dy, dx)
-                val twoThirdsPi = 2.0 * Math.PI / 3.0
-                for (i in 0..2) {
-                    val a = baseAngle + i * twoThirdsPi
-                    addPt(
-                        sx + dist * kotlin.math.cos(a).toFloat(),
-                        sy + dist * kotlin.math.sin(a).toFloat()
-                    )
-                }
-            }
-        }
+        com.wyldsoft.notes.geometry.GeometryShapeRenderer.appendOutlinePoints(tpl, shapeType, sx, sy, ex, ey, ts)
     }
 
     // ── Selection helpers ─────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.Log
+import com.wyldsoft.notes.geometry.GeometryShapeRenderer
 import com.wyldsoft.notes.rendering.RenderContext
 import kotlin.math.sqrt
 
@@ -35,21 +36,12 @@ class CircleGeometryShape : Shape() {
         val pts = touchPointList?.points ?: return
         if (pts.size < 2) return
 
-        val cx = pts[0].x
-        val cy = pts[0].y
-        val ex = pts[1].x
-        val ey = pts[1].y
-        val dx = ex - cx
-        val dy = ey - cy
-        val radius = sqrt(dx * dx + dy * dy)
-        if (radius < 1f) return
-
         val paint = Paint().apply {
             isAntiAlias = true
             color = if (strokeColor != 0) strokeColor else Color.BLACK
             style = Paint.Style.STROKE
             strokeWidth = if (this@CircleGeometryShape.strokeWidth > 0f) this@CircleGeometryShape.strokeWidth else 4f
         }
-        canvas.drawCircle(cx, cy, radius, paint)
+        GeometryShapeRenderer.drawCircle(canvas, pts[0].x, pts[0].y, pts[1].x, pts[1].y, paint)
     }
 }

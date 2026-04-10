@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.Log
+import com.wyldsoft.notes.geometry.GeometryShapeRenderer
 import com.wyldsoft.notes.rendering.RenderContext
 import kotlin.math.max
 import kotlin.math.min
@@ -44,6 +45,6 @@ class LineGeometryShape : Shape() {
             strokeWidth = if (this@LineGeometryShape.strokeWidth > 0f) this@LineGeometryShape.strokeWidth else 4f
             strokeCap = Paint.Cap.ROUND
         }
-        canvas.drawLine(pts[0].x, pts[0].y, pts[1].x, pts[1].y, paint)
+        GeometryShapeRenderer.drawLine(canvas, pts[0].x, pts[0].y, pts[1].x, pts[1].y, paint)
     }
 }
