@@ -65,6 +65,7 @@ Coordinate transforms (ViewportManager), pan/zoom, selection tool, undo/redo (Ac
 - Onyx SDK repo uses insecure HTTP (`repo.boox.com`) — this is intentional
 - Whenever significant code changes are implement check it compiles
 - When creating new classes make a TAG = <class name> and add Log.d(TAG, "<function name>") for each function larger than four lines.
+- **Menu/panel open → use `AppMode.SETTINGS`:** Whenever any dropdown menu or properties panel opens, call `EditorState.setMode(AppMode.SETTINGS)`. This causes `updateTouchHelperWithProfile()` to skip re-enabling the Onyx ink renderer, preventing accidental strokes while the user interacts with UI. Restore the previous mode when the menu closes. This pattern is already used by pen slot buttons and the settings panel.
 
 ## Key Dependencies
 
