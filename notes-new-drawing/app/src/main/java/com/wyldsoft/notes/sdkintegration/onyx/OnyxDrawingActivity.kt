@@ -994,9 +994,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             GeometryShapeType.TRIANGLE  -> ShapeFactory.SHAPE_GEOMETRY_TRIANGLE
         }
 
+        val ts = System.currentTimeMillis()
         val tpl = TouchPointList()
-        tpl.add(com.onyx.android.sdk.data.note.TouchPoint(noteStartX, noteStartY, 1f, 0f, 0, 0, System.currentTimeMillis()))
-        tpl.add(com.onyx.android.sdk.data.note.TouchPoint(noteEndX, noteEndY, 1f, 0f, 0, 0, System.currentTimeMillis()))
+        tpl.add(com.onyx.android.sdk.data.note.TouchPoint(noteStartX, noteStartY, 1f, 0f, 0, 0, ts))
+        tpl.add(com.onyx.android.sdk.data.note.TouchPoint(noteEndX, noteEndY, 1f, 0f, 0, 0, ts))
+        appendGeometryOutlinePoints(tpl, geometryShapeType, noteStartX, noteStartY, noteEndX, noteEndY, ts)
 
         val shape = ShapeFactory.createShape(shapeTypeInt).apply {
             shapeType = shapeTypeInt
@@ -1015,6 +1017,77 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         bitmapCanvas = state.canvas
         EpdController.enablePost(sv, 1)
         renderToScreen(sv, bitmap)
+    }
+
+    /**
+     * Appends representative boundary points to [tpl] after the 2 defining points.
+     * These extra points are used by SelectionManager's lasso hit-test
+     * (which checks that ALL touchPointList points are inside the lasso).
+     * render() in each geometry shape class only reads pts[0] and pts[1], so
+     * extra points here do not affect drawing.
+     */
+    private fun appendGeometryOutlinePoints(
+        tpl: TouchPointList,
+        shapeType: GeometryShapeType,
+        sx: Float, sy: Float,
+        ex: Float, ey: Float,
+        ts: Long
+    ) {
+        Log.d(TAG, "appendGeometryOutlinePoints shapeType=$shapeType")
+        val dx = ex - sx; val dy = ey - sy
+        val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+        if (dist < 1f) return
+
+        fun addPt(x: Float, y: Float) {
+            tpl.add(com.onyx.android.sdk.data.note.TouchPoint(x, y, 1f, 0f, 0, 0, ts))
+        }
+
+        when (shapeType) {
+            GeometryShapeType.CIRCLE -> {
+                // 24 points evenly distributed around the circumference
+                val steps = 24
+                for (i in 0 until steps) {
+                    val angle = i * 2.0 * Math.PI / steps
+                    addPt(
+                        sx + dist * kotlin.math.cos(angle).toFloat(),
+                        sy + dist * kotlin.math.sin(angle).toFloat()
+                    )
+                }
+            }
+            GeometryShapeType.LINE -> {
+                // The 2 endpoints (pts[0], pts[1]) already fully define the lasso extent
+            }
+            GeometryShapeType.RECTANGLE -> {
+                val aspectRatio = 1.618f
+                val halfH = dist / kotlin.math.sqrt(1f + aspectRatio * aspectRatio)
+                val halfW = halfH * aspectRatio
+                val angle = kotlin.math.atan2(dy, dx)
+                val cosA = kotlin.math.cos(angle)
+                val sinA = kotlin.math.sin(angle)
+                // The 4 corners of the rotated rectangle
+                for ((lx, ly) in listOf(
+                    Pair(+halfW, +halfH), Pair(-halfW, +halfH),
+                    Pair(-halfW, -halfH), Pair(+halfW, -halfH)
+                )) {
+                    addPt(
+                        sx + lx * cosA - ly * sinA,
+                        sy + lx * sinA + ly * cosA
+                    )
+                }
+            }
+            GeometryShapeType.TRIANGLE -> {
+                // The 3 equilateral triangle vertices
+                val baseAngle = kotlin.math.atan2(dy, dx)
+                val twoThirdsPi = 2.0 * Math.PI / 3.0
+                for (i in 0..2) {
+                    val a = baseAngle + i * twoThirdsPi
+                    addPt(
+                        sx + dist * kotlin.math.cos(a).toFloat(),
+                        sy + dist * kotlin.math.sin(a).toFloat()
+                    )
+                }
+            }
+        }
     }
 
     // ── Selection helpers ─────────────────────────────────────────────────────
