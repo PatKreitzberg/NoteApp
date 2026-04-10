@@ -644,7 +644,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 createDrawingBitmap()
                 geometryStartPoint = touchPoint
                 geometrySnapshotBitmap?.recycle()
-                geometrySnapshotBitmap = bitmap?.copy(bitmap!!.config, false)
+                geometrySnapshotBitmap = bitmap?.let { bmp -> bmp.copy(bmp.config ?: Bitmap.Config.ARGB_8888, false) }
                 isDrawingInProgress = true
                 disableFingerTouch()
                 return
