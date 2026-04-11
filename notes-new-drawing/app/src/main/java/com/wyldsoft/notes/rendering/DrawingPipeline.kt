@@ -162,7 +162,11 @@ class DrawingPipeline(
                 val viewportRect = viewportManager.noteToViewport(refreshRect)
                 EpdController.enablePost(surfaceView, 1)
                 rxManager.enqueue(
-                    PartialRefreshRequest(surfaceView, viewportRect, drawnShapes.toList(), viewportManager),
+                    PartialRefreshRequest(
+                        surfaceView, viewportRect, drawnShapes.toList(), viewportManager,
+                        templateRenderer, currentTemplate, paginationManager,
+                        surfaceView.width, surfaceView.height
+                    ),
                     null
                 )
             }

@@ -7,13 +7,14 @@ import android.util.Log
 import android.view.SurfaceView
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
+import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 
 /**
  * An RxRequest that redraws a rectangular region of the screen.
  * Creates a temporary bitmap covering only the refresh region,
- * renders the intersecting shapes into it, and blits the result
- * to the SurfaceView.
+ * renders the template and intersecting shapes into it, and blits
+ * the result to the SurfaceView.
  *
  * Can be enqueued through RxManager to serialize with other
  * rendering operations.
@@ -22,7 +23,12 @@ class PartialRefreshRequest(
     private val surfaceView: SurfaceView,
     private val refreshRect: RectF,
     private val shapesToRender: List<Shape>,
-    private val viewportManager: ViewportManager
+    private val viewportManager: ViewportManager,
+    private val templateRenderer: TemplateRenderer,
+    private val currentTemplate: PaperTemplate,
+    private val paginationManager: PaginationManager?,
+    private val fullCanvasWidth: Int,
+    private val fullCanvasHeight: Int
 ) : com.onyx.android.sdk.rx.RxRequest() {
 
     private val TAG = "PartialRefreshRequest"
@@ -41,6 +47,14 @@ class PartialRefreshRequest(
         // Offset so viewport-coord shapes land in the temp bitmap's local space
         tempCanvas.save()
         tempCanvas.translate(-refreshRect.left, -refreshRect.top)
+
+        // Draw the template so erased areas show the correct background
+        val pageRects = paginationManager?.let { pm ->
+            (0 until pm.pageCount).map { i ->
+                android.graphics.RectF(0f, pm.pageTopY(i), pm.pageWidth, pm.pageBottomY(i))
+            }
+        }
+        templateRenderer.drawTemplate(tempCanvas, currentTemplate, viewportManager, fullCanvasWidth, fullCanvasHeight, pageRects)
 
         val renderContext = RenderContext.createForBitmap(tempBitmap, tempCanvas)
 
