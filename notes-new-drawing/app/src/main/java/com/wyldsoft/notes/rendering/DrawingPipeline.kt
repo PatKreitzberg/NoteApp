@@ -35,6 +35,8 @@ class DrawingPipeline(
 ) {
     private val TAG = "DrawingPipeline"
 
+    private val PAGINATION_GAP_HEIGHT = 10f
+
     private val drawnShapes = mutableListOf<Shape>()
     private val eraseManager = EraseManager()
     var paginationManager: PaginationManager? = null
@@ -238,7 +240,7 @@ class DrawingPipeline(
 
         for (i in 0 until pm.pageCount) {
             val vpX = viewportManager.noteToViewportX(pm.pageWidth - 20f)
-            val vpY = viewportManager.noteToViewportY(pm.pageTopY(i) + 30f)
+            val vpY = viewportManager.noteToViewportY(pm.pageTopY(i) + PAGINATION_GAP_HEIGHT)
             if (vpY > -50 && vpY < screenHeight + 50) {
                 canvas.drawText("${i + 1}", vpX, vpY, textPaint)
             }

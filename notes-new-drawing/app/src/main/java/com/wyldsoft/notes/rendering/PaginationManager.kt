@@ -78,8 +78,9 @@ class PaginationManager(
     }
 
     /**
-     * Converts visible gap regions to viewport-space Rects for TouchHelper exclusion.
-     * Only returns rects that intersect the current screen area.
+     * Converts visible out-of-page regions to viewport-space Rects for TouchHelper exclusion.
+     * Covers: gaps between pages, area to the right of the page (when zoomed out),
+     * and area below the last page (when visible).
      */
     fun computeExclusionRects(
         scrollX: Float,
@@ -93,6 +94,7 @@ class PaginationManager(
         val viewportNoteTop = scrollY
         val viewportNoteBottom = scrollY + screenHeight / scale
 
+        // Gap exclusions (between pages)
         for (gap in allGapRects()) {
             if (gap.bottom <= viewportNoteTop || gap.top >= viewportNoteBottom) continue
             val top = ((gap.top - scrollY) * scale).toInt().coerceAtLeast(0)
@@ -101,6 +103,19 @@ class PaginationManager(
                 result.add(Rect(0, top, screenWidth, bottom))
             }
         }
+
+        // Right-side exclusion: area to the right of the page when zoomed out
+        val pageRightViewport = ((pageWidth - scrollX) * scale).toInt()
+        if (pageRightViewport < screenWidth) {
+            result.add(Rect(pageRightViewport.coerceAtLeast(0), 0, screenWidth, screenHeight))
+        }
+
+        // Below-last-page exclusion: area below the last page when visible
+        val lastPageBottomViewport = ((pageBottomY(pageCount - 1) - scrollY) * scale).toInt()
+        if (lastPageBottomViewport < screenHeight) {
+            result.add(Rect(0, lastPageBottomViewport.coerceAtLeast(0), screenWidth, screenHeight))
+        }
+
         Log.d(TAG, "computeExclusionRects: ${result.size} rects")
         return result
     }
