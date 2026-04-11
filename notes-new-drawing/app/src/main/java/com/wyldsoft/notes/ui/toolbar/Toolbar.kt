@@ -2,6 +2,8 @@ package com.wyldsoft.notes.ui.toolbar
 
 import android.util.Log
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -126,9 +129,6 @@ fun Toolbar(
                 onExpandedChange = onExpandedChange,
                 onSettingsExpandedChange = onSettingsExpandedChange
             )
-            if (slot < penProfiles.size) {
-                Spacer(modifier = Modifier.width(6.dp))
-            }
         }
 
         Spacer(modifier = Modifier.width(10.dp))
@@ -250,36 +250,44 @@ fun Toolbar(
         val currentNoteIndex by EditorState.currentNoteIndex.collectAsState()
 
         if (notesInNotebook.isNotEmpty()) {
-            IconButton(
-                onClick = {
-                    Log.d(TAG, "Navigate prev note")
-                    EditorState.requestNavigatePrev()
-                },
-                enabled = currentNoteIndex > 0,
-                modifier = Modifier.size(36.dp)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
             ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowLeft,
-                    contentDescription = "Previous note",
-                    modifier = Modifier.size(24.dp)
+                Text(
+                    text = "${currentNoteIndex + 1} / ${notesInNotebook.size}",
+                    fontSize = 11.sp
                 )
-            }
-            Text(
-                text = "${currentNoteIndex + 1} / ${notesInNotebook.size}",
-                fontSize = 13.sp
-            )
-            IconButton(
-                onClick = {
-                    Log.d(TAG, "Navigate next note")
-                    EditorState.requestNavigateNext()
-                },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowRight,
-                    contentDescription = "Next note",
-                    modifier = Modifier.size(24.dp)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            Log.d(TAG, "Navigate prev note")
+                            EditorState.requestNavigatePrev()
+                        },
+                        enabled = currentNoteIndex > 0,
+                        modifier = Modifier.size(26.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowLeft,
+                            contentDescription = "Previous note",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            Log.d(TAG, "Navigate next note")
+                            EditorState.requestNavigateNext()
+                        },
+                        modifier = Modifier.size(26.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowRight,
+                            contentDescription = "Next note",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.width(4.dp))
         }
@@ -287,32 +295,39 @@ fun Toolbar(
         val canUndo by EditorState.canUndo.collectAsState()
         val canRedo by EditorState.canRedo.collectAsState()
 
-        IconButton(
-            onClick = {
-                Log.d(TAG, "Undo button clicked")
-                EditorState.requestUndo()
-            },
-            enabled = canUndo
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.wrapContentHeight()
         ) {
-            Icon(
-                imageVector = Icons.Default.Undo,
-                contentDescription = "Undo",
+            IconButton(
+                onClick = {
+                    Log.d(TAG, "Undo button clicked")
+                    EditorState.requestUndo()
+                },
+                enabled = canUndo,
                 modifier = Modifier.size(24.dp)
-            )
-        }
-
-        IconButton(
-            onClick = {
-                Log.d(TAG, "Redo button clicked")
-                EditorState.requestRedo()
-            },
-            enabled = canRedo
-        ) {
-            Icon(
-                imageVector = Icons.Default.Redo,
-                contentDescription = "Redo",
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Undo,
+                    contentDescription = "Undo",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            IconButton(
+                onClick = {
+                    Log.d(TAG, "Redo button clicked")
+                    EditorState.requestRedo()
+                },
+                enabled = canRedo,
                 modifier = Modifier.size(24.dp)
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Redo,
+                    contentDescription = "Redo",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
 
         IconButton(onClick = {
