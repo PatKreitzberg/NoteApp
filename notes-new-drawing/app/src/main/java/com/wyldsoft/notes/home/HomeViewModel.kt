@@ -1,12 +1,16 @@
 package com.wyldsoft.notes.home
 
 import android.app.Application
+import android.graphics.pdf.PdfRenderer
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.aventrix.jnanoid.jnanoid.NanoIdUtils
 import com.wyldsoft.notes.ScrotesApp
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
+import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.repository.FolderRepository
 import com.wyldsoft.notes.data.database.repository.NotebookRepository
 import kotlinx.coroutines.Dispatchers
@@ -130,6 +134,64 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun launchWithFolderRefresh(block: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) { block(); refreshCurrentFolder() }
+    }
+
+    /**
+     * Imports a PDF from [uri], creating a new notebook named [displayName] containing
+     * a single PDF-backed note. Calls [onResult] with the new note's ID on the main thread.
+     */
+    fun importPdf(uri: Uri, displayName: String, onResult: (noteId: String) -> Unit) {
+        Log.d(TAG, "importPdf uri=$uri displayName=$displayName")
+        viewModelScope.launch(Dispatchers.IO) {
+            val (pageCount, pageAspectRatio) = readPdfMetadata(uri)
+
+            val now = System.currentTimeMillis()
+            val notebook = NotebookEntity(
+                id = NanoIdUtils.randomNanoId(),
+                name = displayName,
+                folderId = _uiState.value.currentFolderId,
+                createdAt = now,
+                modifiedAt = now
+            )
+            db.notebookDao().insert(notebook)
+
+            val note = NoteEntity(
+                id = NanoIdUtils.randomNanoId(),
+                title = "Page 1",
+                parentNotebookId = notebook.id,
+                createdAt = now,
+                modifiedAt = now,
+                isPaginationEnabled = true,
+                pdfPath = uri.toString(),
+                pdfPageCount = pageCount,
+                pdfPageAspectRatio = pageAspectRatio,
+                overrideNotebookSettings = true
+            )
+            db.noteDao().insert(note)
+
+            refreshCurrentFolder()
+            launch(Dispatchers.Main) { onResult(note.id) }
+        }
+    }
+
+    private fun readPdfMetadata(uri: Uri): Pair<Int, Float> {
+        return try {
+            getApplication<Application>().contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                PdfRenderer(pfd).use { renderer ->
+                    val count = renderer.pageCount.coerceAtLeast(1)
+                    val ratio = if (count > 0) {
+                        renderer.openPage(0).use { page ->
+                            if (page.width > 0) page.height.toFloat() / page.width.toFloat()
+                            else 11f / 8.5f
+                        }
+                    } else 11f / 8.5f
+                    Pair(count, ratio)
+                }
+            } ?: Pair(1, 11f / 8.5f)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read PDF metadata", e)
+            Pair(1, 11f / 8.5f)
+        }
     }
 
     fun getMostRecentNoteIdForNotebook(

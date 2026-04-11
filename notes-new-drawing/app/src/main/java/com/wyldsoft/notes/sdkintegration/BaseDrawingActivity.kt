@@ -123,7 +123,10 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                             noteTemplate = PaperTemplate.fromString(note.paperTemplate),
                             overrideNotebook = note.overrideNotebookSettings,
                             notebookPagination = notebook?.isPaginationEnabled ?: false,
-                            notebookTemplate = PaperTemplate.fromString(notebook?.template ?: "BLANK")
+                            notebookTemplate = PaperTemplate.fromString(notebook?.template ?: "BLANK"),
+                            pdfPath = note.pdfPath,
+                            pdfPageCount = note.pdfPageCount,
+                            pdfPageAspectRatio = note.pdfPageAspectRatio
                         )
                     }
                 }
@@ -208,7 +211,10 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                         noteTemplate = PaperTemplate.fromString(note.paperTemplate),
                         overrideNotebook = note.overrideNotebookSettings,
                         notebookPagination = notebook?.isPaginationEnabled ?: false,
-                        notebookTemplate = PaperTemplate.fromString(notebook?.template ?: "BLANK")
+                        notebookTemplate = PaperTemplate.fromString(notebook?.template ?: "BLANK"),
+                        pdfPath = note.pdfPath,
+                        pdfPageCount = note.pdfPageCount,
+                        pdfPageAspectRatio = note.pdfPageAspectRatio
                     )
                 } else {
                     viewportManager.resetViewport()
@@ -262,11 +268,17 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                     val dm = resources.displayMetrics
                     val width = sv?.width?.takeIf { it > 0 } ?: dm.widthPixels
                     val height = sv?.height?.takeIf { it > 0 } ?: dm.heightPixels
-                    paginationManager = PaginationManager(
+                    val pdfAspect = EditorState.pdfPageAspectRatio.value
+                    val aspectRatio = if (pdfAspect > 0) pdfAspect else PaginationManager.DEFAULT_ASPECT_RATIO
+                    val pm = PaginationManager(
                         screenWidthPx = width,
                         screenHeightPx = height,
-                        density = dm.density
+                        density = dm.density,
+                        pageAspectRatio = aspectRatio
                     )
+                    val pdfPageCount = EditorState.pdfPageCount.value
+                    if (pdfPageCount > 1) pm.addPages(pdfPageCount - 1)
+                    paginationManager = pm
                 } else {
                     paginationManager = null
                 }
@@ -292,6 +304,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected open fun onTemplateChanged(template: PaperTemplate) {}
 
     private fun checkLazyPageCreation() {
+        // PDF-backed notes have a fixed page count — do not auto-add pages
+        if (EditorState.pdfPageCount.value > 0) return
         paginationManager?.let { pm ->
             surfaceView?.let { sv ->
                 val viewportHeightInNote = sv.height / viewportManager.scale

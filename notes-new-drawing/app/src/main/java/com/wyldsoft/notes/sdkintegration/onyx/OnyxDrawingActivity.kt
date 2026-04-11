@@ -97,6 +97,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private lateinit var shapeRepo: ShapeRepository
     private lateinit var undoHistoryRepo: UndoHistoryRepository
     private val htrRunManager = HTRRunManager()
+    private var currentPdfPageRenderer: com.wyldsoft.notes.pdf.PdfPageRenderer? = null
 
     // ── Selection state ───────────────────────────────────────────────────────
     private enum class SelectionSubState { DRAWING_LASSO, SELECTED, MOVING, STRETCHING, ROTATING }
@@ -199,6 +200,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         val noteId = intent.getStringExtra("noteId")
         if (noteId != null) setupPipelineForNote(noteId)
         observeUndoRedo()
+        observeExportPdf()
     }
 
     override fun onSwitchNoteSDK(noteId: String) {
@@ -230,6 +232,20 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         )
         shapesLoaded = false
         lifecycleScope.launch(Dispatchers.IO) {
+            // Load note entity to wire up PDF page renderer if this is a PDF-backed note
+            val note = noteRepository?.getById(noteId)
+            val pdfPath = note?.pdfPath
+            if (pdfPath != null) {
+                val uri = android.net.Uri.parse(pdfPath)
+                currentPdfPageRenderer?.close()
+                val renderer = com.wyldsoft.notes.pdf.PdfPageRenderer(this@OnyxDrawingActivity, uri)
+                currentPdfPageRenderer = renderer
+                drawingPipeline.pdfPageRenderer = renderer
+            } else {
+                currentPdfPageRenderer?.close()
+                currentPdfPageRenderer = null
+                drawingPipeline.pdfPageRenderer = null
+            }
             drawingPipeline.loadShapes(noteId)
             actionManager.loadFromDatabase(drawingPipeline)
             shapesLoaded = true
@@ -264,6 +280,55 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 }
             }
         }
+    }
+
+    private fun observeExportPdf() {
+        Log.d(TAG, "observeExportPdf")
+        lifecycleScope.launch {
+            EditorState.exportPdfRequested.collect {
+                val pm = paginationManager ?: run {
+                    Log.w(TAG, "observeExportPdf: no paginationManager, using single-page fallback")
+                    val dm = resources.displayMetrics
+                    val sv = surfaceView
+                    val w = sv?.width?.takeIf { it > 0 } ?: dm.widthPixels
+                    val h = sv?.height?.takeIf { it > 0 } ?: dm.heightPixels
+                    com.wyldsoft.notes.rendering.PaginationManager(w, h, dm.density)
+                }
+                val shapes = drawingPipeline.getShapes()
+                val pdfUriStr = EditorState.pdfPath.value
+                val pdfUri = if (pdfUriStr != null) android.net.Uri.parse(pdfUriStr) else null
+                val noteId = currentNoteId ?: return@collect
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val file = com.wyldsoft.notes.pdf.PdfExporter.export(
+                            context = applicationContext,
+                            noteId = noteId,
+                            pdfUri = pdfUri,
+                            shapes = shapes,
+                            paginationManager = pm
+                        )
+                        launch(Dispatchers.Main) { sharePdfFile(file) }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "PDF export failed", e)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun sharePdfFile(file: java.io.File) {
+        Log.d(TAG, "sharePdfFile: ${file.absolutePath}")
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            this,
+            "${packageName}.fileprovider",
+            file
+        )
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(android.content.Intent.createChooser(intent, "Share PDF"))
     }
 
     private fun onUndoRedoComplete() {
@@ -341,6 +406,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     override fun onPaginationChanged(enabled: Boolean) {
         Log.d(TAG, "onPaginationChanged: $enabled")
         drawingPipeline.paginationManager = paginationManager
+        // Re-wire pdf renderer in case pagination recreated the manager
+        drawingPipeline.pdfPageRenderer = currentPdfPageRenderer
     }
 
     override fun onTemplateChanged(template: PaperTemplate) {

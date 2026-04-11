@@ -12,6 +12,7 @@ import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.data.database.repository.ShapeRepository
 import com.wyldsoft.notes.data.mappers.ShapeMapper
 import com.wyldsoft.notes.models.PaperTemplate
+import com.wyldsoft.notes.pdf.PdfPageRenderer
 import com.wyldsoft.notes.pen.PenProfile
 import com.wyldsoft.notes.pen.PenType
 import com.wyldsoft.notes.shapemanagement.EraseManager
@@ -40,6 +41,7 @@ class DrawingPipeline(
     private val drawnShapes = mutableListOf<Shape>()
     private val eraseManager = EraseManager()
     var paginationManager: PaginationManager? = null
+    var pdfPageRenderer: PdfPageRenderer? = null
     var currentTemplate: PaperTemplate = PaperTemplate.BLANK
     private val templateRenderer = TemplateRenderer()
 
@@ -199,6 +201,23 @@ class DrawingPipeline(
             }
         }
         templateRenderer.drawTemplate(canvas, currentTemplate, viewportManager, width, height, pageRects)
+
+        // Draw PDF page backgrounds on top of the template (PDF-backed notes only)
+        pdfPageRenderer?.let { renderer ->
+            paginationManager?.let { pm ->
+                for (i in 0 until pm.pageCount) {
+                    val pageTopVp = viewportManager.noteToViewportY(pm.pageTopY(i))
+                    val pageBottomVp = viewportManager.noteToViewportY(pm.pageBottomY(i))
+                    if (pageBottomVp <= 0 || pageTopVp >= height) continue
+                    val pageWidthVp = (pm.pageWidth * viewportManager.scale).toInt().coerceAtLeast(1)
+                    val pageHeightVp = (pageBottomVp - pageTopVp).toInt().coerceAtLeast(1)
+                    val pageBitmap = renderer.getPageBitmap(i, pageWidthVp, pageHeightVp)
+                    if (pageBitmap != null && !pageBitmap.isRecycled) {
+                        canvas.drawBitmap(pageBitmap, 0f, pageTopVp, null)
+                    }
+                }
+            }
+        }
 
         val renderContext = RenderContext.createForBitmap(bmp, canvas)
 

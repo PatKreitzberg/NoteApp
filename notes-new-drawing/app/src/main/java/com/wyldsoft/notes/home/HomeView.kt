@@ -17,6 +17,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,6 +50,7 @@ fun HomeView(
     onSignInClick: () -> Unit,
     onSignOutClick: () -> Unit,
     onOpenNotebook: (notebookId: String) -> Unit,
+    onImportPdf: () -> Unit,
     defaultPaginationEnabled: Boolean,
     onDefaultPaginationChanged: (Boolean) -> Unit,
     gestureMappings: Map<String, GestureAction>,
@@ -200,6 +202,12 @@ fun HomeView(
                 style = MaterialTheme.typography.h6
             )
             if (!isInTrash) {
+                IconButton(onClick = { onImportPdf() }) {
+                    Icon(
+                        imageVector = Icons.Default.Description,
+                        contentDescription = "Import PDF"
+                    )
+                }
                 IconButton(onClick = { showCreateNotebookDialog = true }) {
                     Icon(
                         imageVector = Icons.Default.Add,

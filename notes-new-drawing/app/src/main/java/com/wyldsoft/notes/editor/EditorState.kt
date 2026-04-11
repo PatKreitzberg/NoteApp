@@ -37,6 +37,24 @@ class EditorState {
         private val _dismissSettings = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val dismissSettings = _dismissSettings.asSharedFlow()
 
+        // PDF metadata for the currently open note
+        private val _pdfPath = MutableStateFlow<String?>(null)
+        val pdfPath: StateFlow<String?> = _pdfPath.asStateFlow()
+
+        private val _pdfPageCount = MutableStateFlow(0)
+        val pdfPageCount: StateFlow<Int> = _pdfPageCount.asStateFlow()
+
+        private val _pdfPageAspectRatio = MutableStateFlow(0f)
+        val pdfPageAspectRatio: StateFlow<Float> = _pdfPageAspectRatio.asStateFlow()
+
+        private val _exportPdfRequested = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val exportPdfRequested = _exportPdfRequested.asSharedFlow()
+
+        fun requestExportPdf() {
+            Log.d(TAG, "requestExportPdf")
+            _exportPdfRequested.tryEmit(Unit)
+        }
+
         private val _canUndo = MutableStateFlow(false)
         val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
         private val _canRedo = MutableStateFlow(false)
@@ -165,9 +183,16 @@ class EditorState {
             noteTemplate: PaperTemplate,
             overrideNotebook: Boolean,
             notebookPagination: Boolean,
-            notebookTemplate: PaperTemplate
+            notebookTemplate: PaperTemplate,
+            pdfPath: String? = null,
+            pdfPageCount: Int = 0,
+            pdfPageAspectRatio: Float = 0f
         ) {
-            Log.d(TAG, "loadNoteAndNotebookSettings")
+            Log.d(TAG, "loadNoteAndNotebookSettings pdfPath=$pdfPath pdfPageCount=$pdfPageCount")
+            // Set PDF data before updateEffectiveSettings so pagination observer can read it
+            _pdfPath.value = pdfPath
+            _pdfPageCount.value = pdfPageCount
+            _pdfPageAspectRatio.value = pdfPageAspectRatio
             _notePaginationEnabled.value = notePagination
             _noteTemplate.value = noteTemplate
             _overrideNotebookSettings.value = overrideNotebook

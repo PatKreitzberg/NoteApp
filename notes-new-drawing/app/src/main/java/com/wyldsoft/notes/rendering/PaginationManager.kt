@@ -14,17 +14,18 @@ import android.util.Log
 class PaginationManager(
     private val screenWidthPx: Int,
     private val screenHeightPx: Int,
-    private val density: Float
+    private val density: Float,
+    pageAspectRatio: Float = DEFAULT_ASPECT_RATIO
 ) {
     private val TAG = "PaginationManager"
 
     companion object {
         private const val GAP_DP = 40f
-        private const val PAGE_ASPECT_RATIO = 11.0f / 8.5f
+        const val DEFAULT_ASPECT_RATIO = 11.0f / 8.5f
     }
 
     val pageWidth: Float = screenWidthPx.toFloat()
-    val pageHeight: Float = pageWidth * PAGE_ASPECT_RATIO
+    val pageHeight: Float = pageWidth * pageAspectRatio
     val gapPx: Float = GAP_DP * density
 
     var pageCount: Int = 1

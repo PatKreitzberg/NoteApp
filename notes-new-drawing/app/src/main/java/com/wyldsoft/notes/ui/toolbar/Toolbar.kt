@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Icon
@@ -273,6 +274,17 @@ fun Toolbar(
             Icon(
                 imageVector = Icons.Default.Redo,
                 contentDescription = "Redo",
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        IconButton(onClick = {
+            Log.d(TAG, "Export PDF button clicked")
+            EditorState.requestExportPdf()
+        }) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = "Export PDF",
                 modifier = Modifier.size(24.dp)
             )
         }

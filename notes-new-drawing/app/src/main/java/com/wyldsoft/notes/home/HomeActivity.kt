@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import android.provider.OpenableColumns
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
@@ -51,6 +52,22 @@ class HomeActivity : ComponentActivity() {
         }
     }
 
+    private val pdfPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) {
+            Log.d(TAG, "pdfPickerLauncher: user cancelled")
+            return@registerForActivityResult
+        }
+        Log.d(TAG, "pdfPickerLauncher uri=$uri")
+        // Take persistent read permission so we can re-open this file in future sessions
+        contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val displayName = resolveDisplayName(uri)
+        viewModel.importPdf(uri, displayName) { noteId ->
+            openNoteAsPdf(noteId)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate")
@@ -83,6 +100,7 @@ class HomeActivity : ComponentActivity() {
                             }
                         },
                         onOpenNotebook = { notebookId -> openNotebook(notebookId) },
+                        onImportPdf = { pdfPickerLauncher.launch(arrayOf("application/pdf")) },
                         defaultPaginationEnabled = defaultPagination,
                         onDefaultPaginationChanged = { enabled ->
                             appSettings.defaultPaginationEnabled = enabled
@@ -121,6 +139,28 @@ class HomeActivity : ComponentActivity() {
             } else {
                 Log.e(TAG, "No notes found for notebook $notebookId")
             }
+        }
+    }
+
+    private fun openNoteAsPdf(noteId: String) {
+        Log.d(TAG, "openNoteAsPdf noteId=$noteId")
+        val intent = Intent(this, MainActivity::class.java).apply {
+            putExtra("noteId", noteId)
+        }
+        startActivity(intent)
+    }
+
+    private fun resolveDisplayName(uri: android.net.Uri): String {
+        return try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                        .removeSuffix(".pdf")
+                } else null
+            } ?: uri.lastPathSegment ?: "Imported PDF"
+        } catch (e: Exception) {
+            Log.e(TAG, "resolveDisplayName failed", e)
+            "Imported PDF"
         }
     }
 }
