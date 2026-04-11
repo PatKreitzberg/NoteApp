@@ -91,6 +91,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     abstract fun cleanSurfaceView(surfaceView: SurfaceView): Boolean
     abstract fun renderToScreen(surfaceView: SurfaceView, bitmap: Bitmap?)
 
+    open fun onSearchQueryChanged(query: String) {}  // overridden by OnyxDrawingActivity
+
     // Template methods - common implementation for all SDKs
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate()")
@@ -105,6 +107,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         noteRepository = NoteRepository(db.noteDao())
         notebookRepository = NotebookRepository(db.notebookDao(), db.noteDao())
 
+        val initialScrollY = intent.getFloatExtra("initialScrollY", 0f)
+
         // Restore viewport state and settings from the note if available
         currentNoteId?.let { noteId ->
             lifecycleScope.launch(Dispatchers.IO) {
@@ -118,6 +122,9 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                             note.viewportScrollX,
                             note.viewportScrollY
                         )
+                        if (initialScrollY > 0f) {
+                            viewportManager.scrollToY(initialScrollY)
+                        }
                         EditorState.loadNoteAndNotebookSettings(
                             notePagination = note.isPaginationEnabled,
                             noteTemplate = PaperTemplate.fromString(note.paperTemplate),
@@ -150,6 +157,9 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                         resetViewport = {
                             viewportManager.resetViewport()
                             forceScreenRefresh()
+                        },
+                        onSearchQueryChanged = { query ->
+                            onSearchQueryChanged(query)
                         }
                     )
                 }

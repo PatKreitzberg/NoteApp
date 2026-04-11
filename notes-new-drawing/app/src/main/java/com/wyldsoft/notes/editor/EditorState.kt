@@ -2,6 +2,7 @@ package com.wyldsoft.notes.editor
 
 import android.annotation.SuppressLint
 import android.graphics.Rect
+import android.graphics.RectF
 import android.util.Log
 import com.wyldsoft.notes.data.database.entities.LayerEntity
 import com.wyldsoft.notes.geometry.GeometryShapeType
@@ -15,6 +16,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+data class SearchHit(
+    val text: String,
+    val boundingBox: RectF   // note-space coordinates
+)
 
 /**
  * Global event bus for drawing lifecycle and UI state, using SharedFlows.
@@ -379,6 +385,68 @@ class EditorState {
         fun requestToggleLayerVisibility(layer: LayerEntity) {
             Log.d(TAG, "requestToggleLayerVisibility layerId=${layer.id}")
             _toggleLayerVisibilityRequested.tryEmit(layer)
+        }
+
+        // ── In-note search state ───────────────────────────────────────────────
+        private val _isSearchActive = MutableStateFlow(false)
+        val isSearchActive: StateFlow<Boolean> = _isSearchActive.asStateFlow()
+
+        private val _searchHits = MutableStateFlow<List<SearchHit>>(emptyList())
+        val searchHits: StateFlow<List<SearchHit>> = _searchHits.asStateFlow()
+
+        private val _searchIndex = MutableStateFlow(0)
+        val searchIndex: StateFlow<Int> = _searchIndex.asStateFlow()
+
+        // Emitted when search navigation requests a viewport scroll + highlight
+        private val _navigateToSearchHit = MutableSharedFlow<SearchHit>(extraBufferCapacity = 1)
+        val navigateToSearchHit = _navigateToSearchHit.asSharedFlow()
+
+        fun activateSearch() {
+            Log.d(TAG, "activateSearch")
+            _isSearchActive.value = true
+            _searchHits.value = emptyList()
+            _searchIndex.value = 0
+        }
+
+        fun deactivateSearch() {
+            Log.d(TAG, "deactivateSearch")
+            _isSearchActive.value = false
+            _searchHits.value = emptyList()
+            _searchIndex.value = 0
+        }
+
+        fun setSearchHits(hits: List<SearchHit>) {
+            Log.d(TAG, "setSearchHits count=${hits.size}")
+            _searchHits.value = hits
+            _searchIndex.value = 0
+            if (hits.isNotEmpty()) _navigateToSearchHit.tryEmit(hits[0])
+        }
+
+        fun navigateSearchNext() {
+            Log.d(TAG, "navigateSearchNext")
+            val hits = _searchHits.value
+            if (hits.isEmpty()) return
+            val next = (_searchIndex.value + 1) % hits.size
+            _searchIndex.value = next
+            _navigateToSearchHit.tryEmit(hits[next])
+        }
+
+        fun navigateSearchPrev() {
+            Log.d(TAG, "navigateSearchPrev")
+            val hits = _searchHits.value
+            if (hits.isEmpty()) return
+            val prev = (_searchIndex.value - 1 + hits.size) % hits.size
+            _searchIndex.value = prev
+            _navigateToSearchHit.tryEmit(hits[prev])
+        }
+
+        // Note-space bounding rect of the current search hit, drawn as a highlight overlay.
+        // Set by BaseDrawingActivity after navigating; cleared after 2 seconds.
+        private val _searchHighlightNoteRect = MutableStateFlow<RectF?>(null)
+        val searchHighlightNoteRect: StateFlow<RectF?> = _searchHighlightNoteRect.asStateFlow()
+
+        fun setSearchHighlight(rect: RectF?) {
+            _searchHighlightNoteRect.value = rect
         }
     }
 }

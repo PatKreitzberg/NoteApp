@@ -1,33 +1,49 @@
 package com.wyldsoft.notes.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.gestures.GestureAction
@@ -50,6 +66,7 @@ fun HomeView(
     onSignInClick: () -> Unit,
     onSignOutClick: () -> Unit,
     onOpenNotebook: (notebookId: String) -> Unit,
+    onOpenNotebookAtNote: (notebookId: String, noteId: String, scrollY: Float) -> Unit = { _, _, _ -> },
     onImportPdf: () -> Unit,
     defaultPaginationEnabled: Boolean,
     onDefaultPaginationChanged: (Boolean) -> Unit,
@@ -65,10 +82,13 @@ fun HomeView(
     val syncUiState by syncViewModel.syncUiState.collectAsState()
     val allFolders by viewModel.allFolders.collectAsState()
     val isInTrash = uiState.currentFolderId == FolderEntity.TRASH_ID
+    val searchResults by viewModel.searchResults.collectAsState()
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showCreateNotebookDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     // Rename state
     var renameFolderTarget by remember { mutableStateOf<FolderEntity?>(null) }
@@ -94,7 +114,7 @@ fun HomeView(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Top bar: breadcrumbs + settings button
+        // Top bar: breadcrumbs + search + settings buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -105,11 +125,43 @@ fun HomeView(
                 onFolderClick = { folderId -> viewModel.navigateToFolder(folderId) },
                 modifier = Modifier.weight(1f)
             )
+            IconButton(onClick = {
+                isSearchActive = true
+                searchQuery = ""
+                viewModel.search("")
+            }) {
+                Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
+            }
             IconButton(onClick = { showSettingsDialog = true }) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings"
+                Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
+            }
+        }
+
+        // Search bar (shown when search is active)
+        if (isSearchActive) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { q ->
+                        searchQuery = q
+                        viewModel.search(q)
+                    },
+                    placeholder = { Text("Search all notes...") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { viewModel.search(searchQuery) })
                 )
+                IconButton(onClick = {
+                    isSearchActive = false
+                    searchQuery = ""
+                    viewModel.search("")
+                }) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close search")
+                }
             }
         }
 
@@ -122,6 +174,31 @@ fun HomeView(
             onSyncNowClick = { syncViewModel.triggerSync() }
         )
         Divider()
+
+        // Show search results when search is active with a query; otherwise show folders/notebooks
+        if (isSearchActive && searchQuery.isNotBlank()) {
+            if (searchResults.isEmpty()) {
+                Text(
+                    text = "No results for \"$searchQuery\"",
+                    style = MaterialTheme.typography.body2,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(searchResults) { result ->
+                        HomeSearchResultItem(
+                            result = result,
+                            query = searchQuery,
+                            onClick = {
+                                onOpenNotebookAtNote(result.notebookId, result.noteId, result.boundingTop)
+                            }
+                        )
+                        Divider()
+                    }
+                }
+            }
+        } else {
 
         // Folders section header
         Row(
@@ -202,17 +279,19 @@ fun HomeView(
                 style = MaterialTheme.typography.h6
             )
             if (!isInTrash) {
-                IconButton(onClick = { onImportPdf() }) {
-                    Icon(
-                        imageVector = Icons.Default.Description,
-                        contentDescription = "Import PDF"
-                    )
-                }
-                IconButton(onClick = { showCreateNotebookDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Create notebook"
-                    )
+                Row() {
+                    IconButton(onClick = { onImportPdf() }) {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = "Import PDF"
+                        )
+                    }
+                    IconButton(onClick = { showCreateNotebookDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Create notebook"
+                        )
+                    }
                 }
             }
         }
@@ -245,6 +324,7 @@ fun HomeView(
                 }
             }
         }
+        } // end else (not showing search results)
     }
 
     // Dialogs
@@ -330,5 +410,53 @@ fun HomeView(
             },
             onDismiss = { moveNotebookTarget = null }
         )
+    }
+}
+
+@Composable
+private fun HomeSearchResultItem(
+    result: HomeSearchResult,
+    query: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 10.dp)
+    ) {
+        Text(
+            text = result.notebookName,
+            style = MaterialTheme.typography.subtitle2,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        val snippet = buildSnippet(result.matchText, query)
+        Text(
+            text = snippet,
+            style = MaterialTheme.typography.body2,
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.8f)
+        )
+    }
+}
+
+private fun buildSnippet(matchText: String, query: String): androidx.compose.ui.text.AnnotatedString {
+    val lower = matchText.lowercase()
+    val queryLower = query.lowercase()
+    val idx = lower.indexOf(queryLower)
+    return buildAnnotatedString {
+        if (idx < 0) {
+            append(matchText.take(80))
+        } else {
+            val start = maxOf(0, idx - 20)
+            val end = minOf(matchText.length, idx + query.length + 40)
+            if (start > 0) append("...")
+            append(matchText.substring(start, idx))
+            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                append(matchText.substring(idx, idx + query.length))
+            }
+            append(matchText.substring(idx + query.length, end))
+            if (end < matchText.length) append("...")
+        }
     }
 }

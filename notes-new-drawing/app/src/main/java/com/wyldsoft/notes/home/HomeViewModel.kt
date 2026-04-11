@@ -19,6 +19,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class HomeSearchResult(
+    val notebookId: String,
+    val notebookName: String,
+    val noteId: String,
+    val matchText: String,
+    val boundingTop: Float
+)
+
 data class HomeUiState(
     val currentFolderId: String = FolderEntity.ROOT_ID,
     val breadcrumbs: List<FolderEntity> = emptyList(),
@@ -191,6 +199,66 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to read PDF metadata", e)
             Pair(1, 11f / 8.5f)
+        }
+    }
+
+    private val _searchResults = MutableStateFlow<List<HomeSearchResult>>(emptyList())
+    val searchResults: StateFlow<List<HomeSearchResult>> = _searchResults.asStateFlow()
+
+    fun search(query: String) {
+        Log.d(TAG, "search query='$query'")
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val results = mutableListOf<HomeSearchResult>()
+
+            // HTR results across all non-trash notes
+            val htrRows = db.htrResultDao().searchAcrossNotes(query)
+            for (row in htrRows) {
+                // noteId from htr row — get the parent note for the notebook's noteId mapping
+                results.add(
+                    HomeSearchResult(
+                        notebookId = row.notebookId,
+                        notebookName = row.notebookName,
+                        noteId = row.noteId,
+                        matchText = row.text,
+                        boundingTop = row.boundingTop
+                    )
+                )
+            }
+
+            // TextShapes across all non-trash notes
+            val textRows = db.shapeDao().searchTextShapes(query)
+            for (row in textRows) {
+                // Compute boundingTop from first point in the points JSON
+                val top = extractFirstPointY(row.points)
+                results.add(
+                    HomeSearchResult(
+                        notebookId = row.notebookId,
+                        notebookName = row.notebookName,
+                        noteId = row.noteId,
+                        matchText = row.text ?: "",
+                        boundingTop = top
+                    )
+                )
+            }
+
+            _searchResults.value = results.sortedBy { it.notebookName }
+        }
+    }
+
+    private fun extractFirstPointY(pointsJson: String): Float {
+        return try {
+            // Points are stored as [[x,y], [x,y], ...] or similar JSON
+            val arr = org.json.JSONArray(pointsJson)
+            if (arr.length() > 0) {
+                val first = arr.getJSONArray(0)
+                first.getDouble(1).toFloat()
+            } else 0f
+        } catch (e: Exception) {
+            0f
         }
     }
 

@@ -32,4 +32,16 @@ interface ShapeDao {
 
     @Query("DELETE FROM shapes WHERE noteId = :noteId AND layer = :layerPosition")
     suspend fun deleteShapesForNoteAndLayer(noteId: String, layerPosition: Int)
+
+    @Query("""
+        SELECT s.id AS shapeId, s.noteId, s.text, s.points,
+               n.id AS notebookId, n.name AS notebookName
+        FROM shapes s
+        JOIN notes note ON s.noteId = note.id
+        JOIN notebooks n ON note.parentNotebookId = n.id
+        WHERE s.text LIKE '%' || :query || '%'
+          AND s.type = '6'
+          AND n.folderId != 'trash'
+    """)
+    suspend fun searchTextShapes(query: String): List<TextShapeSearchRow>
 }

@@ -9,30 +9,41 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wyldsoft.notes.editor.AppMode
@@ -58,7 +69,8 @@ fun Toolbar(
     onGeometryExpandedChange: (Boolean) -> Unit,
     layerPanelExpanded: Boolean,
     onLayerPanelExpandedChange: (Boolean) -> Unit,
-    resetViewport: () -> Unit = {}
+    resetViewport: () -> Unit = {},
+    onSearchQueryChanged: (String) -> Unit = {}
 ) {
     LaunchedEffect(Unit) {
         EditorState.dismissSettings.collect {
@@ -70,6 +82,27 @@ fun Toolbar(
             onLayerPanelExpandedChange(false)
             EditorState.setMode(AppMode.DRAWING)
         }
+    }
+
+    val isSearchActive by EditorState.isSearchActive.collectAsState()
+    val searchHits by EditorState.searchHits.collectAsState()
+    val searchIndex by EditorState.searchIndex.collectAsState()
+
+    if (isSearchActive) {
+        SearchToolbar(
+            searchHits = searchHits,
+            searchIndex = searchIndex,
+            onQueryChanged = { query ->
+                onSearchQueryChanged(query)
+            },
+            onPrev = { EditorState.navigateSearchPrev() },
+            onNext = { EditorState.navigateSearchNext() },
+            onClose = {
+                EditorState.deactivateSearch()
+                EditorState.setMode(AppMode.DRAWING)
+            }
+        )
+        return
     }
 
     val penProfiles = EditorState.penProfiles.map { it.collectAsState().value }
@@ -293,6 +326,22 @@ fun Toolbar(
             )
         }
 
+        LayerButton(
+            layerPanelExpanded = layerPanelExpanded,
+            onTogglePanel = {
+                Log.d(TAG, "LayerButton toggle layerPanelExpanded=$layerPanelExpanded")
+                if (!layerPanelExpanded) {
+                    onLayerPanelExpandedChange(true)
+                    onExpandedChange(false)
+                    onSettingsExpandedChange(false)
+                    EditorState.setMode(AppMode.SETTINGS)
+                } else {
+                    onLayerPanelExpandedChange(false)
+                    EditorState.setMode(AppMode.DRAWING)
+                }
+            }
+        )
+
         IconButton(onClick = {
             Log.d(TAG, "Settings button clicked, settingsExpanded=$settingsExpanded")
             if (!settingsExpanded) {
@@ -311,20 +360,99 @@ fun Toolbar(
             )
         }
 
-        LayerButton(
-            layerPanelExpanded = layerPanelExpanded,
-            onTogglePanel = {
-                Log.d(TAG, "LayerButton toggle layerPanelExpanded=$layerPanelExpanded")
-                if (!layerPanelExpanded) {
-                    onLayerPanelExpandedChange(true)
-                    onExpandedChange(false)
-                    onSettingsExpandedChange(false)
-                    EditorState.setMode(AppMode.SETTINGS)
-                } else {
-                    onLayerPanelExpandedChange(false)
-                    EditorState.setMode(AppMode.DRAWING)
-                }
-            }
+        IconButton(onClick = {
+            Log.d(TAG, "Search button clicked")
+            EditorState.activateSearch()
+            EditorState.setMode(AppMode.SETTINGS)
+        }) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchToolbar(
+    searchHits: List<com.wyldsoft.notes.editor.SearchHit>,
+    searchIndex: Int,
+    onQueryChanged: (String) -> Unit,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    onClose: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .border(1.dp, Color.Black)
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { newQuery ->
+                query = newQuery
+                onQueryChanged(newQuery)
+            },
+            placeholder = { Text("Search...", fontSize = 13.sp) },
+            singleLine = true,
+            modifier = Modifier.weight(1f).height(44.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onQueryChanged(query) }),
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
         )
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        val hitCount = searchHits.size
+        if (hitCount > 0) {
+            Text(
+                text = "${searchIndex + 1} / $hitCount",
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+        } else if (query.isNotBlank()) {
+            Text(
+                text = "No results",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+        }
+
+        IconButton(onClick = onPrev, enabled = hitCount > 1, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.Default.ArrowUpward,
+                contentDescription = "Previous hit",
+                modifier = Modifier.size(20.dp),
+                tint = if (hitCount > 1) Color.Black else Color.LightGray
+            )
+        }
+
+        IconButton(onClick = onNext, enabled = hitCount > 1, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.Default.ArrowDownward,
+                contentDescription = "Next hit",
+                modifier = Modifier.size(20.dp),
+                tint = if (hitCount > 1) Color.Black else Color.LightGray
+            )
+        }
+
+        IconButton(onClick = onClose, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close search",
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }

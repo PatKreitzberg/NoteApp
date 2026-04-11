@@ -22,7 +22,8 @@ import com.wyldsoft.notes.ui.toolbar.Toolbar
 fun EditorView(
     onSurfaceViewCreated: (android.view.SurfaceView) -> Unit = {},
     gestureLabel: MutableState<String> = remember { mutableStateOf("") },
-    resetViewport: () -> Unit = {}
+    resetViewport: () -> Unit = {},
+    onSearchQueryChanged: (String) -> Unit = {}
 ) {
     remember { EditorState() }
 
@@ -54,7 +55,8 @@ fun EditorView(
                 onGeometryExpandedChange = { geometryExpanded = it },
                 layerPanelExpanded = layerPanelExpanded,
                 onLayerPanelExpandedChange = { layerPanelExpanded = it },
-                resetViewport = { resetViewport() }
+                resetViewport = { resetViewport() },
+                onSearchQueryChanged = onSearchQueryChanged
             )
 
             DrawingCanvas(

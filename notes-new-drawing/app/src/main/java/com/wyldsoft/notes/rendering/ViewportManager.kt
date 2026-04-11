@@ -206,6 +206,16 @@ class ViewportManager {
      * Handle a pinch-to-zoom gesture. Zooms around the pinch center so that
      * the note-space point under the pinch center stays visually fixed.
      */
+    /**
+     * Scroll the viewport so the given note-space Y coordinate is near the top of the screen.
+     * Used by search navigation to jump to a matching shape.
+     */
+    fun scrollToY(targetY: Float) {
+        Log.d(TAG, "scrollToY targetY=$targetY")
+        scrollY = targetY.coerceAtLeast(0f)
+        if (paginationEnabled) scrollX = 0f
+    }
+
     fun handlePinchMove(centerX: Float, centerY: Float, scaleFactor: Float) {
         // Note-space point under the pinch center BEFORE scale change
         val anchorNoteX = centerX / scale + scrollX

@@ -58,6 +58,7 @@ import kotlin.math.hypot
 import kotlin.math.sqrt
 import com.onyx.android.sdk.api.device.epd.EpdController
 import com.onyx.android.sdk.api.device.epd.UpdateMode
+import com.wyldsoft.notes.data.database.repository.HtrResultRepository
 import com.wyldsoft.notes.htr.HTRRunManager
 import com.wyldsoft.notes.htr.ShapeGeometryUtils
 import com.wyldsoft.notes.utils.copyWith
@@ -98,7 +99,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var shapesLoaded = false
     private lateinit var shapeRepo: ShapeRepository
     private lateinit var undoHistoryRepo: UndoHistoryRepository
-    private val htrRunManager = HTRRunManager()
+    private lateinit var htrRunManager: HTRRunManager
     private var currentPdfPageRenderer: com.wyldsoft.notes.pdf.PdfPageRenderer? = null
     private lateinit var layerRepo: LayerRepository
     private lateinit var layerManager: LayerManager
@@ -212,6 +213,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         isAntiAlias = true
     }
 
+    private val searchHighlightPaint = Paint().apply {
+        color = Color.argb(200, 255, 200, 0)   // semi-transparent yellow
+        style = Paint.Style.STROKE
+        strokeWidth = 8f
+        isAntiAlias = true
+    }
+
     // ── Geometry state ────────────────────────────────────────────────────────
     private var geometryStartPoint: com.onyx.android.sdk.data.note.TouchPoint? = null
     private var geometrySnapshotBitmap: Bitmap? = null
@@ -225,11 +233,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         undoHistoryRepo = UndoHistoryRepository(db.undoHistoryDao())
         layerRepo = LayerRepository(db.layerDao())
         layerManager = LayerManager(layerRepo, shapeRepo)
+        htrRunManager = HTRRunManager(htrResultRepository = HtrResultRepository(db.htrResultDao()))
         val noteId = intent.getStringExtra("noteId")
         if (noteId != null) setupPipelineForNote(noteId)
         observeUndoRedo()
         observeExportPdf()
         observeLayerOperations()
+        observeSearchNavigation()
     }
 
     override fun onSwitchNoteSDK(noteId: String) {
@@ -393,6 +403,89 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 val updatedLayers = layerManager.loadLayersForNote(noteId)
                 EditorState.setLayers(updatedLayers)
                 withContext(Dispatchers.Main) { forceScreenRefresh() }
+            }
+        }
+    }
+
+    private fun observeSearchNavigation() {
+        Log.d(TAG, "observeSearchNavigation")
+        lifecycleScope.launch {
+            EditorState.navigateToSearchHit.collect { hit ->
+                val padding = 80f
+                viewportManager.scrollToY((hit.boundingBox.top - padding).coerceAtLeast(0f))
+                EditorState.setSearchHighlight(hit.boundingBox)
+                withContext(Dispatchers.Main) { forceScreenRefresh() }
+                // Clear highlight after 2 seconds
+                launch {
+                    kotlinx.coroutines.delay(2000)
+                    EditorState.setSearchHighlight(null)
+                    withContext(Dispatchers.Main) { forceScreenRefresh() }
+                }
+            }
+        }
+    }
+
+    override fun onSearchQueryChanged(query: String) {
+        Log.d(TAG, "onSearchQueryChanged query='$query'")
+        executeSearch(query)
+    }
+
+    fun executeSearch(query: String) {
+        Log.d(TAG, "executeSearch query='$query'")
+        val noteId = EditorState.currentNoteId ?: return
+        val db = (application as ScrotesApp).database
+        val htrRepo = HtrResultRepository(db.htrResultDao())
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val hits = mutableListOf<com.wyldsoft.notes.editor.SearchHit>()
+
+            // HTR results from DB
+            if (query.isNotBlank()) {
+                val htrResults = htrRepo.getByNoteId(noteId)
+                    .filter { it.text.contains(query, ignoreCase = true) }
+                for (result in htrResults) {
+                    hits.add(
+                        com.wyldsoft.notes.editor.SearchHit(
+                            text = result.text,
+                            boundingBox = android.graphics.RectF(
+                                result.boundingLeft, result.boundingTop,
+                                result.boundingRight, result.boundingBottom
+                            )
+                        )
+                    )
+                }
+
+                // TextShapes from in-memory pipeline
+                val textShapes = drawingPipeline.getShapes()
+                    .filterIsInstance<com.wyldsoft.notes.shapemanagement.shapes.TextShape>()
+                    .filter { it.text.contains(query, ignoreCase = true) }
+                for (shape in textShapes) {
+                    val pts = shape.touchPointList?.points?.filterNotNull() ?: continue
+                    if (pts.isEmpty()) continue
+                    var left = pts[0].x; var top = pts[0].y
+                    var right = left; var bottom = top
+                    for (p in pts) {
+                        if (p.x < left) left = p.x
+                        if (p.y < top) top = p.y
+                        if (p.x > right) right = p.x
+                        if (p.y > bottom) bottom = p.y
+                    }
+                    // Ensure minimum hit rect height for legible text
+                    if (bottom - top < 40f) bottom = top + 40f
+                    if (right - left < 40f) right = left + 40f
+                    hits.add(
+                        com.wyldsoft.notes.editor.SearchHit(
+                            text = shape.text,
+                            boundingBox = android.graphics.RectF(left, top, right, bottom)
+                        )
+                    )
+                }
+            }
+
+            // Sort by Y position (top of bounding box)
+            hits.sortBy { it.boundingBox.top }
+            withContext(Dispatchers.Main) {
+                EditorState.setSearchHits(hits)
             }
         }
     }
@@ -741,6 +834,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
             bitmap = state.bitmap
             bitmapCanvas = state.canvas
+
+            // Draw search highlight rect on the bitmap if active
+            val highlightNoteRect = EditorState.searchHighlightNoteRect.value
+            if (highlightNoteRect != null) {
+                val vpRect = viewportManager.noteToViewport(highlightNoteRect)
+                bitmapCanvas?.drawRect(vpRect, searchHighlightPaint)
+            }
 
             EpdController.enablePost(sv, 1)
             bitmap?.let { renderToScreen(sv, it) }

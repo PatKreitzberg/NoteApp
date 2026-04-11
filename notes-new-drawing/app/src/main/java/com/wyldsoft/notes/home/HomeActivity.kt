@@ -100,6 +100,9 @@ class HomeActivity : ComponentActivity() {
                             }
                         },
                         onOpenNotebook = { notebookId -> openNotebook(notebookId) },
+                        onOpenNotebookAtNote = { notebookId, noteId, scrollY ->
+                            openNotebookAtNote(notebookId, noteId, scrollY)
+                        },
                         onImportPdf = { pdfPickerLauncher.launch(arrayOf("application/pdf")) },
                         defaultPaginationEnabled = defaultPagination,
                         onDefaultPaginationChanged = { enabled ->
@@ -140,6 +143,16 @@ class HomeActivity : ComponentActivity() {
                 Log.e(TAG, "No notes found for notebook $notebookId")
             }
         }
+    }
+
+    private fun openNotebookAtNote(notebookId: String, noteId: String, scrollY: Float) {
+        Log.d(TAG, "openNotebookAtNote notebookId=$notebookId noteId=$noteId scrollY=$scrollY")
+        val intent = Intent(this, MainActivity::class.java).apply {
+            putExtra("noteId", noteId)
+            putExtra("notebookId", notebookId)
+            putExtra("initialScrollY", scrollY)
+        }
+        startActivity(intent)
     }
 
     private fun openNoteAsPdf(noteId: String) {
