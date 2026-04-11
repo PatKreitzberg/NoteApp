@@ -13,6 +13,11 @@ import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.repository.FolderRepository
 import com.wyldsoft.notes.data.database.repository.NotebookRepository
+import com.wyldsoft.notes.data.mappers.ShapeMapper
+import com.wyldsoft.notes.models.PaperTemplate
+import com.wyldsoft.notes.pdf.NoteExportData
+import com.wyldsoft.notes.pdf.PdfExporter
+import com.wyldsoft.notes.rendering.PaginationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +31,13 @@ data class HomeSearchResult(
     val matchText: String,
     val boundingTop: Float
 )
+
+sealed class NotebookExportState {
+    object Idle : NotebookExportState()
+    object InProgress : NotebookExportState()
+    data class Done(val file: java.io.File) : NotebookExportState()
+    data class Error(val message: String) : NotebookExportState()
+}
 
 data class HomeUiState(
     val currentFolderId: String = FolderEntity.ROOT_ID,
@@ -51,6 +63,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     // All non-trash folders for the move dialog
     private val _allFolders = MutableStateFlow<List<FolderEntity>>(emptyList())
     val allFolders: StateFlow<List<FolderEntity>> = _allFolders.asStateFlow()
+
+    private val _notebookExportState = MutableStateFlow<NotebookExportState>(NotebookExportState.Idle)
+    val notebookExportState: StateFlow<NotebookExportState> = _notebookExportState.asStateFlow()
 
     init {
         navigateToFolder(FolderEntity.ROOT_ID)
@@ -285,6 +300,56 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 it.id != FolderEntity.TRASH_ID && it.id != FolderEntity.ROOT_ID
             }
         }
+    }
+
+    fun startNotebookExport(notebookId: String) {
+        Log.d(TAG, "startNotebookExport notebookId=$notebookId")
+        viewModelScope.launch(Dispatchers.IO) {
+            _notebookExportState.value = NotebookExportState.InProgress
+            try {
+                val context = getApplication<Application>()
+                val dm = context.resources.displayMetrics
+
+                val notebook = db.notebookDao().getById(notebookId)
+                    ?: throw Exception("Notebook not found")
+                val notes = db.noteDao().getByNotebook(notebookId)
+                if (notes.isEmpty()) throw Exception("No notes in notebook")
+
+                val notesData = notes.map { note ->
+                    val effectiveTemplate = if (note.overrideNotebookSettings) {
+                        runCatching { PaperTemplate.valueOf(note.paperTemplate) }.getOrDefault(PaperTemplate.BLANK)
+                    } else {
+                        runCatching { PaperTemplate.valueOf(notebook.template) }.getOrDefault(PaperTemplate.BLANK)
+                    }
+                    val aspectRatio = if (note.pdfPageAspectRatio > 0f) note.pdfPageAspectRatio
+                                      else PaginationManager.DEFAULT_ASPECT_RATIO
+                    val pm = PaginationManager(dm.widthPixels, dm.heightPixels, dm.density, aspectRatio)
+                    if (note.pdfPath != null && note.pdfPageCount > 1) {
+                        pm.addPages(note.pdfPageCount - 1)
+                    }
+                    val shapes = db.shapeDao().getByNoteId(note.id).map { ShapeMapper.toShape(it) }
+                    val pdfUri = note.pdfPath?.let { Uri.parse(it) }
+                    NoteExportData(
+                        noteId = note.id,
+                        pdfUri = pdfUri,
+                        shapes = shapes,
+                        paginationManager = pm,
+                        template = effectiveTemplate
+                    )
+                }
+
+                val file = PdfExporter.exportNotebook(context, notebookId, notesData)
+                _notebookExportState.value = NotebookExportState.Done(file)
+            } catch (e: Exception) {
+                Log.e(TAG, "Notebook export failed", e)
+                _notebookExportState.value = NotebookExportState.Error(e.message ?: "Export failed")
+            }
+        }
+    }
+
+    fun clearExportState() {
+        Log.d(TAG, "clearExportState")
+        _notebookExportState.value = NotebookExportState.Idle
     }
 
     private suspend fun refreshCurrentFolder() {

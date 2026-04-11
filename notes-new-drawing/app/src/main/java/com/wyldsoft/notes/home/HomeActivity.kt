@@ -3,6 +3,7 @@ package com.wyldsoft.notes.home
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,13 +17,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.FileProvider
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.wyldsoft.notes.MainActivity
 import com.wyldsoft.notes.ScrotesApp
 import com.wyldsoft.notes.sync.GoogleDriveManager
 import com.wyldsoft.notes.sync.SyncViewModel
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
+import kotlinx.coroutines.launch
 
 class HomeActivity : ComponentActivity() {
     companion object {
@@ -72,6 +78,7 @@ class HomeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate")
         isSignedIn = GoogleDriveManager.getSignedInAccount(this) != null
+        observeNotebookExport()
 
         setContent {
             MinimaleditorTheme {
@@ -104,6 +111,10 @@ class HomeActivity : ComponentActivity() {
                             openNotebookAtNote(notebookId, noteId, scrollY)
                         },
                         onImportPdf = { pdfPickerLauncher.launch(arrayOf("application/pdf")) },
+                        onShareNotebook = { notebookId ->
+                            Log.d(TAG, "onShareNotebook notebookId=$notebookId")
+                            viewModel.startNotebookExport(notebookId)
+                        },
                         defaultPaginationEnabled = defaultPagination,
                         onDefaultPaginationChanged = { enabled ->
                             appSettings.defaultPaginationEnabled = enabled
@@ -128,6 +139,38 @@ class HomeActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun observeNotebookExport() {
+        Log.d(TAG, "observeNotebookExport")
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.notebookExportState.collect { state ->
+                    when (state) {
+                        is NotebookExportState.Done -> {
+                            sharePdfFile(state.file)
+                            viewModel.clearExportState()
+                        }
+                        is NotebookExportState.Error -> {
+                            Toast.makeText(this@HomeActivity, state.message, Toast.LENGTH_SHORT).show()
+                            viewModel.clearExportState()
+                        }
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
+
+    private fun sharePdfFile(file: java.io.File) {
+        Log.d(TAG, "sharePdfFile ${file.absolutePath}")
+        val uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, "Share Notebook PDF"))
     }
 
     private fun openNotebook(notebookId: String) {

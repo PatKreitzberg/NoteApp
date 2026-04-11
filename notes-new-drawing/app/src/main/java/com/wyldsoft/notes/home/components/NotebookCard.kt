@@ -15,7 +15,8 @@ fun NotebookCard(
     onRename: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onMove: (() -> Unit)? = null,
-    onRestore: (() -> Unit)? = null
+    onRestore: (() -> Unit)? = null,
+    onShare: (() -> Unit)? = null
 ) = ItemCard(
     name = notebook.name,
     icon = Icons.AutoMirrored.Filled.MenuBook,
@@ -25,5 +26,6 @@ fun NotebookCard(
     onRename = onRename,
     onDelete = onDelete,
     onMove = onMove,
-    onRestore = onRestore
+    onRestore = onRestore,
+    onShare = onShare
 )

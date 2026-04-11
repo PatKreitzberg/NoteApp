@@ -286,6 +286,19 @@ fun EditorSettingsPanel(modifier: Modifier = Modifier) {
                     Text("Rename Notebook")
                 }
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            OutlinedButton(
+                onClick = {
+                    Log.d(TAG, "Export PDF clicked")
+                    EditorState.requestExportPdf()
+                    EditorState.emitDismissSettings()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Export PDF")
+            }
         }
     }
 }

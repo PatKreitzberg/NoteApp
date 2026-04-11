@@ -22,8 +22,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
+data class NoteExportData(
+    val noteId: String,
+    val pdfUri: Uri?,
+    val shapes: List<Shape>,
+    val paginationManager: PaginationManager,
+    val template: PaperTemplate
+)
+
 /**
- * Exports a note to a PDF file using [PdfDocument].
+ * Exports notes to PDF files using [PdfDocument].
  * Renders everything the user sees: PDF background (if applicable), paper template,
  * and all drawn shapes/annotations.
  */
@@ -32,14 +40,6 @@ object PdfExporter {
 
     /**
      * Exports the note to a PDF file in the app's cache dir.
-     *
-     * @param context       Application context.
-     * @param noteId        Used as the output filename.
-     * @param pdfUri        URI of the source PDF, or null for regular (non-PDF-backed) notes.
-     * @param shapes        All shapes/annotations to render.
-     * @param paginationManager  Provides page dimensions and count.
-     * @param template      Paper template to render (BLANK, LINED, GRID, etc.).
-     * @return The exported PDF [File] in [Context.getCacheDir]/exports/.
      */
     suspend fun export(
         context: Context,
@@ -49,9 +49,6 @@ object PdfExporter {
         paginationManager: PaginationManager,
         template: PaperTemplate = PaperTemplate.BLANK
     ): File = withContext(Dispatchers.IO) {
-        // For PDF-backed notes, the page count is fixed. For regular notes, derive it
-        // from both the tracked page count and the actual content extent so all pages
-        // with drawn content are included even if the user hasn't scrolled to them.
         val pageCount = effectivePageCount(paginationManager, shapes, pdfUri != null)
         Log.d(TAG, "export noteId=$noteId pdfUri=$pdfUri pages=$pageCount template=$template")
 
@@ -59,72 +56,106 @@ object PdfExporter {
         exportsDir.mkdirs()
         val outputFile = File(exportsDir, "$noteId.pdf")
 
-        val pageWidth = paginationManager.pageWidth.toInt().coerceAtLeast(1)
-        val pageHeight = paginationManager.pageHeight.toInt().coerceAtLeast(1)
         val document = PdfDocument()
         val templateRenderer = TemplateRenderer()
-
         try {
-            for (pageIndex in 0 until pageCount) {
-                val pageTopY = paginationManager.pageTopY(pageIndex)
-
-                // Synthetic viewport: scale=1, scrolled to this page's top-left
-                val pageViewport = ViewportManager().apply {
-                    restoreState(scale = 1f, scrollX = 0f, scrollY = pageTopY)
-                }
-
-                // Render page content to a bitmap
-                val bitmap = createBitmap(pageWidth, pageHeight)
-                val bitmapCanvas = Canvas(bitmap)
-                bitmapCanvas.drawColor(Color.WHITE)
-
-                // 1. Draw PDF background (PDF-backed notes)
-                if (pdfUri != null) {
-                    renderPdfBackground(context, pdfUri, pageIndex, bitmapCanvas, pageWidth, pageHeight)
-                }
-
-                // 2. Draw paper template on top (for non-PDF notes, or if template is not BLANK)
-                //    Pass the single page rect so template is confined to the page area
-                if (template != PaperTemplate.BLANK && pdfUri == null) {
-                    val pageNoteRect = RectF(
-                        0f,
-                        pageTopY,
-                        paginationManager.pageWidth,
-                        paginationManager.pageBottomY(pageIndex)
-                    )
-                    templateRenderer.drawTemplate(
-                        bitmapCanvas,
-                        template,
-                        pageViewport,
-                        pageWidth,
-                        pageHeight,
-                        listOf(pageNoteRect)
-                    )
-                }
-
-                // 3. Draw shapes/annotations
-                val renderContext = RenderContext.createForBitmap(bitmap, bitmapCanvas)
-                for (shape in shapes) {
-                    shape.renderInViewport(renderContext, pageViewport)
-                }
-
-                // Add page to the PDF document
-                val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageIndex + 1).create()
-                val pdfPage = document.startPage(pageInfo)
-                val scalePaint = Paint().apply { isFilterBitmap = true }
-                pdfPage.canvas.drawBitmap(bitmap, null, Rect(0, 0, pageWidth, pageHeight), scalePaint)
-                document.finishPage(pdfPage)
-
-                bitmap.recycle()
-            }
-
+            renderNotePages(
+                context, document,
+                NoteExportData(noteId, pdfUri, shapes, paginationManager, template),
+                templateRenderer, startPageNumber = 1
+            )
             FileOutputStream(outputFile).use { stream -> document.writeTo(stream) }
             Log.d(TAG, "export complete: ${outputFile.absolutePath} (${outputFile.length()} bytes)")
         } finally {
             document.close()
         }
-
         outputFile
+    }
+
+    /**
+     * Exports all notes in a notebook to a single combined PDF, in the order given.
+     * Each note's own template and pagination settings are respected.
+     */
+    suspend fun exportNotebook(
+        context: Context,
+        notebookId: String,
+        notesData: List<NoteExportData>
+    ): File = withContext(Dispatchers.IO) {
+        Log.d(TAG, "exportNotebook notebookId=$notebookId notes=${notesData.size}")
+
+        val exportsDir = File(context.cacheDir, "exports")
+        exportsDir.mkdirs()
+        val outputFile = File(exportsDir, "notebook_$notebookId.pdf")
+
+        val document = PdfDocument()
+        val templateRenderer = TemplateRenderer()
+        var globalPageNumber = 1
+        try {
+            for (noteData in notesData) {
+                val pagesRendered = renderNotePages(context, document, noteData, templateRenderer, globalPageNumber)
+                globalPageNumber += pagesRendered
+            }
+            FileOutputStream(outputFile).use { stream -> document.writeTo(stream) }
+            Log.d(TAG, "exportNotebook complete: ${outputFile.absolutePath} (${outputFile.length()} bytes)")
+        } finally {
+            document.close()
+        }
+        outputFile
+    }
+
+    /**
+     * Renders all pages of a single note into [document], starting at [startPageNumber].
+     * Returns the number of pages rendered.
+     */
+    private fun renderNotePages(
+        context: Context,
+        document: PdfDocument,
+        noteData: NoteExportData,
+        templateRenderer: TemplateRenderer,
+        startPageNumber: Int
+    ): Int {
+        val pm = noteData.paginationManager
+        val pageCount = effectivePageCount(pm, noteData.shapes, noteData.pdfUri != null)
+        val pageWidth = pm.pageWidth.toInt().coerceAtLeast(1)
+        val pageHeight = pm.pageHeight.toInt().coerceAtLeast(1)
+        Log.d(TAG, "renderNotePages noteId=${noteData.noteId} pages=$pageCount")
+
+        for (pageIndex in 0 until pageCount) {
+            val pageTopY = pm.pageTopY(pageIndex)
+            val pageViewport = ViewportManager().apply {
+                restoreState(scale = 1f, scrollX = 0f, scrollY = pageTopY)
+            }
+
+            val bitmap = createBitmap(pageWidth, pageHeight)
+            val bitmapCanvas = Canvas(bitmap)
+            bitmapCanvas.drawColor(Color.WHITE)
+
+            if (noteData.pdfUri != null) {
+                renderPdfBackground(context, noteData.pdfUri, pageIndex, bitmapCanvas, pageWidth, pageHeight)
+            }
+
+            if (noteData.template != PaperTemplate.BLANK && noteData.pdfUri == null) {
+                val pageNoteRect = RectF(0f, pageTopY, pm.pageWidth, pm.pageBottomY(pageIndex))
+                templateRenderer.drawTemplate(
+                    bitmapCanvas, noteData.template, pageViewport,
+                    pageWidth, pageHeight, listOf(pageNoteRect)
+                )
+            }
+
+            val renderContext = RenderContext.createForBitmap(bitmap, bitmapCanvas)
+            for (shape in noteData.shapes) {
+                shape.renderInViewport(renderContext, pageViewport)
+            }
+
+            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, startPageNumber + pageIndex).create()
+            val pdfPage = document.startPage(pageInfo)
+            val scalePaint = Paint().apply { isFilterBitmap = true }
+            pdfPage.canvas.drawBitmap(bitmap, null, Rect(0, 0, pageWidth, pageHeight), scalePaint)
+            document.finishPage(pdfPage)
+            bitmap.recycle()
+        }
+
+        return pageCount
     }
 
     /**

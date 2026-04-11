@@ -38,7 +38,8 @@ fun ItemCard(
     onRename: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onMove: (() -> Unit)? = null,
-    onRestore: (() -> Unit)? = null
+    onRestore: (() -> Unit)? = null,
+    onShare: (() -> Unit)? = null
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -105,6 +106,14 @@ fun ItemCard(
                     onDelete?.invoke()
                 }) {
                     Text("Delete")
+                }
+                if (onShare != null) {
+                    DropdownMenuItem(onClick = {
+                        menuExpanded = false
+                        onShare.invoke()
+                    }) {
+                        Text("Share")
+                    }
                 }
             }
         }

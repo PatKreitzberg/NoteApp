@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -23,6 +24,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
@@ -68,6 +70,7 @@ fun HomeView(
     onOpenNotebook: (notebookId: String) -> Unit,
     onOpenNotebookAtNote: (notebookId: String, noteId: String, scrollY: Float) -> Unit = { _, _, _ -> },
     onImportPdf: () -> Unit,
+    onShareNotebook: (notebookId: String) -> Unit = {},
     defaultPaginationEnabled: Boolean,
     onDefaultPaginationChanged: (Boolean) -> Unit,
     gestureMappings: Map<String, GestureAction>,
@@ -97,6 +100,8 @@ fun HomeView(
     // Move state
     var moveFolderTarget by remember { mutableStateOf<FolderEntity?>(null) }
     var moveNotebookTarget by remember { mutableStateOf<NotebookEntity?>(null) }
+
+    val notebookExportState by viewModel.notebookExportState.collectAsState()
 
     if (uiState.isLoading) {
         Column(
@@ -319,7 +324,8 @@ fun HomeView(
                         onRename = { renameNotebookTarget = notebook },
                         onDelete = { viewModel.moveNotebookToTrash(notebook.id) },
                         onMove = { moveNotebookTarget = notebook },
-                        onRestore = { viewModel.restoreNotebookFromTrash(notebook.id) }
+                        onRestore = { viewModel.restoreNotebookFromTrash(notebook.id) },
+                        onShare = if (!isInTrash) {{ onShareNotebook(notebook.id) }} else null
                     )
                 }
             }
@@ -410,6 +416,21 @@ fun HomeView(
             },
             onDismiss = { moveNotebookTarget = null }
         )
+    }
+
+    if (notebookExportState is NotebookExportState.InProgress) {
+        Dialog(onDismissRequest = {}) {
+            Card {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Exporting notebook\u2026")
+                }
+            }
+        }
     }
 }
 
