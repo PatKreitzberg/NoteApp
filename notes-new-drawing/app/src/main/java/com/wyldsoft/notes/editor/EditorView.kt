@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.DrawingCanvas
 import com.wyldsoft.notes.touchhandling.GestureDisplay
+import com.wyldsoft.notes.ui.toolbar.LayerPanel
 import com.wyldsoft.notes.ui.toolbar.PenPropertiesPanel
 import com.wyldsoft.notes.ui.toolbar.TextPropertiesPanel
 import com.wyldsoft.notes.ui.toolbar.Toolbar
@@ -29,9 +30,12 @@ fun EditorView(
     var settingsExpanded by remember { mutableStateOf(false) }
     var textExpanded by remember { mutableStateOf(false) }
     var geometryExpanded by remember { mutableStateOf(false) }
+    var layerPanelExpanded by remember { mutableStateOf(false) }
     val currentProfile by EditorState.currentPenProfile.collectAsState()
     val textProfile by EditorState.textProfile.collectAsState()
     val currentMode by EditorState.currentMode.collectAsState()
+    val layers by EditorState.layers.collectAsState()
+    val activeLayer by EditorState.activeLayer.collectAsState()
 
     Box(
         modifier = Modifier
@@ -48,6 +52,8 @@ fun EditorView(
                 onTextExpandedChange = { textExpanded = it },
                 geometryExpanded = geometryExpanded,
                 onGeometryExpandedChange = { geometryExpanded = it },
+                layerPanelExpanded = layerPanelExpanded,
+                onLayerPanelExpandedChange = { layerPanelExpanded = it },
                 resetViewport = { resetViewport() }
             )
 
@@ -56,6 +62,47 @@ fun EditorView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+            )
+        }
+
+        // Layer panel overlay
+        if (layerPanelExpanded) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        layerPanelExpanded = false
+                        EditorState.setMode(AppMode.DRAWING)
+                    }
+            )
+            LayerPanel(
+                layers = layers,
+                activeLayer = activeLayer,
+                onSelectLayer = { pos ->
+                    EditorState.setActiveLayer(pos)
+                    layerPanelExpanded = false
+                    EditorState.setMode(AppMode.DRAWING)
+                },
+                onAddLayer = {
+                    EditorState.requestAddLayer()
+                },
+                onDeleteLayer = { layer ->
+                    EditorState.requestDeleteLayer(layer)
+                },
+                onRenameLayer = { layer, newName ->
+                    EditorState.requestRenameLayer(layer, newName)
+                },
+                onToggleVisibility = { layer ->
+                    EditorState.requestToggleLayerVisibility(layer)
+                },
+                onDismiss = {
+                    layerPanelExpanded = false
+                    EditorState.setMode(AppMode.DRAWING)
+                },
+                modifier = Modifier.padding(top = 48.dp)
             )
         }
 

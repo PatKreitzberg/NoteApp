@@ -5,13 +5,16 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.util.Log
 import androidx.core.graphics.createBitmap
+import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.rendering.PaginationManager
 import com.wyldsoft.notes.rendering.RenderContext
+import com.wyldsoft.notes.rendering.TemplateRenderer
 import com.wyldsoft.notes.rendering.ViewportManager
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import kotlinx.coroutines.Dispatchers
@@ -21,9 +24,8 @@ import java.io.FileOutputStream
 
 /**
  * Exports a note to a PDF file using [PdfDocument].
- * For PDF-backed notes, each page's background is sourced from the original PDF.
- * For regular notes, pages have a white background.
- * All shapes (annotations) are rendered on top.
+ * Renders everything the user sees: PDF background (if applicable), paper template,
+ * and all drawn shapes/annotations.
  */
 object PdfExporter {
     private const val TAG = "PdfExporter"
@@ -36,6 +38,7 @@ object PdfExporter {
      * @param pdfUri        URI of the source PDF, or null for regular (non-PDF-backed) notes.
      * @param shapes        All shapes/annotations to render.
      * @param paginationManager  Provides page dimensions and count.
+     * @param template      Paper template to render (BLANK, LINED, GRID, etc.).
      * @return The exported PDF [File] in [Context.getCacheDir]/exports/.
      */
     suspend fun export(
@@ -43,9 +46,14 @@ object PdfExporter {
         noteId: String,
         pdfUri: Uri?,
         shapes: List<Shape>,
-        paginationManager: PaginationManager
+        paginationManager: PaginationManager,
+        template: PaperTemplate = PaperTemplate.BLANK
     ): File = withContext(Dispatchers.IO) {
-        Log.d(TAG, "export noteId=$noteId pdfUri=$pdfUri pages=${paginationManager.pageCount}")
+        // For PDF-backed notes, the page count is fixed. For regular notes, derive it
+        // from both the tracked page count and the actual content extent so all pages
+        // with drawn content are included even if the user hasn't scrolled to them.
+        val pageCount = effectivePageCount(paginationManager, shapes, pdfUri != null)
+        Log.d(TAG, "export noteId=$noteId pdfUri=$pdfUri pages=$pageCount template=$template")
 
         val exportsDir = File(context.cacheDir, "exports")
         exportsDir.mkdirs()
@@ -54,26 +62,48 @@ object PdfExporter {
         val pageWidth = paginationManager.pageWidth.toInt().coerceAtLeast(1)
         val pageHeight = paginationManager.pageHeight.toInt().coerceAtLeast(1)
         val document = PdfDocument()
+        val templateRenderer = TemplateRenderer()
 
         try {
-            for (pageIndex in 0 until paginationManager.pageCount) {
+            for (pageIndex in 0 until pageCount) {
                 val pageTopY = paginationManager.pageTopY(pageIndex)
+
+                // Synthetic viewport: scale=1, scrolled to this page's top-left
+                val pageViewport = ViewportManager().apply {
+                    restoreState(scale = 1f, scrollX = 0f, scrollY = pageTopY)
+                }
 
                 // Render page content to a bitmap
                 val bitmap = createBitmap(pageWidth, pageHeight)
                 val bitmapCanvas = Canvas(bitmap)
                 bitmapCanvas.drawColor(Color.WHITE)
 
-                // Draw PDF background if available
+                // 1. Draw PDF background (PDF-backed notes)
                 if (pdfUri != null) {
                     renderPdfBackground(context, pdfUri, pageIndex, bitmapCanvas, pageWidth, pageHeight)
                 }
 
-                // Render shapes using a viewport positioned at this page's top
-                val renderContext = RenderContext.createForBitmap(bitmap, bitmapCanvas)
-                val pageViewport = ViewportManager().apply {
-                    restoreState(scale = 1f, scrollX = 0f, scrollY = pageTopY)
+                // 2. Draw paper template on top (for non-PDF notes, or if template is not BLANK)
+                //    Pass the single page rect so template is confined to the page area
+                if (template != PaperTemplate.BLANK && pdfUri == null) {
+                    val pageNoteRect = RectF(
+                        0f,
+                        pageTopY,
+                        paginationManager.pageWidth,
+                        paginationManager.pageBottomY(pageIndex)
+                    )
+                    templateRenderer.drawTemplate(
+                        bitmapCanvas,
+                        template,
+                        pageViewport,
+                        pageWidth,
+                        pageHeight,
+                        listOf(pageNoteRect)
+                    )
                 }
+
+                // 3. Draw shapes/annotations
+                val renderContext = RenderContext.createForBitmap(bitmap, bitmapCanvas)
                 for (shape in shapes) {
                     shape.renderInViewport(renderContext, pageViewport)
                 }
@@ -95,6 +125,30 @@ object PdfExporter {
         }
 
         outputFile
+    }
+
+    /**
+     * For PDF-backed notes the page count is fixed (from the PDF).
+     * For regular notes the PaginationManager only tracks pages the user has scrolled to,
+     * so we also check all shapes' bounding boxes to cover content on pages not yet scrolled.
+     */
+    private fun effectivePageCount(
+        pm: PaginationManager,
+        shapes: List<Shape>,
+        isPdfNote: Boolean
+    ): Int {
+        if (isPdfNote) return pm.pageCount.coerceAtLeast(1)
+
+        var maxPage = pm.pageCount
+        val stride = pm.pageHeight + pm.gapPx
+        if (stride > 0) {
+            for (shape in shapes) {
+                val bottomY = shape.boundingRect?.bottom ?: continue
+                val page = (bottomY / stride).toInt() + 1
+                if (page > maxPage) maxPage = page
+            }
+        }
+        return maxPage.coerceAtLeast(1)
     }
 
     private fun renderPdfBackground(

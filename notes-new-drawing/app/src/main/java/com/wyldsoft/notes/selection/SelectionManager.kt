@@ -24,12 +24,18 @@ class SelectionManager {
     /**
      * Returns shapes from [shapes] where every touch point is inside the lasso polygon.
      * [lassoPoints] must be in the same coordinate space as the shapes (note-space).
+     * [activeLayer] filters shapes to only the active layer; -1 means all layers.
      */
-    fun findShapesInsideLasso(shapes: List<Shape>, lassoPoints: TouchPointList): List<Shape> {
-        Log.d(TAG, "findShapesInsideLasso shapes=${shapes.size} lassoSize=${lassoPoints.size()}")
+    fun findShapesInsideLasso(
+        shapes: List<Shape>,
+        lassoPoints: TouchPointList,
+        activeLayer: Int = -1
+    ): List<Shape> {
+        Log.d(TAG, "findShapesInsideLasso shapes=${shapes.size} lassoSize=${lassoPoints.size()} activeLayer=$activeLayer")
+        val candidateShapes = if (activeLayer == -1) shapes else shapes.filter { it.layer == activeLayer }
         val poly = lassoPoints.points.filterNotNull().map { Pair(it.x, it.y) }
         if (poly.size < 3) return emptyList()
-        return shapes.filter { isShapeFullyInsideLasso(it, poly) }
+        return candidateShapes.filter { isShapeFullyInsideLasso(it, poly) }
     }
 
     /**

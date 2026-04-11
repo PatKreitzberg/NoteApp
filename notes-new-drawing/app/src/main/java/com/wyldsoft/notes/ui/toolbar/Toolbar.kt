@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -55,6 +56,8 @@ fun Toolbar(
     onTextExpandedChange: (Boolean) -> Unit,
     geometryExpanded: Boolean,
     onGeometryExpandedChange: (Boolean) -> Unit,
+    layerPanelExpanded: Boolean,
+    onLayerPanelExpandedChange: (Boolean) -> Unit,
     resetViewport: () -> Unit = {}
 ) {
     LaunchedEffect(Unit) {
@@ -64,6 +67,7 @@ fun Toolbar(
             onSettingsExpandedChange(false)
             onTextExpandedChange(false)
             onGeometryExpandedChange(false)
+            onLayerPanelExpandedChange(false)
             EditorState.setMode(AppMode.DRAWING)
         }
     }
@@ -306,5 +310,21 @@ fun Toolbar(
                 modifier = Modifier.size(24.dp)
             )
         }
+
+        LayerButton(
+            layerPanelExpanded = layerPanelExpanded,
+            onTogglePanel = {
+                Log.d(TAG, "LayerButton toggle layerPanelExpanded=$layerPanelExpanded")
+                if (!layerPanelExpanded) {
+                    onLayerPanelExpandedChange(true)
+                    onExpandedChange(false)
+                    onSettingsExpandedChange(false)
+                    EditorState.setMode(AppMode.SETTINGS)
+                } else {
+                    onLayerPanelExpandedChange(false)
+                    EditorState.setMode(AppMode.DRAWING)
+                }
+            }
+        )
     }
 }

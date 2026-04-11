@@ -20,8 +20,10 @@ import com.onyx.android.sdk.pen.TouchHelper
 import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.ScrotesApp
+import com.wyldsoft.notes.data.database.repository.LayerRepository
 import com.wyldsoft.notes.data.database.repository.ShapeRepository
 import com.wyldsoft.notes.data.database.repository.UndoHistoryRepository
+import com.wyldsoft.notes.layers.LayerManager
 import com.wyldsoft.notes.editor.AppMode
 import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.models.PaperTemplate
@@ -98,6 +100,30 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private lateinit var undoHistoryRepo: UndoHistoryRepository
     private val htrRunManager = HTRRunManager()
     private var currentPdfPageRenderer: com.wyldsoft.notes.pdf.PdfPageRenderer? = null
+    private lateinit var layerRepo: LayerRepository
+    private lateinit var layerManager: LayerManager
+    private var pendingExportFile: java.io.File? = null
+
+    private val saveFileLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        if (uri == null) {
+            Log.d(TAG, "saveFileLauncher: user cancelled")
+            return@registerForActivityResult
+        }
+        val file = pendingExportFile ?: return@registerForActivityResult
+        pendingExportFile = null
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    java.io.FileInputStream(file).use { it.copyTo(out) }
+                }
+                Log.d(TAG, "saveFileLauncher: saved to $uri")
+            } catch (e: Exception) {
+                Log.e(TAG, "saveFileLauncher: write failed", e)
+            }
+        }
+    }
 
     // ── Selection state ───────────────────────────────────────────────────────
     private enum class SelectionSubState { DRAWING_LASSO, SELECTED, MOVING, STRETCHING, ROTATING }
@@ -197,10 +223,13 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         val db = (application as ScrotesApp).database
         shapeRepo = ShapeRepository(db.shapeDao())
         undoHistoryRepo = UndoHistoryRepository(db.undoHistoryDao())
+        layerRepo = LayerRepository(db.layerDao())
+        layerManager = LayerManager(layerRepo, shapeRepo)
         val noteId = intent.getStringExtra("noteId")
         if (noteId != null) setupPipelineForNote(noteId)
         observeUndoRedo()
         observeExportPdf()
+        observeLayerOperations()
     }
 
     override fun onSwitchNoteSDK(noteId: String) {
@@ -248,6 +277,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             }
             drawingPipeline.loadShapes(noteId)
             actionManager.loadFromDatabase(drawingPipeline)
+            // Load layers and reset active layer to 1 on note switch
+            val loadedLayers = layerManager.loadLayersForNote(noteId)
+            EditorState.setLayers(loadedLayers)
+            EditorState.setActiveLayer(1)
             shapesLoaded = true
             launch(Dispatchers.Main) {
                 forceScreenRefresh()
@@ -305,15 +338,82 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                             noteId = noteId,
                             pdfUri = pdfUri,
                             shapes = shapes,
-                            paginationManager = pm
+                            paginationManager = pm,
+                            template = drawingPipeline.currentTemplate
                         )
-                        launch(Dispatchers.Main) { sharePdfFile(file) }
+                        launch(Dispatchers.Main) { showExportDialog(file) }
                     } catch (e: Exception) {
                         Log.e(TAG, "PDF export failed", e)
                     }
                 }
             }
         }
+    }
+
+    private fun observeLayerOperations() {
+        Log.d(TAG, "observeLayerOperations")
+        lifecycleScope.launch {
+            EditorState.addLayerRequested.collect {
+                val noteId = EditorState.currentNoteId ?: return@collect
+                val newLayer = layerManager.addLayer(noteId)
+                val updatedLayers = layerManager.loadLayersForNote(noteId)
+                EditorState.setLayers(updatedLayers)
+                EditorState.setActiveLayer(newLayer.position)
+            }
+        }
+        lifecycleScope.launch {
+            EditorState.deleteLayerRequested.collect { layer ->
+                val db = (application as ScrotesApp).database
+                layerManager.deleteLayer(layer, db.shapeDao())
+                val noteId = EditorState.currentNoteId ?: return@collect
+                val updatedLayers = layerManager.loadLayersForNote(noteId)
+                EditorState.setLayers(updatedLayers)
+                // If active layer was the deleted one, switch to layer 1
+                if (EditorState.activeLayer.value == layer.position) {
+                    EditorState.setActiveLayer(1)
+                }
+                // Remove shapes from in-memory pipeline for deleted layer
+                val shapesToRemove = drawingPipeline.getShapes().filter { it.layer == layer.position }
+                shapesToRemove.forEach { drawingPipeline.removeShape(it) }
+                withContext(Dispatchers.Main) { forceScreenRefresh() }
+            }
+        }
+        lifecycleScope.launch {
+            EditorState.renameLayerRequested.collect { (layer, newName) ->
+                layerManager.renameLayer(layer, newName)
+                val noteId = EditorState.currentNoteId ?: return@collect
+                val updatedLayers = layerManager.loadLayersForNote(noteId)
+                EditorState.setLayers(updatedLayers)
+            }
+        }
+        lifecycleScope.launch {
+            EditorState.toggleLayerVisibilityRequested.collect { layer ->
+                layerManager.toggleVisibility(layer)
+                val noteId = EditorState.currentNoteId ?: return@collect
+                val updatedLayers = layerManager.loadLayersForNote(noteId)
+                EditorState.setLayers(updatedLayers)
+                withContext(Dispatchers.Main) { forceScreenRefresh() }
+            }
+        }
+    }
+
+    private fun showExportDialog(file: java.io.File) {
+        Log.d(TAG, "showExportDialog: ${file.absolutePath}")
+        val noteTitle = EditorState.currentNoteId ?: "note"
+        val suggestedName = "$noteTitle.pdf"
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Export PDF")
+            .setItems(arrayOf("Share", "Save to file")) { _, which ->
+                when (which) {
+                    0 -> sharePdfFile(file)
+                    1 -> {
+                        pendingExportFile = file
+                        saveFileLauncher.launch(suggestedName)
+                    }
+                }
+            }
+            .show()
     }
 
     private fun sharePdfFile(file: java.io.File) {
@@ -1120,7 +1220,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private fun handleLassoComplete(touchPointList: TouchPointList) {
         Log.d(TAG, "handleLassoComplete points=${touchPointList.size()}")
         val noteLasso = viewportManager.viewportToNoteTouchPoints(touchPointList)
-        val found = selectionManager.findShapesInsideLasso(drawingPipeline.getShapes(), noteLasso)
+        val found = selectionManager.findShapesInsideLasso(drawingPipeline.getShapes(), noteLasso, EditorState.activeLayer.value)
         if (found.isNotEmpty()) {
             selectedShapes = found.toMutableList()
             selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)

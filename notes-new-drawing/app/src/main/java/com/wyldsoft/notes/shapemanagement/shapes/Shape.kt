@@ -34,6 +34,7 @@ open class Shape {
         protected set
     var penType: PenType = PenType.BALLPEN
     var entityId: String? = null
+    var layer: Int = 1
 
     var touchPointList: TouchPointList? = null
 

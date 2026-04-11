@@ -28,4 +28,9 @@ class ShapeRepository(private val shapeDao: ShapeDao) {
         Log.d(TAG, "deleteAllShapesForNote noteId=$noteId")
         shapeDao.deleteByNoteId(noteId)
     }
+
+    suspend fun deleteShapesForNoteAndLayer(noteId: String, layerPosition: Int) {
+        Log.d(TAG, "deleteShapesForNoteAndLayer noteId=$noteId layerPosition=$layerPosition")
+        shapeDao.deleteShapesForNoteAndLayer(noteId, layerPosition)
+    }
 }

@@ -11,6 +11,7 @@ import com.onyx.android.sdk.pen.data.TouchPointList
 import com.onyx.android.sdk.rx.RxManager
 import com.wyldsoft.notes.data.database.repository.ShapeRepository
 import com.wyldsoft.notes.data.mappers.ShapeMapper
+import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pdf.PdfPageRenderer
 import com.wyldsoft.notes.pen.PenProfile
@@ -82,6 +83,7 @@ class DrawingPipeline(
         Log.d(TAG, "drawScribbleToBitmap list size ${touchPointList.size()}")
         val notePointList = viewportManager.viewportToNoteTouchPoints(touchPointList)
         val shape = createShapeFromPenType(notePointList, penProfile)
+        shape.layer = EditorState.getActiveLayerForDrawing()
         drawnShapes.add(shape)
         renderShapeToBitmap(shape, bitmap)
         persistShape(shape)
@@ -145,7 +147,8 @@ class DrawingPipeline(
         val noteErasePointList = viewportManager.viewportToNoteTouchPoints(erasePointList)
         val intersectingShapes = eraseManager.findIntersectingShapes(
             noteErasePointList,
-            drawnShapes
+            drawnShapes,
+            activeLayer = EditorState.activeLayer.value
         )
         if (intersectingShapes.isNotEmpty()) {
             lastErasedShapes = intersectingShapes.toList()
@@ -221,7 +224,18 @@ class DrawingPipeline(
 
         val renderContext = RenderContext.createForBitmap(bmp, canvas)
 
-        for (shape in shapesToRender) {
+        // Filter out shapes on hidden layers
+        val hiddenPositions = EditorState.layers.value
+            .filter { !it.visible }
+            .map { it.position }
+            .toSet()
+        val visibleShapes = if (hiddenPositions.isEmpty()) {
+            shapesToRender
+        } else {
+            shapesToRender.filter { shape -> shape.layer !in hiddenPositions }
+        }
+
+        for (shape in visibleShapes) {
             shape.renderInViewport(renderContext, viewportManager)
         }
 

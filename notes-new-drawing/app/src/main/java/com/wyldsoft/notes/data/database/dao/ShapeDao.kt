@@ -29,4 +29,7 @@ interface ShapeDao {
 
     @Query("DELETE FROM shapes WHERE noteId = :noteId")
     suspend fun deleteAllForNote(noteId: String)
+
+    @Query("DELETE FROM shapes WHERE noteId = :noteId AND layer = :layerPosition")
+    suspend fun deleteShapesForNoteAndLayer(noteId: String, layerPosition: Int)
 }

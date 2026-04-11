@@ -65,7 +65,7 @@ object ShapeMapper {
             text = textContent,
             fontSize = fontSize,
             fontFamily = fontFamily,
-            layer = 1
+            layer = shape.layer
         )
     }
 
@@ -118,6 +118,7 @@ object ShapeMapper {
             shape.fontFamily = entity.fontFamily
         }
 
+        shape.layer = entity.layer
         shape.touchPointList = touchPointList
         shape.updateShapeRect()
         return shape

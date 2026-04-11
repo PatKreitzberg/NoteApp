@@ -11,6 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.wyldsoft.notes.data.database.converters.Converters
 import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.FolderDao
+import com.wyldsoft.notes.data.database.dao.LayerDao
 import com.wyldsoft.notes.data.database.dao.NotebookDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
 import com.wyldsoft.notes.data.database.dao.ShapeDao
@@ -18,6 +19,7 @@ import com.wyldsoft.notes.data.database.dao.SyncStateDao
 import com.wyldsoft.notes.data.database.dao.UndoHistoryDao
 import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.FolderEntity
+import com.wyldsoft.notes.data.database.entities.LayerEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRefEntity
@@ -27,6 +29,7 @@ import com.wyldsoft.notes.data.database.entities.UndoHistoryEntity
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_2_3
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_3_4
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_4_5
+import com.wyldsoft.notes.data.database.migrations.MIGRATION_5_6
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,9 +43,10 @@ import kotlinx.coroutines.launch
         ShapeEntity::class,
         SyncStateEntity::class,
         DeletedItemEntity::class,
-        UndoHistoryEntity::class
+        UndoHistoryEntity::class,
+        LayerEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -54,6 +58,7 @@ abstract class NotesDatabase : RoomDatabase() {
     abstract fun syncStateDao(): SyncStateDao
     abstract fun deletedItemDao(): DeletedItemDao
     abstract fun undoHistoryDao(): UndoHistoryDao
+    abstract fun layerDao(): LayerDao
 
     companion object {
         private const val TAG = "NotesDatabase"
@@ -94,7 +99,7 @@ abstract class NotesDatabase : RoomDatabase() {
                 NotesDatabase::class.java,
                 "notes_database"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .addCallback(SeedCallback())
                 .build()
         }

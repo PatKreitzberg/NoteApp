@@ -3,6 +3,7 @@ package com.wyldsoft.notes.editor
 import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.util.Log
+import com.wyldsoft.notes.data.database.entities.LayerEntity
 import com.wyldsoft.notes.geometry.GeometryShapeType
 import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
@@ -320,6 +321,64 @@ class EditorState {
 
         fun getCurrentExclusionRects(): List<Rect> {
             return exclusionRects
+        }
+
+        // ── Layer state ────────────────────────────────────────────────────────
+        private val _layers = MutableStateFlow<List<LayerEntity>>(emptyList())
+        val layers: StateFlow<List<LayerEntity>> = _layers.asStateFlow()
+
+        private val _activeLayer = MutableStateFlow(1)
+        val activeLayer: StateFlow<Int> = _activeLayer.asStateFlow()
+
+        private var _lastRealActiveLayer = 1  // not a flow, just internal tracking
+
+        fun setLayers(layers: List<LayerEntity>) {
+            Log.d(TAG, "setLayers count=${layers.size}")
+            _layers.value = layers
+        }
+
+        fun setActiveLayer(position: Int) {
+            Log.d(TAG, "setActiveLayer position=$position")
+            if (position != -1) _lastRealActiveLayer = position
+            _activeLayer.value = position
+        }
+
+        fun getLastRealActiveLayer(): Int = _lastRealActiveLayer
+
+        fun getActiveLayerForDrawing(): Int =
+            if (_activeLayer.value == -1) _lastRealActiveLayer else _activeLayer.value
+
+        // Layer operation requests (handled by OnyxDrawingActivity)
+        private val _addLayerRequested = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val addLayerRequested = _addLayerRequested.asSharedFlow()
+
+        private val _deleteLayerRequested = MutableSharedFlow<LayerEntity>(extraBufferCapacity = 1)
+        val deleteLayerRequested = _deleteLayerRequested.asSharedFlow()
+
+        private val _renameLayerRequested = MutableSharedFlow<Pair<LayerEntity, String>>(extraBufferCapacity = 1)
+        val renameLayerRequested = _renameLayerRequested.asSharedFlow()
+
+        private val _toggleLayerVisibilityRequested = MutableSharedFlow<LayerEntity>(extraBufferCapacity = 1)
+        val toggleLayerVisibilityRequested = _toggleLayerVisibilityRequested.asSharedFlow()
+
+        fun requestAddLayer() {
+            Log.d(TAG, "requestAddLayer")
+            _addLayerRequested.tryEmit(Unit)
+        }
+
+        fun requestDeleteLayer(layer: LayerEntity) {
+            Log.d(TAG, "requestDeleteLayer layerId=${layer.id}")
+            _deleteLayerRequested.tryEmit(layer)
+        }
+
+        fun requestRenameLayer(layer: LayerEntity, newName: String) {
+            Log.d(TAG, "requestRenameLayer layerId=${layer.id} newName=$newName")
+            _renameLayerRequested.tryEmit(Pair(layer, newName))
+        }
+
+        fun requestToggleLayerVisibility(layer: LayerEntity) {
+            Log.d(TAG, "requestToggleLayerVisibility layerId=${layer.id}")
+            _toggleLayerVisibilityRequested.tryEmit(layer)
         }
     }
 }

@@ -23,15 +23,23 @@ class EraseManager {
     fun findIntersectingShapes(
         touchPointList: TouchPointList,
         drawnShapes: List<Shape>,
-        eraseRadius: Float = ERASE_RADIUS
+        eraseRadius: Float = ERASE_RADIUS,
+        activeLayer: Int = -1
     ): List<Shape> {
-        Log.d(TAG, "findIntersectingShapes")
+        Log.d(TAG, "findIntersectingShapes activeLayer=$activeLayer")
 
-        // Option 1: compute erase stroke bounding rect for quick rejection
+        // Filter by active layer: -1 means all layers
+        val candidateShapes = if (activeLayer == -1) {
+            drawnShapes
+        } else {
+            drawnShapes.filter { it.layer == activeLayer }
+        }
+
+        // compute erase stroke bounding rect for quick rejection
         val eraseBounds = computeEraseBounds(touchPointList, eraseRadius) ?: return emptyList()
 
         val intersectingShapes = mutableListOf<Shape>()
-        for (shape in drawnShapes) {
+        for (shape in candidateShapes) {
             val shapeBounds = shape.boundingRect ?: continue
             if (!RectF.intersects(eraseBounds, shapeBounds)) continue
             if (shape.hitTestPoints(touchPointList, eraseRadius)) {
