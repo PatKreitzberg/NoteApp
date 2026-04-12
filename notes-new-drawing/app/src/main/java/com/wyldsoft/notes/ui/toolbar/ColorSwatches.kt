@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -143,7 +142,6 @@ private fun ColorSwatch(
 
     Box(
         modifier = modifier
-            .aspectRatio(1f)
             .clip(RoundedCornerShape(4.dp))
             .background(color)
             .border(borderWidth, borderColor, RoundedCornerShape(4.dp))
@@ -190,7 +188,7 @@ fun ColorSwatchGrid(
                         name = name,
                         isSelected = color == selectedColor,
                         onClick = { onColorSelected(color) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
