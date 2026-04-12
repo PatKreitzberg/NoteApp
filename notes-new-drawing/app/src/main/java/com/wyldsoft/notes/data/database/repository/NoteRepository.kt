@@ -59,6 +59,11 @@ class NoteRepository(private val noteDao: NoteDao) {
         noteDao.updateOverrideNotebook(noteId, override)
     }
 
+    suspend fun updateDrawOutsideBounds(noteId: String, enabled: Boolean) {
+        Log.d(TAG, "updateDrawOutsideBounds noteId=$noteId enabled=$enabled")
+        noteDao.updateDrawOutsideBounds(noteId, enabled)
+    }
+
     suspend fun update(note: NoteEntity) {
         Log.d(TAG, "update noteId=${note.id}")
         noteDao.update(note)

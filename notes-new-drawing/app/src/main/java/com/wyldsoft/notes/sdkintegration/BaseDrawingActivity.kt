@@ -133,7 +133,9 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                             notebookTemplate = PaperTemplate.fromString(notebook?.template ?: "BLANK"),
                             pdfPath = note.pdfPath,
                             pdfPageCount = note.pdfPageCount,
-                            pdfPageAspectRatio = note.pdfPageAspectRatio
+                            pdfPageAspectRatio = note.pdfPageAspectRatio,
+                            noteDrawOutsideBounds = note.drawOutsideBounds,
+                            notebookDrawOutsideBounds = notebook?.drawOutsideBounds ?: false
                         )
                     }
                 }
@@ -224,7 +226,9 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                         notebookTemplate = PaperTemplate.fromString(notebook?.template ?: "BLANK"),
                         pdfPath = note.pdfPath,
                         pdfPageCount = note.pdfPageCount,
-                        pdfPageAspectRatio = note.pdfPageAspectRatio
+                        pdfPageAspectRatio = note.pdfPageAspectRatio,
+                        noteDrawOutsideBounds = note.drawOutsideBounds,
+                        notebookDrawOutsideBounds = notebook?.drawOutsideBounds ?: false
                     )
                 } else {
                     viewportManager.resetViewport()

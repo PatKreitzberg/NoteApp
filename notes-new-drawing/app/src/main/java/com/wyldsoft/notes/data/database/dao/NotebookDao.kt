@@ -40,6 +40,9 @@ interface NotebookDao {
     @Query("UPDATE notebooks SET isPaginationEnabled = :enabled, modifiedAt = :now WHERE id = :id")
     suspend fun updatePagination(id: String, enabled: Boolean, now: Long = System.currentTimeMillis())
 
+    @Query("UPDATE notebooks SET drawOutsideBounds = :enabled, modifiedAt = :now WHERE id = :id")
+    suspend fun updateDrawOutsideBounds(id: String, enabled: Boolean, now: Long = System.currentTimeMillis())
+
     // Sync methods
     @Query("SELECT * FROM notebooks WHERE modifiedAt > :timestamp")
     suspend fun getNotebooksModifiedAfter(timestamp: Long): List<NotebookEntity>

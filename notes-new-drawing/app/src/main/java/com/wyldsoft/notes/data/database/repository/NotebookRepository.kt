@@ -73,6 +73,11 @@ class NotebookRepository(
         notebookDao.updatePagination(id, enabled)
     }
 
+    suspend fun updateDrawOutsideBounds(id: String, enabled: Boolean) {
+        Log.d(TAG, "updateDrawOutsideBounds id=$id enabled=$enabled")
+        notebookDao.updateDrawOutsideBounds(id, enabled)
+    }
+
     suspend fun moveNotebook(id: String, newFolderId: String) {
         Log.d(TAG, "moveNotebook id=$id newFolderId=$newFolderId")
         notebookDao.moveNotebook(id, newFolderId, null, System.currentTimeMillis())

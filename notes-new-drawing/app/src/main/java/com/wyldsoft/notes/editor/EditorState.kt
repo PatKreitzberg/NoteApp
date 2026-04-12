@@ -128,17 +128,25 @@ class EditorState {
         private val _paginationEnabled = MutableStateFlow(false)
         val paginationEnabled: StateFlow<Boolean> = _paginationEnabled.asStateFlow()
 
+        // Effective draw-outside-bounds (pagination must also be enabled to matter)
+        private val _drawOutsideBounds = MutableStateFlow(false)
+        val drawOutsideBounds: StateFlow<Boolean> = _drawOutsideBounds.asStateFlow()
+
         // Notebook-level defaults
         private val _notebookPaginationEnabled = MutableStateFlow(false)
         val notebookPaginationEnabled: StateFlow<Boolean> = _notebookPaginationEnabled.asStateFlow()
         private val _notebookTemplate = MutableStateFlow(PaperTemplate.BLANK)
         val notebookTemplate: StateFlow<PaperTemplate> = _notebookTemplate.asStateFlow()
+        private val _notebookDrawOutsideBounds = MutableStateFlow(false)
+        val notebookDrawOutsideBounds: StateFlow<Boolean> = _notebookDrawOutsideBounds.asStateFlow()
 
         // Note-level values (used when overrideNotebookSettings is true)
         private val _notePaginationEnabled = MutableStateFlow(false)
         val notePaginationEnabled: StateFlow<Boolean> = _notePaginationEnabled.asStateFlow()
         private val _noteTemplate = MutableStateFlow(PaperTemplate.BLANK)
         val noteTemplate: StateFlow<PaperTemplate> = _noteTemplate.asStateFlow()
+        private val _noteDrawOutsideBounds = MutableStateFlow(false)
+        val noteDrawOutsideBounds: StateFlow<Boolean> = _noteDrawOutsideBounds.asStateFlow()
 
         // Override flag: if true, note uses its own template/pagination instead of notebook's
         private val _overrideNotebookSettings = MutableStateFlow(false)
@@ -152,6 +160,7 @@ class EditorState {
             val override = _overrideNotebookSettings.value
             _paginationEnabled.value = if (override) _notePaginationEnabled.value else _notebookPaginationEnabled.value
             _currentTemplate.value = if (override) _noteTemplate.value else _notebookTemplate.value
+            _drawOutsideBounds.value = if (override) _noteDrawOutsideBounds.value else _notebookDrawOutsideBounds.value
         }
 
         fun setNotebookTemplate(template: PaperTemplate) {
@@ -166,6 +175,12 @@ class EditorState {
             updateEffectiveSettings()
         }
 
+        fun setNotebookDrawOutsideBounds(enabled: Boolean) {
+            Log.d(TAG, "setNotebookDrawOutsideBounds: $enabled")
+            _notebookDrawOutsideBounds.value = enabled
+            updateEffectiveSettings()
+        }
+
         fun setNoteTemplate(template: PaperTemplate) {
             Log.d(TAG, "setNoteTemplate: $template")
             _noteTemplate.value = template
@@ -175,6 +190,12 @@ class EditorState {
         fun setNotePagination(enabled: Boolean) {
             Log.d(TAG, "setNotePagination: $enabled")
             _notePaginationEnabled.value = enabled
+            updateEffectiveSettings()
+        }
+
+        fun setNoteDrawOutsideBounds(enabled: Boolean) {
+            Log.d(TAG, "setNoteDrawOutsideBounds: $enabled")
+            _noteDrawOutsideBounds.value = enabled
             updateEffectiveSettings()
         }
 
@@ -193,7 +214,9 @@ class EditorState {
             notebookTemplate: PaperTemplate,
             pdfPath: String? = null,
             pdfPageCount: Int = 0,
-            pdfPageAspectRatio: Float = 0f
+            pdfPageAspectRatio: Float = 0f,
+            noteDrawOutsideBounds: Boolean = false,
+            notebookDrawOutsideBounds: Boolean = false
         ) {
             Log.d(TAG, "loadNoteAndNotebookSettings pdfPath=$pdfPath pdfPageCount=$pdfPageCount")
             // Set PDF data before updateEffectiveSettings so pagination observer can read it
@@ -202,9 +225,11 @@ class EditorState {
             _pdfPageAspectRatio.value = pdfPageAspectRatio
             _notePaginationEnabled.value = notePagination
             _noteTemplate.value = noteTemplate
+            _noteDrawOutsideBounds.value = noteDrawOutsideBounds
             _overrideNotebookSettings.value = overrideNotebook
             _notebookPaginationEnabled.value = notebookPagination
             _notebookTemplate.value = notebookTemplate
+            _notebookDrawOutsideBounds.value = notebookDrawOutsideBounds
             updateEffectiveSettings()
         }
 

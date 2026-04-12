@@ -47,9 +47,11 @@ fun EditorSettingsPanel(modifier: Modifier = Modifier) {
 
     val notebookTemplate by EditorState.notebookTemplate.collectAsState()
     val notebookPagination by EditorState.notebookPaginationEnabled.collectAsState()
+    val notebookDrawOutsideBounds by EditorState.notebookDrawOutsideBounds.collectAsState()
     val overrideNotebook by EditorState.overrideNotebookSettings.collectAsState()
     val noteTemplate by EditorState.noteTemplate.collectAsState()
     val notePagination by EditorState.notePaginationEnabled.collectAsState()
+    val noteDrawOutsideBounds by EditorState.noteDrawOutsideBounds.collectAsState()
 
     var showRenameNote by remember { mutableStateOf(false) }
     var showRenameNotebook by remember { mutableStateOf(false) }
@@ -131,6 +133,28 @@ fun EditorSettingsPanel(modifier: Modifier = Modifier) {
                 )
             }
 
+            // Notebook draw outside bounds toggle (only meaningful when pagination is on)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Draw outside bounds", fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Switch(
+                    checked = notebookDrawOutsideBounds,
+                    enabled = notebookPagination,
+                    onCheckedChange = { enabled ->
+                        Log.d(TAG, "Notebook drawOutsideBounds toggled to $enabled")
+                        val notebookId = EditorState.currentNotebookId ?: return@Switch
+                        EditorState.setNotebookDrawOutsideBounds(enabled)
+                        val db = (context.applicationContext as ScrotesApp).database
+                        CoroutineScope(Dispatchers.IO).launch {
+                            NotebookRepository(db.notebookDao(), db.noteDao())
+                                .updateDrawOutsideBounds(notebookId, enabled)
+                        }
+                    }
+                )
+            }
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // ── Note Settings ──────────────────────────────────────────────────
@@ -205,6 +229,27 @@ fun EditorSettingsPanel(modifier: Modifier = Modifier) {
                             val db = (context.applicationContext as ScrotesApp).database
                             CoroutineScope(Dispatchers.IO).launch {
                                 NoteRepository(db.noteDao()).updatePagination(noteId, enabled)
+                            }
+                        }
+                    )
+                }
+
+                // Note draw outside bounds toggle (only meaningful when pagination is on)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Draw outside bounds", fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = noteDrawOutsideBounds,
+                        enabled = notePagination,
+                        onCheckedChange = { enabled ->
+                            Log.d(TAG, "Note drawOutsideBounds toggled to $enabled")
+                            val noteId = EditorState.currentNoteId ?: return@Switch
+                            EditorState.setNoteDrawOutsideBounds(enabled)
+                            val db = (context.applicationContext as ScrotesApp).database
+                            CoroutineScope(Dispatchers.IO).launch {
+                                NoteRepository(db.noteDao()).updateDrawOutsideBounds(noteId, enabled)
                             }
                         }
                     )
