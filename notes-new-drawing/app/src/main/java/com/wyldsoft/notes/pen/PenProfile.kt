@@ -16,6 +16,7 @@ data class PenProfile(
     val strokeWidth: Float,
     var penType: PenType, // Made mutable to allow pen type switching
     val strokeColor: Color,
+    val strokeAlpha: Float = 1.0f, // Opacity: 0.0 (transparent) to 1.0 (opaque)
     val profileId: Int = 0 // Added profile ID for identification
 ) {
     companion object {
@@ -35,12 +36,13 @@ data class PenProfile(
                 strokeWidth = defaultStrokeWidth,
                 penType = penType,
                 strokeColor = Color.Black,
+                strokeAlpha = 1.0f,
                 profileId = profileId
             )
         }
     }
 
-    fun getColorAsInt(): Int = strokeColor.toArgb()
+    fun getColorAsInt(): Int = strokeColor.copy(alpha = strokeAlpha).toArgb()
 
     internal fun getOnyxStrokeStyleInternal(): Int {
         return when (penType) {

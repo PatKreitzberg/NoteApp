@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -121,52 +120,31 @@ fun TextPropertiesPanel(
             // ── Color ───────────────────────────────────────────────────────
             Text("Color", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(4.dp))
-            val rows = colorSwatches.chunked(8)
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    rows.forEach { rowItems ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            rowItems.forEach { (color, name) ->
-                                val isSelected = color == textProfile.color
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(color)
-                                        .border(
-                                            width = if (isSelected) 3.dp else 1.dp,
-                                            color = if (isSelected) Color.Red else Color.Black
-                                        )
-                                        .clickable {
-                                            Log.d(TAG, "Selected color: $name")
-                                            onProfileChanged(textProfile.copy(color = color))
-                                        }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Preview
-                Box(
-                    contentAlignment = Alignment.CenterStart,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(120.dp)
-                        .border(1.dp, Color.Gray)
-                        .background(Color(0xFFF5F5F5))
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = "Sample",
-                        color = textProfile.color,
-                        fontSize = textProfile.fontSize.coerceIn(10f, 48f).sp,
-                        fontFamily = fontFamilyFor(textProfile.fontFamily)
-                    )
-                }
+            // Preview
+            Box(
+                contentAlignment = Alignment.CenterStart,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .border(1.dp, Color.Gray)
+                    .background(Color(0xFFF5F5F5))
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = "Sample",
+                    color = textProfile.color,
+                    fontSize = textProfile.fontSize.coerceIn(10f, 48f).sp,
+                    fontFamily = fontFamilyFor(textProfile.fontFamily)
+                )
             }
+            Spacer(modifier = Modifier.height(6.dp))
+            ColorSwatchGrid(
+                selectedColor = textProfile.color,
+                onColorSelected = { color ->
+                    Log.d(TAG, "Selected color: $color")
+                    onProfileChanged(textProfile.copy(color = color))
+                }
+            )
         }
     }
 }

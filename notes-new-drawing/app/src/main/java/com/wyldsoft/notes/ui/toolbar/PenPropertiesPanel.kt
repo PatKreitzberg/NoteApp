@@ -5,16 +5,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -57,7 +53,7 @@ fun StrokePreview(profile: PenProfile, modifier: Modifier = Modifier) {
         val previewWidth = profile.strokeWidth.coerceIn(1f, h * 0.6f)
         drawPath(
             path = path,
-            color = profile.strokeColor,
+            color = profile.strokeColor.copy(alpha = profile.strokeAlpha),
             style = Stroke(
                 width = previewWidth,
                 cap = StrokeCap.Round,
@@ -96,7 +92,10 @@ fun PenPropertiesPanel(
                             Log.d(TAG, "Selected pen type: ${type.displayName}")
                             val newProfile = PenProfile
                                 .getDefaultProfile(type, currentProfile.profileId)
-                                .copy(strokeColor = currentProfile.strokeColor)
+                                .copy(
+                                    strokeColor = currentProfile.strokeColor,
+                                    strokeAlpha = currentProfile.strokeAlpha
+                                )
                             onProfileChanged(newProfile)
                         }
                         .padding(vertical = 6.dp, horizontal = 8.dp)
@@ -129,42 +128,40 @@ fun PenPropertiesPanel(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
+            Text(
+                "Opacity: ${(currentProfile.strokeAlpha * 100).toInt()}%",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+            Slider(
+                value = currentProfile.strokeAlpha,
+                onValueChange = { alpha ->
+                    onProfileChanged(currentProfile.copy(strokeAlpha = alpha))
+                },
+                onValueChangeFinished = {
+                    Log.d(TAG, "Stroke alpha set to: ${currentProfile.strokeAlpha}")
+                },
+                valueRange = 0.05f..1f,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
             Text("Color", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(4.dp))
-            val rows = colorSwatches.chunked(8)
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    rows.forEach { rowItems ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            rowItems.forEach { (color, name) ->
-                                val isSelected = color == currentProfile.strokeColor
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(color)
-                                        .border(
-                                            width = if (isSelected) 3.dp else 1.dp,
-                                            color = if (isSelected) Color.Red else Color.Black
-                                        )
-                                        .clickable {
-                                            Log.d(TAG, "Selected color: $name")
-                                            onProfileChanged(currentProfile.copy(strokeColor = color))
-                                        }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
+            StrokePreview(
+                profile = currentProfile,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            ColorSwatchGrid(
+                selectedColor = currentProfile.strokeColor,
+                onColorSelected = { color ->
+                    onProfileChanged(currentProfile.copy(strokeColor = color))
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                StrokePreview(
-                    profile = currentProfile,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(120.dp)
-                )
-            }
+            )
         }
     }
 }
