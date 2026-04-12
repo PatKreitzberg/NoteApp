@@ -133,11 +133,27 @@ fun Toolbar(
         Spacer(modifier = Modifier.width(10.dp))
 
         val currentMode by EditorState.currentMode.collectAsState()
+        val inEraser = currentMode == AppMode.ERASER
         val inSelection = currentMode == AppMode.SELECTION
         val inSeparation = currentMode == AppMode.SEPARATION
         val hasSelection by EditorState.hasSelection.collectAsState()
         val hasCopied by EditorState.hasCopied.collectAsState()
         val paginationEnabled by EditorState.paginationEnabled.collectAsState()
+
+        IconButton(
+            onClick = {
+                Log.d(TAG, "Eraser button clicked, inEraser=$inEraser")
+                if (inEraser) EditorState.setMode(AppMode.DRAWING)
+                else EditorState.setMode(AppMode.ERASER)
+            },
+            modifier = Modifier.then(if (inEraser) Modifier.border(2.dp, Color.Black) else Modifier)
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(id = drawable.ic_eraser),
+                contentDescription = "Eraser Tool",
+                tint = if (inEraser) Color.Black else Color.Gray
+            )
+        }
 
         IconButton(
             onClick = {

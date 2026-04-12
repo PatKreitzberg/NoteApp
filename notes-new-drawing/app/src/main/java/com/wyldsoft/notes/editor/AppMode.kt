@@ -12,6 +12,7 @@ package com.wyldsoft.notes.editor
 enum class AppMode {
     HOME,
     DRAWING,
+    ERASER,
     SELECTION,
     SEPARATION,
     TEXT,

@@ -612,6 +612,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         Log.d(TAG, "enterNewMode $mode")
         when (mode) {
             AppMode.DRAWING -> updateTouchHelperWithProfile()
+            AppMode.ERASER -> {
+                savedPenProfile = currentPenProfile
+                // Enable raw drawing to capture pen touch points, but suppress Onyx ink rendering
+                updateTouchHelperWithProfile()
+                disableInkRendering()
+            }
             AppMode.SELECTION -> {
                 savedPenProfile = currentPenProfile
                 if (circleSelectPreloaded) {
@@ -678,6 +684,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         if (isInMode(mode)) return
         when (mode) {
             AppMode.DRAWING -> disableRawDrawing()
+            AppMode.ERASER -> restoreSavedPenProfile()
             AppMode.SELECTION -> {
                 selectedShapes.clear()
                 selectionBoundingRectNote = null
@@ -948,6 +955,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 disableFingerTouch()
                 return
             }
+            if (EditorState.currentMode.value == AppMode.ERASER) {
+                disableInkRendering()
+                isDrawingInProgress = true
+                disableFingerTouch()
+                return
+            }
             isDrawingInProgress = true
             disableFingerTouch()
         }
@@ -1049,6 +1062,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 val startPt = geometryStartPoint ?: return
                 val endPt = touchPointList?.points?.lastOrNull() ?: return
                 commitGeometryShape(startPt, endPt)
+                return
+            }
+            if (EditorState.currentMode.value == AppMode.ERASER) {
+                touchPointList?.let { handleErasing(it) }
                 return
             }
             touchPointList?.points?.let { points ->
