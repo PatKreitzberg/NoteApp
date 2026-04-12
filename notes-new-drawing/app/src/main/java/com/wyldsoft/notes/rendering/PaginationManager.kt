@@ -20,7 +20,7 @@ class PaginationManager(
     private val TAG = "PaginationManager"
 
     companion object {
-        private const val GAP_DP = 40f
+        private const val GAP_DP = 20f
         const val DEFAULT_ASPECT_RATIO = 11.0f / 8.5f
     }
 

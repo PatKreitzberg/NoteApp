@@ -41,5 +41,6 @@ data class NoteEntity(
     val pdfPath: String? = null,
     val pdfPageCount: Int = 0,
     val pdfPageAspectRatio: Float = 0f,
-    val overrideNotebookSettings: Boolean = false
+    val overrideNotebookSettings: Boolean = false,
+    val drawOutsideBounds: Boolean = false
 )

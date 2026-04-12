@@ -29,5 +29,6 @@ data class NotebookEntity(
     @ColumnInfo(name = "trashedFromId")
     val trashedFromId: String? = null,
     val template: String = "BLANK",
-    val isPaginationEnabled: Boolean = false
+    val isPaginationEnabled: Boolean = false,
+    val drawOutsideBounds: Boolean = false
 )

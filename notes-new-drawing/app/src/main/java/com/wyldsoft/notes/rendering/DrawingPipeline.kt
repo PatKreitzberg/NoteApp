@@ -261,6 +261,11 @@ class DrawingPipeline(
             color = Color.parseColor("#4A90D9")
             style = Paint.Style.FILL
         }
+        val borderPaint = Paint().apply {
+            color = Color.BLACK
+            style = Paint.Style.FILL
+            isAntiAlias = false
+        }
         val textPaint = Paint().apply {
             color = Color.DKGRAY
             textSize = 14f * viewportManager.scale
@@ -268,11 +273,43 @@ class DrawingPipeline(
             isAntiAlias = true
         }
 
+        val borderThicknessPx = (1.5f * viewportManager.scale).coerceAtLeast(1f)
+        val pageRightVp = viewportManager.noteToViewportX(pm.pageWidth)
+
         for (gapRect in pm.allGapRects()) {
             val vpRect = viewportManager.noteToViewport(gapRect)
             if (vpRect.bottom > 0 && vpRect.top < screenHeight) {
                 canvas.drawRect(vpRect, gapPaint)
+                // Thin black line at top of gap
+                canvas.drawRect(
+                    vpRect.left, vpRect.top,
+                    vpRect.right, vpRect.top + borderThicknessPx,
+                    borderPaint
+                )
+                // Thin black line at bottom of gap
+                canvas.drawRect(
+                    vpRect.left, vpRect.bottom - borderThicknessPx,
+                    vpRect.right, vpRect.bottom,
+                    borderPaint
+                )
             }
+        }
+
+        // Draw left and right page border lines for each page
+        for (i in 0 until pm.pageCount) {
+            val pageTopVp = viewportManager.noteToViewportY(pm.pageTopY(i))
+            val pageBottomVp = viewportManager.noteToViewportY(pm.pageBottomY(i))
+            if (pageBottomVp <= 0 || pageTopVp >= screenHeight) continue
+            val clampedTop = pageTopVp.coerceAtLeast(0f)
+            val clampedBottom = pageBottomVp.coerceAtMost(screenHeight.toFloat())
+            // Left border
+            canvas.drawRect(0f, clampedTop, borderThicknessPx, clampedBottom, borderPaint)
+            // Right border
+            canvas.drawRect(
+                pageRightVp - borderThicknessPx, clampedTop,
+                pageRightVp, clampedBottom,
+                borderPaint
+            )
         }
 
         for (i in 0 until pm.pageCount) {
