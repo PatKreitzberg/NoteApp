@@ -6,6 +6,7 @@ enum class GestureAction {
     UNDO,
     REDO,
     ENTER_SELECTION_MODE,
+    TOGGLE_ERASER_MODE,
     NEXT_NOTE,
     PREVIOUS_NOTE,
     FULL_SCREEN_REFRESH;
@@ -16,6 +17,7 @@ enum class GestureAction {
         UNDO -> "Undo"
         REDO -> "Redo"
         ENTER_SELECTION_MODE -> "Enter Selection Mode"
+        TOGGLE_ERASER_MODE -> "Enter/Exit Eraser Mode"
         NEXT_NOTE -> "Next Note"
         PREVIOUS_NOTE -> "Previous Note"
         FULL_SCREEN_REFRESH -> "Full Screen Refresh"

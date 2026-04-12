@@ -453,6 +453,10 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             GestureAction.UNDO -> EditorState.requestUndo()
             GestureAction.REDO -> EditorState.requestRedo()
             GestureAction.ENTER_SELECTION_MODE -> EditorState.setMode(AppMode.SELECTION)
+            GestureAction.TOGGLE_ERASER_MODE -> {
+                if (EditorState.currentMode.value == AppMode.ERASER) EditorState.setMode(AppMode.DRAWING)
+                else EditorState.setMode(AppMode.ERASER)
+            }
             GestureAction.NEXT_NOTE -> EditorState.requestNavigateNext()
             GestureAction.PREVIOUS_NOTE -> EditorState.requestNavigatePrev()
             GestureAction.FULL_SCREEN_REFRESH -> postFullEinkRefresh()
