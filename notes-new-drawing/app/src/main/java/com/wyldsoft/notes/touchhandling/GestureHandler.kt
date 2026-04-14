@@ -34,6 +34,9 @@ class GestureHandler(
         private const val MULTI_TAP_TIMEOUT = 300L
         private const val LONG_PRESS_TIMEOUT = 500L
         private const val VELOCITY_WINDOW_SIZE = 5
+        // Palms produce a much larger contact area than fingertips.
+        // Any pointer whose touchMajor exceeds this threshold is treated as a palm.
+        private const val PALM_TOUCH_MAJOR_THRESHOLD = 100f
     }
 
     private enum class GesturePhase { IDLE, TOUCHING, MOVING, PINCHING }
@@ -77,6 +80,17 @@ class GestureHandler(
 
     private val handler = Handler(Looper.getMainLooper())
 
+    // Set to true when a palm-sized contact is detected; cleared on ACTION_UP/CANCEL.
+    // All events in a palm gesture session are swallowed to prevent spurious panning.
+    private var palmTouchActive = false
+
+    private fun hasPalmTouch(event: MotionEvent): Boolean {
+        for (i in 0 until event.pointerCount) {
+            if (event.getTouchMajor(i) > PALM_TOUCH_MAJOR_THRESHOLD) return true
+        }
+        return false
+    }
+
     fun isStylusOrEraser(event: MotionEvent) : Boolean {
         for (i in 0 until event.pointerCount) {
             val toolType = event.getToolType(i)
@@ -105,6 +119,31 @@ class GestureHandler(
         }
 
         if (isStylusOrEraser(event)) return false
+
+        // Palm rejection: large contact area → cancel any in-progress gesture and swallow.
+        if (hasPalmTouch(event)) {
+            if (!palmTouchActive) {
+                palmTouchActive = true
+                Log.d(TAG, "Palm detected (touchMajor=${event.getTouchMajor(0)}), cancelling gesture")
+                cancelLongPress()
+                cancelTapTimeout()
+                tapCount = 0
+                if (isPanning) {
+                    isPanning = false
+                }
+                resetGestureState()
+            }
+            return true
+        }
+        // Once a palm is active, swallow all events until the finger(s) fully lift.
+        if (palmTouchActive) {
+            if (event.actionMasked == MotionEvent.ACTION_UP ||
+                event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                palmTouchActive = false
+                Log.d(TAG, "Palm lifted, resuming gesture detection")
+            }
+            return true
+        }
 
         when (event.actionMasked) {
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> handleAllPointersUp(event)
