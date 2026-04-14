@@ -59,7 +59,6 @@ class ViewportManager {
         snapshotScrollY = scrollY
         snapshotScale = scale
         hasSnapshot = true
-        Log.d(TAG, "saveSnapshot scrollX=$scrollX scrollY=$scrollY scale=$scale")
     }
 
     fun clearSnapshot() {
@@ -82,7 +81,6 @@ class ViewportManager {
         val ty = (snapshotScrollY - scrollY) * scale
         canvas.translate(tx, ty)
         canvas.scale(sx, sy)
-        Log.d(TAG, "applyGestureTransform sx=$sx tx=$tx ty=$ty")
         return true
     }
 
@@ -122,7 +120,6 @@ class ViewportManager {
      * only does additive translation and cannot handle scaling.
      */
     fun viewportToNoteTouchPoints(viewportPoints: TouchPointList): TouchPointList {
-        Log.d(TAG, "viewportToNoteTouchPoints")
         val notePoints = TouchPointList()
         for (tp in viewportPoints.points) {
             val noteTp = TouchPoint(
@@ -146,7 +143,6 @@ class ViewportManager {
      * matching the Onyx SDK's real-time rendering.
      */
     fun noteToViewportTouchPoints(notePoints: TouchPointList): TouchPointList {
-        Log.d(TAG, "noteToViewportTouchPoints")
         val viewportPoints = TouchPointList()
         for (tp in notePoints.points) {
             val viewportTp = TouchPoint(
@@ -169,7 +165,6 @@ class ViewportManager {
      * Call canvas.save() before and canvas.restore() after rendering.
      */
     fun applyToCanvas(canvas: Canvas) {
-        Log.d(TAG, "applyToCanvas scale=$scale scrollX=$scrollX scrollY=$scrollY")
         canvas.scale(scale, scale)
         canvas.translate(-scrollX, -scrollY)
     }
@@ -191,7 +186,6 @@ class ViewportManager {
         scrollX = 0f
         scrollY = 0f
         scale = 1f
-        Log.d(TAG, "resetViewport")
     }
 
     fun handlePanMove(deltaX: Float, deltaY: Float) {
@@ -199,7 +193,6 @@ class ViewportManager {
             scrollX = max(0f, scrollX - deltaX / scale)
         }
         scrollY = max(0f, scrollY - deltaY / scale)
-        Log.d(TAG, "handlePanMove scrollX=$scrollX scrollY=$scrollY")
     }
 
     /**
@@ -211,7 +204,6 @@ class ViewportManager {
      * Used by search navigation to jump to a matching shape.
      */
     fun scrollToY(targetY: Float) {
-        Log.d(TAG, "scrollToY targetY=$targetY")
         scrollY = targetY.coerceAtLeast(0f)
         if (paginationEnabled) scrollX = 0f
     }
@@ -229,6 +221,5 @@ class ViewportManager {
         scrollY = max(0f, anchorNoteY - centerY / newScale)
 
         scale = newScale
-        Log.d(TAG, "handlePinchMove scale=$scale scrollX=$scrollX scrollY=$scrollY")
     }
 }

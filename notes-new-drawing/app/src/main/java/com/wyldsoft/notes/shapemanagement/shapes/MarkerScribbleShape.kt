@@ -13,10 +13,6 @@ class MarkerScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList!!.points
 
-        for (p in points){
-            Log.d("tilt", p.tiltX.toString())
-        }
-
         applyStrokeStyle(renderContext)
         NeoMarkerPenWrapper.drawStroke(
             renderContext.canvas, renderContext.paint, points,

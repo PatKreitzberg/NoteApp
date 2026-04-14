@@ -810,10 +810,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         helper.closeRawDrawing()
 
         helper.setStrokeWidth(currentPenProfile.strokeWidth * viewportManager.scale)
-            .setStrokeColor(currentPenProfile.getColorAsInt())
             .setLimitRect(limit, ArrayList(excludeRects))
             .openRawDrawing()
             .setStrokeStyle(currentPenProfile.getOnyxStrokeStyleInternal())
+            .setStrokeColor(currentPenProfile.getColorAsInt())
             .setRawDrawingEnabled(true).isRawDrawingRenderEnabled = true
     }
 

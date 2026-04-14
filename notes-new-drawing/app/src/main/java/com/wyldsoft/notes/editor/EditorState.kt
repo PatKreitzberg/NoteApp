@@ -346,6 +346,15 @@ class EditorState {
             _penProfiles.getOrNull(_activePenSlot.value - 1)?.value = profile
         }
 
+        fun initializePenProfiles(profiles: List<PenProfile>, activePenSlot: Int) {
+            Log.d(TAG, "initializePenProfiles activeSlot=$activePenSlot count=${profiles.size}")
+            profiles.forEachIndexed { i, profile ->
+                _penProfiles.getOrNull(i)?.value = profile
+            }
+            _activePenSlot.value = activePenSlot.coerceIn(1, _penProfiles.size)
+            _currentPenProfile.value = penProfileForSlot(_activePenSlot.value)
+        }
+
         fun addExclusionRect(rect: Rect) {
             exclusionRects.add(rect)
         }

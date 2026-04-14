@@ -3,8 +3,12 @@ package com.wyldsoft.notes.settings
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.gestures.GestureBindings
+import com.wyldsoft.notes.pen.PenProfile
+import com.wyldsoft.notes.pen.PenType
 
 class AppSettings(context: Context) {
     companion object {
@@ -14,6 +18,11 @@ class AppSettings(context: Context) {
         private const val KEY_GESTURE_PREFIX = "gesture_"
         private const val KEY_SCRIBBLE_TO_ERASE = "scribble_to_erase"
         private const val KEY_CIRCLE_TO_SELECT = "circle_to_select"
+        private const val KEY_PEN_ACTIVE_SLOT = "pen_active_slot"
+        private const val KEY_PEN_SLOT_PREFIX = "pen_slot_"
+        private val DEFAULT_PEN_TYPES = listOf(
+            PenType.BALLPEN, PenType.MARKER, PenType.PENCIL, PenType.FOUNTAIN, PenType.CHARCOAL
+        )
     }
 
     private val prefs: SharedPreferences =
@@ -58,5 +67,44 @@ class AppSettings(context: Context) {
             editor.putString("$KEY_GESTURE_PREFIX$key", action.name)
         }
         editor.apply()
+    }
+
+    fun savePenProfiles(profiles: List<PenProfile>, activePenSlot: Int) {
+        Log.d(TAG, "savePenProfiles activeSlot=$activePenSlot count=${profiles.size}")
+        val editor = prefs.edit()
+        editor.putInt(KEY_PEN_ACTIVE_SLOT, activePenSlot)
+        profiles.forEachIndexed { i, profile ->
+            val prefix = "$KEY_PEN_SLOT_PREFIX${i + 1}"
+            editor.putFloat("${prefix}_width", profile.strokeWidth)
+            editor.putString("${prefix}_type", profile.penType.name)
+            editor.putInt("${prefix}_color", profile.strokeColor.toArgb())
+            editor.putFloat("${prefix}_alpha", profile.strokeAlpha)
+        }
+        editor.apply()
+    }
+
+    fun loadPenProfiles(): Pair<List<PenProfile>, Int> {
+        Log.d(TAG, "loadPenProfiles")
+        val activePenSlot = prefs.getInt(KEY_PEN_ACTIVE_SLOT, 1).coerceIn(1, DEFAULT_PEN_TYPES.size)
+        val profiles = DEFAULT_PEN_TYPES.mapIndexed { i, defaultType ->
+            val prefix = "$KEY_PEN_SLOT_PREFIX${i + 1}"
+            if (!prefs.contains("${prefix}_type")) {
+                PenProfile.getDefaultProfile(defaultType, i + 1)
+            } else {
+                val typeName = prefs.getString("${prefix}_type", defaultType.name)!!
+                val penType = PenType.entries.find { it.name == typeName } ?: defaultType
+                val width = prefs.getFloat("${prefix}_width", PenProfile.getDefaultProfile(penType).strokeWidth)
+                val colorArgb = prefs.getInt("${prefix}_color", android.graphics.Color.BLACK)
+                val alpha = prefs.getFloat("${prefix}_alpha", 1.0f)
+                PenProfile(
+                    strokeWidth = width,
+                    penType = penType,
+                    strokeColor = Color(colorArgb),
+                    strokeAlpha = alpha,
+                    profileId = i + 1
+                )
+            }
+        }
+        return Pair(profiles, activePenSlot)
     }
 }

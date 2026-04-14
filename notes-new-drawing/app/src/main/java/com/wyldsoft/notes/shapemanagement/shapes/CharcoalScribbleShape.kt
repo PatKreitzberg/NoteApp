@@ -20,13 +20,6 @@ import com.wyldsoft.notes.shapemanagement.ShapeFactory
 class CharcoalScribbleShape : Shape() {
     override fun render(renderContext: RenderContext) {
         val points = touchPointList!!.points
-        Log.d(TAG, "CharcoalScribbleShape")
-
-        for (p in points){
-            Log.d("tilt", p.tiltX.toString())
-        }
-
-
         applyStrokeStyle(renderContext)
 
         val createArgs = ShapeCreateArgs()

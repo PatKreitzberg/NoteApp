@@ -142,6 +142,9 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             }
         }
 
+        val (savedProfiles, savedSlot) = appSettings.loadPenProfiles()
+        EditorState.initializePenProfiles(savedProfiles, savedSlot)
+
         initializeSDK()
         initializePaint()
         initializeDeviceReceiver()
@@ -172,6 +175,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         observeAppMode()
         observePenProfile()
         observePagination()
+        observeDrawOutsideBounds()
         observeTemplate()
         loadNotesForNotebook()
         observeNoteNavigation()
@@ -267,6 +271,10 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                 currentPenProfile = profile
                 updatePaintFromProfile()
                 updateTouchHelperWithProfile()
+                appSettings.savePenProfiles(
+                    EditorState.penProfiles.map { it.value },
+                    EditorState.activePenSlot.value
+                )
             }
         }
     }
@@ -305,6 +313,15 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
     protected open fun onPaginationChanged(enabled: Boolean) {}
 
+    private fun observeDrawOutsideBounds() {
+        lifecycleScope.launch {
+            EditorState.drawOutsideBounds.collect { enabled ->
+                Log.d(TAG, "drawOutsideBounds changed: $enabled")
+                updatePaginationExclusions()
+            }
+        }
+    }
+
     private fun observeTemplate() {
         lifecycleScope.launch {
             EditorState.currentTemplate.collect { template ->
@@ -335,12 +352,14 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     private fun updatePaginationExclusions() {
         paginationManager?.let { pm ->
             surfaceView?.let { sv ->
-                val gapExclusions = pm.computeExclusionRects(
-                    viewportManager.scrollX, viewportManager.scrollY,
-                    viewportManager.scale, sv.width, sv.height
-                )
                 val allExclusions = EditorState.getCurrentExclusionRects().toMutableList()
-                allExclusions.addAll(gapExclusions)
+                if (!EditorState.drawOutsideBounds.value) {
+                    val gapExclusions = pm.computeExclusionRects(
+                        viewportManager.scrollX, viewportManager.scrollY,
+                        viewportManager.scale, sv.width, sv.height
+                    )
+                    allExclusions.addAll(gapExclusions)
+                }
                 updateExclusionZones(allExclusions)
             }
         }
