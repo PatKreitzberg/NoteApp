@@ -261,6 +261,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             shapeRepository = shapeRepo,
             noteId = noteId
         )
+        Log.d(TAG, "setupPipelineForNote 1")
         drawingPipeline.paginationManager = paginationManager
         actionManager = ActionManager(
             undoHistoryRepository = undoHistoryRepo,
@@ -269,8 +270,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             selectionManager = selectionManager,
             paginationManager = paginationManager
         )
+        Log.d(TAG, "setupPipelineForNote 2")
         shapesLoaded = false
         lifecycleScope.launch(Dispatchers.IO) {
+            Log.d(TAG, "setupPipelineForNote 3")
             // Load note entity to wire up PDF page renderer if this is a PDF-backed note
             val note = noteRepository?.getById(noteId)
             val pdfPath = note?.pdfPath
@@ -285,14 +288,21 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                 currentPdfPageRenderer = null
                 drawingPipeline.pdfPageRenderer = null
             }
+            Log.d(TAG, "setupPipelineForNote 4")
             drawingPipeline.loadShapes(noteId)
+            Log.d(TAG, "setupPipelineForNote 5")
             actionManager.loadFromDatabase(drawingPipeline)
+            Log.d(TAG, "setupPipelineForNote 6")
             // Load layers and reset active layer to 1 on note switch
             val loadedLayers = layerManager.loadLayersForNote(noteId)
+            Log.d(TAG, "setupPipelineForNote 7")
             EditorState.setLayers(loadedLayers)
             EditorState.setActiveLayer(1)
             shapesLoaded = true
+            Log.d(TAG, "forceScreenRefresh from loading note")
+            Log.d(TAG, "setupPipelineForNote 8")
             launch(Dispatchers.Main) {
+                Log.d(TAG, "setupPipelineForNote 9")
                 forceScreenRefresh()
             }
         }
