@@ -34,6 +34,7 @@ import com.wyldsoft.notes.data.database.migrations.MIGRATION_4_5
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_5_6
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_6_7
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_7_8
+import com.wyldsoft.notes.data.database.migrations.MIGRATION_8_9
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,7 +52,7 @@ import kotlinx.coroutines.launch
         LayerEntity::class,
         HtrResultEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -105,7 +106,7 @@ abstract class NotesDatabase : RoomDatabase() {
                 NotesDatabase::class.java,
                 "notes_database"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                 .addCallback(SeedCallback())
                 .build()
         }

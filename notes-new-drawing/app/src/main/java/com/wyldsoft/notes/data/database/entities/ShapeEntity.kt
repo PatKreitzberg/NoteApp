@@ -34,5 +34,6 @@ data class ShapeEntity(
     val text: String? = null,
     val fontSize: Float = 32f,
     val fontFamily: String = "sans-serif",
-    val layer: Int = 1
+    val layer: Int = 1,
+    val pointData: ByteArray? = null
 )

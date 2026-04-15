@@ -2,6 +2,7 @@ package com.wyldsoft.notes.data.mappers
 
 import android.util.Log
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils
+import java.nio.ByteBuffer
 import com.onyx.android.sdk.data.note.PenTexture
 import com.onyx.android.sdk.data.note.TouchPoint
 import com.onyx.android.sdk.pen.data.TouchPointList
@@ -42,6 +43,17 @@ object ShapeMapper {
 
         val pointPairs = xs.zip(ys).map { listOf(it.first, it.second) }
 
+        // Binary encoding: x(4) + y(4) + pressure(4) + tiltX(4) + tiltY(4) + timestamp(8) = 28 bytes/point
+        val pointDataBuffer = ByteBuffer.allocate(xs.size * 28)
+        for (i in xs.indices) {
+            pointDataBuffer.putFloat(xs[i])
+            pointDataBuffer.putFloat(ys[i])
+            pointDataBuffer.putFloat(pressures[i])
+            pointDataBuffer.putInt(tiltXs[i])
+            pointDataBuffer.putInt(tiltYs[i])
+            pointDataBuffer.putLong(timestamps[i])
+        }
+
         val entityId = shape.entityId ?: NanoIdUtils.randomNanoId()
         shape.entityId = entityId
 
@@ -62,6 +74,7 @@ object ShapeMapper {
             tiltY = json.encodeToString(tiltYs.toList()),
             pointTimestamps = json.encodeToString(timestamps.toList()),
             timestamp = System.currentTimeMillis(),
+            pointData = pointDataBuffer.array(),
             text = textContent,
             fontSize = fontSize,
             fontFamily = fontFamily,
@@ -95,21 +108,37 @@ object ShapeMapper {
             shape.texture = PenTexture.CHARCOAL_SHAPE_V1
         }
 
-        val pointPairs: List<List<Float>> = json.decodeFromString(entity.points)
-        val pressures: List<Float> = json.decodeFromString(entity.pressure)
-        val tiltXs: List<Int> = json.decodeFromString(entity.tiltX)
-        val tiltYs: List<Int> = json.decodeFromString(entity.tiltY)
-        val timestamps: List<Long> = json.decodeFromString(entity.pointTimestamps)
-
         val touchPointList = TouchPointList()
-        for (i in pointPairs.indices) {
-            val x = pointPairs[i][0]
-            val y = pointPairs[i][1]
-            val pressure = pressures.getOrElse(i) { 0f }
-            val tiltX = tiltXs.getOrElse(i) { 0 }
-            val tiltY = tiltYs.getOrElse(i) { 0 }
-            val timestamp = timestamps.getOrElse(i) { 0L }
-            touchPointList.add(TouchPoint(x, y, pressure, 0f, tiltX, tiltY, timestamp))
+        val rawPointData = entity.pointData
+        if (rawPointData != null && rawPointData.isNotEmpty()) {
+            // Fast path: decode from binary blob (28 bytes per point)
+            val buffer = ByteBuffer.wrap(rawPointData)
+            val numPoints = rawPointData.size / 28
+            repeat(numPoints) {
+                val x = buffer.float
+                val y = buffer.float
+                val pressure = buffer.float
+                val tiltX = buffer.int
+                val tiltY = buffer.int
+                val timestamp = buffer.long
+                touchPointList.add(TouchPoint(x, y, pressure, 0f, tiltX, tiltY, timestamp))
+            }
+        } else {
+            // Fallback: decode from legacy JSON fields (rows written before migration)
+            val pointPairs: List<List<Float>> = json.decodeFromString(entity.points)
+            val pressures: List<Float> = json.decodeFromString(entity.pressure)
+            val tiltXs: List<Int> = json.decodeFromString(entity.tiltX)
+            val tiltYs: List<Int> = json.decodeFromString(entity.tiltY)
+            val timestamps: List<Long> = json.decodeFromString(entity.pointTimestamps)
+            for (i in pointPairs.indices) {
+                val x = pointPairs[i][0]
+                val y = pointPairs[i][1]
+                val pressure = pressures.getOrElse(i) { 0f }
+                val tiltX = tiltXs.getOrElse(i) { 0 }
+                val tiltY = tiltYs.getOrElse(i) { 0 }
+                val timestamp = timestamps.getOrElse(i) { 0L }
+                touchPointList.add(TouchPoint(x, y, pressure, 0f, tiltX, tiltY, timestamp))
+            }
         }
 
         if (shape is TextShape) {
