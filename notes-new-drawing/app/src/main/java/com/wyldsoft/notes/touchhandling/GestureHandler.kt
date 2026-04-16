@@ -23,7 +23,8 @@ import kotlin.math.hypot
 class GestureHandler(
     private val currentModeProvider: () -> AppMode,
     private val changeMode: (AppMode) -> Unit,
-    private val onGestureEvent: (GestureEvent) -> Unit
+    private val onGestureEvent: (GestureEvent) -> Unit,
+    private val isCanvasLockedProvider: () -> Boolean = { false }
 ) : View.OnTouchListener {
 
     companion object {
@@ -100,7 +101,7 @@ class GestureHandler(
             val toolType = event.getToolType(i)
             if (toolType == MotionEvent.TOOL_TYPE_STYLUS ||
                 toolType == MotionEvent.TOOL_TYPE_ERASER) {
-                Log.d(TAG, "Type is stylus or eraser")
+                //Log.d(TAG, "Type is stylus or eraser")
                 return true
             }
         }
@@ -218,19 +219,24 @@ class GestureHandler(
             GesturePhase.TOUCHING -> {
                 if (anyPointerMovedBeyondThreshold()) {
                     cancelLongPress()
-                    if (activePointers.size >= 2) {
+                    if (isCanvasLockedProvider()) {
+                        // Canvas locked: suppress pan/pinch, cancel tap since movement occurred
+                        cancelTapTimeout()
+                        tapCount = 0
+                    } else if (activePointers.size >= 2) {
                         gesturePhase = GesturePhase.PINCHING
                         computePinchBaseline()
                         emitGesture(GestureEvent.PinchStart(lastPinchCenterX, lastPinchCenterY))
+                        cancelTapTimeout()
+                        tapCount = 0
                     } else {
                         gesturePhase = GesturePhase.MOVING
                         isPanning = true
                         computePanBaseline()
                         emitGesture(GestureEvent.PanStart(maxPointersInGesture))
+                        cancelTapTimeout()
+                        tapCount = 0
                     }
-                    // Cancel any pending tap sequence since we're now moving
-                    cancelTapTimeout()
-                    tapCount = 0
                 }
             }
             GesturePhase.PINCHING -> {

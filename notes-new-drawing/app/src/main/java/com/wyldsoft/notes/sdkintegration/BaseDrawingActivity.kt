@@ -456,14 +456,13 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         Log.d(TAG, "attachGestureHandler")
         gestureHandler = GestureHandler(
             currentModeProvider = { EditorState.currentMode.value },
-            changeMode = {mode ->
-                EditorState.setMode(mode)
-                         },
+            changeMode = { mode -> EditorState.setMode(mode) },
             onGestureEvent = { event ->
                 gestureLabel.value = event.displayName()
                 handleGestureThatTransformsViewport(event)
                 executeGestureAction(event)
-            }
+            },
+            isCanvasLockedProvider = { EditorState.isCanvasLocked.value }
         )
         sv.setOnTouchListener(gestureHandler)
     }

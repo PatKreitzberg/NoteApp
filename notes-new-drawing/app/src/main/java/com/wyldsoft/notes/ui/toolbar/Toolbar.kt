@@ -18,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
@@ -260,6 +262,21 @@ fun Toolbar(
             Icon(
                 imageVector = Icons.Default.CenterFocusStrong,
                 contentDescription = "ResetViewport"
+            )
+        }
+
+        val isCanvasLocked by EditorState.isCanvasLocked.collectAsState()
+        IconButton(
+            onClick = {
+                Log.d(TAG, "Canvas lock button clicked, locked=$isCanvasLocked")
+                EditorState.toggleCanvasLock()
+            },
+            modifier = Modifier.then(if (isCanvasLocked) Modifier.border(2.dp, Color.Black) else Modifier)
+        ) {
+            Icon(
+                imageVector = if (isCanvasLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                contentDescription = if (isCanvasLocked) "Unlock Canvas" else "Lock Canvas",
+                tint = if (isCanvasLocked) Color.Black else Color.Gray
             )
         }
 

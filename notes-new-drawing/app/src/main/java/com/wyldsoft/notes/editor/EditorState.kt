@@ -45,6 +45,14 @@ class EditorState {
         private val _dismissSettings = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val dismissSettings = _dismissSettings.asSharedFlow()
 
+        private val _isCanvasLocked = MutableStateFlow(false)
+        val isCanvasLocked: StateFlow<Boolean> = _isCanvasLocked.asStateFlow()
+
+        fun toggleCanvasLock() {
+            Log.d(TAG, "toggleCanvasLock locked=${!_isCanvasLocked.value}")
+            _isCanvasLocked.value = !_isCanvasLocked.value
+        }
+
         // PDF metadata for the currently open note
         private val _pdfPath = MutableStateFlow<String?>(null)
         val pdfPath: StateFlow<String?> = _pdfPath.asStateFlow()
