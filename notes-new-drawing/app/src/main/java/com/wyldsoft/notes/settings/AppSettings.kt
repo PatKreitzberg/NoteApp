@@ -20,8 +20,12 @@ class AppSettings(context: Context) {
         private const val KEY_CIRCLE_TO_SELECT = "circle_to_select"
         private const val KEY_PEN_ACTIVE_SLOT = "pen_active_slot"
         private const val KEY_PEN_SLOT_PREFIX = "pen_slot_"
-        private val DEFAULT_PEN_TYPES = listOf(
-            PenType.BALLPEN, PenType.MARKER, PenType.PENCIL, PenType.FOUNTAIN, PenType.CHARCOAL
+        val DEFAULT_PEN_PROFILES = listOf(
+            PenProfile(strokeWidth = 5f, penType = PenType.BALLPEN, strokeColor = Color(0xFF000000), strokeAlpha = 1.0f, profileId = 1),
+            PenProfile(strokeWidth = 5f, penType = PenType.BALLPEN, strokeColor = Color(0xFF0033CC), strokeAlpha = 1.0f, profileId = 2),
+            PenProfile(strokeWidth = 5f, penType = PenType.BALLPEN, strokeColor = Color(0xFFFF0000), strokeAlpha = 1.0f, profileId = 3),
+            PenProfile(strokeWidth = 5f, penType = PenType.BALLPEN, strokeColor = Color(0xFF00AA00), strokeAlpha = 1.0f, profileId = 4),
+            PenProfile(strokeWidth = 5f, penType = PenType.BALLPEN, strokeColor = Color(0xFFCC00CC), strokeAlpha = 1.0f, profileId = 5),
         )
     }
 
@@ -85,16 +89,16 @@ class AppSettings(context: Context) {
 
     fun loadPenProfiles(): Pair<List<PenProfile>, Int> {
         Log.d(TAG, "loadPenProfiles")
-        val activePenSlot = prefs.getInt(KEY_PEN_ACTIVE_SLOT, 1).coerceIn(1, DEFAULT_PEN_TYPES.size)
-        val profiles = DEFAULT_PEN_TYPES.mapIndexed { i, defaultType ->
+        val activePenSlot = prefs.getInt(KEY_PEN_ACTIVE_SLOT, 1).coerceIn(1, DEFAULT_PEN_PROFILES.size)
+        val profiles = DEFAULT_PEN_PROFILES.mapIndexed { i, defaultProfile ->
             val prefix = "$KEY_PEN_SLOT_PREFIX${i + 1}"
             if (!prefs.contains("${prefix}_type")) {
-                PenProfile.getDefaultProfile(defaultType, i + 1)
+                defaultProfile
             } else {
-                val typeName = prefs.getString("${prefix}_type", defaultType.name)!!
-                val penType = PenType.entries.find { it.name == typeName } ?: defaultType
-                val width = prefs.getFloat("${prefix}_width", PenProfile.getDefaultProfile(penType).strokeWidth)
-                val colorArgb = prefs.getInt("${prefix}_color", android.graphics.Color.BLACK)
+                val typeName = prefs.getString("${prefix}_type", defaultProfile.penType.name)!!
+                val penType = PenType.entries.find { it.name == typeName } ?: defaultProfile.penType
+                val width = prefs.getFloat("${prefix}_width", defaultProfile.strokeWidth)
+                val colorArgb = prefs.getInt("${prefix}_color", defaultProfile.strokeColor.toArgb())
                 val alpha = prefs.getFloat("${prefix}_alpha", 1.0f)
                 PenProfile(
                     strokeWidth = width,
