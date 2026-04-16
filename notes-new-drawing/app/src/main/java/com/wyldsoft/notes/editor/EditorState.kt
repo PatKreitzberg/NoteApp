@@ -543,5 +543,36 @@ class EditorState {
         fun setSearchHighlight(rect: RectF?) {
             _searchHighlightNoteRect.value = rect
         }
+
+        // ── Scrollbar state ────────────────────────────────────────────────────
+        private val _viewportScrollY = MutableStateFlow(0f)
+        val viewportScrollY: StateFlow<Float> = _viewportScrollY.asStateFlow()
+
+        private val _viewportScale = MutableStateFlow(1f)
+        val viewportScale: StateFlow<Float> = _viewportScale.asStateFlow()
+
+        // Note-space total content height used to size the scrollbar thumb.
+        // 10000f for free-form canvas; paginationManager.totalContentHeight() when paged.
+        private val _totalContentHeight = MutableStateFlow(10000f)
+        val totalContentHeight: StateFlow<Float> = _totalContentHeight.asStateFlow()
+
+        // Scrollbar drag requests scroll to a specific note-space Y.
+        // Bypasses canvas lock so the scrollbar always moves the canvas.
+        private val _scrollbarRequested = MutableSharedFlow<Float>(extraBufferCapacity = 1)
+        val scrollbarRequested = _scrollbarRequested.asSharedFlow()
+
+        fun requestScrollbarScroll(y: Float) {
+            Log.d(TAG, "requestScrollbarScroll y=$y")
+            _scrollbarRequested.tryEmit(y)
+        }
+
+        fun updateViewportState(scrollY: Float, scale: Float) {
+            _viewportScrollY.value = scrollY
+            _viewportScale.value = scale
+        }
+
+        fun setTotalContentHeight(height: Float) {
+            _totalContentHeight.value = height
+        }
     }
 }

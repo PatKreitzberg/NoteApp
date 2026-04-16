@@ -4,10 +4,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.wyldsoft.notes.DrawingCanvas
 import com.wyldsoft.notes.touchhandling.GestureDisplay
+import com.wyldsoft.notes.ui.components.VerticalScrollbar
 import com.wyldsoft.notes.ui.toolbar.LayerPanel
 import com.wyldsoft.notes.ui.toolbar.PenPropertiesPanel
 import com.wyldsoft.notes.ui.toolbar.TextPropertiesPanel
@@ -37,6 +40,9 @@ fun EditorView(
     val currentMode by EditorState.currentMode.collectAsState()
     val layers by EditorState.layers.collectAsState()
     val activeLayer by EditorState.activeLayer.collectAsState()
+    val viewportScrollY by EditorState.viewportScrollY.collectAsState()
+    val viewportScale by EditorState.viewportScale.collectAsState()
+    val totalContentHeight by EditorState.totalContentHeight.collectAsState()
 
     Box(
         modifier = Modifier
@@ -59,12 +65,30 @@ fun EditorView(
                 onSearchQueryChanged = onSearchQueryChanged
             )
 
-            DrawingCanvas(
-                onSurfaceViewCreated = onSurfaceViewCreated,
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-            )
+            ) {
+                val canvasHeightPx = with(LocalDensity.current) { maxHeight.toPx() }
+
+                DrawingCanvas(
+                    onSurfaceViewCreated = onSurfaceViewCreated,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                VerticalScrollbar(
+                    scrollY = viewportScrollY,
+                    scale = viewportScale,
+                    totalContentHeight = totalContentHeight,
+                    canvasHeightPx = canvasHeightPx,
+                    onScrollRequested = { EditorState.requestScrollbarScroll(it) },
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight()
+                        .width(24.dp)
+                )
+            }
         }
 
         // Layer panel overlay

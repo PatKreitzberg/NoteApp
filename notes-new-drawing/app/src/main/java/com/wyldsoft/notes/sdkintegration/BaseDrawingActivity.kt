@@ -179,6 +179,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         observeTemplate()
         loadNotesForNotebook()
         observeNoteNavigation()
+        observeScrollbarRequests()
     }
 
     private fun resetViewport() {
@@ -186,6 +187,28 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         viewportManager.resetViewport()
         updatePaginationExclusions()
         forceScreenRefresh()
+    }
+
+    private fun observeScrollbarRequests() {
+        lifecycleScope.launch {
+            EditorState.scrollbarRequested.collect { requestedY ->
+                viewportManager.scrollToY(requestedY)
+                updatePaginationExclusions()
+                forceScreenRefresh()
+            }
+        }
+    }
+
+    /** Update EditorState with current viewport values so the scrollbar thumb stays in sync. */
+    protected fun notifyViewportChanged() {
+        EditorState.updateViewportState(viewportManager.scrollY, viewportManager.scale)
+        val sv = surfaceView
+        val viewportH = if (sv != null && viewportManager.scale > 0f)
+            sv.height / viewportManager.scale else 1000f
+        val pm = paginationManager
+        val contentH = if (pm != null) pm.totalContentHeight()
+                        else maxOf(10000f, viewportManager.scrollY + viewportH * 3f)
+        EditorState.setTotalContentHeight(contentH)
     }
 
     private fun loadNotesForNotebook() {
@@ -598,6 +621,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             cleanSurfaceView(sv)
             bitmap?.let { renderToScreen(sv, it) }
         }
+        notifyViewportChanged()
     }
 
     protected fun createDrawingBitmap(): Bitmap? {
