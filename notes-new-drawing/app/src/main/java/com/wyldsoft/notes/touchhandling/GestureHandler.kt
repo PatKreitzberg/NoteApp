@@ -86,8 +86,12 @@ class GestureHandler(
 
     private fun hasPalmTouch(event: MotionEvent): Boolean {
         for (i in 0 until event.pointerCount) {
-            if (event.getTouchMajor(i) > PALM_TOUCH_MAJOR_THRESHOLD) return true
+            if (event.getTouchMajor(i) > PALM_TOUCH_MAJOR_THRESHOLD) {
+                Log.d(TAG, "hasPalmTouch return true")
+                return true
+            }
         }
+        Log.d(TAG, "hasPalmTouch return false")
         return false
     }
 
@@ -100,6 +104,7 @@ class GestureHandler(
                 return true
             }
         }
+        Log.d(TAG, "Type is NOT stylus or eraser")
         return false
     }
 
@@ -145,6 +150,7 @@ class GestureHandler(
             return true
         }
 
+        Log.d(TAG, "entering when(event.actionMasked)")
         when (event.actionMasked) {
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> handleAllPointersUp(event)
             MotionEvent.ACTION_DOWN -> handleActionDown(event)

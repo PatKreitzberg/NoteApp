@@ -79,10 +79,6 @@ fun HomeView(
     onScribbleToEraseToggle: (Boolean) -> Unit,
     circleToSelectEnabled: Boolean,
     onCircleToSelectToggle: (Boolean) -> Unit,
-    penProfileSets: List<com.wyldsoft.notes.data.database.entities.PenProfileSetEntity> = emptyList(),
-    onSaveCurrentAsNewSet: (name: String) -> Unit = {},
-    onRenameSet: (id: String, newName: String) -> Unit = { _, _ -> },
-    onDeleteSet: (id: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -370,10 +366,6 @@ fun HomeView(
             onScribbleToEraseToggle = onScribbleToEraseToggle,
             circleToSelectEnabled = circleToSelectEnabled,
             onCircleToSelectToggle = onCircleToSelectToggle,
-            penProfileSets = penProfileSets,
-            onSaveCurrentAsNewSet = onSaveCurrentAsNewSet,
-            onRenameSet = onRenameSet,
-            onDeleteSet = onDeleteSet,
             onDismiss = { showSettingsDialog = false }
         )
     }

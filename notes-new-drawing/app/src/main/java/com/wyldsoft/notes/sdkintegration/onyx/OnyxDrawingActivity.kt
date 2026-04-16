@@ -866,7 +866,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
     override fun recreateBitmapAtCurrentViewport() {
         surfaceView?.let { sv ->
-            val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height)
+            val state = drawingPipeline.recreateBitmapFromShapes(bitmap, sv.width, sv.height, skipTemplate = isPanningGesture)
             bitmap = state.bitmap
             bitmapCanvas = state.canvas
         }

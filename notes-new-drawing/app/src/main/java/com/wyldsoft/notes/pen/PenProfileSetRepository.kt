@@ -77,6 +77,19 @@ class PenProfileSetRepository(
         }
     }
 
+    /** Overwrite a set's stored profiles with the current EditorState profiles. */
+    suspend fun updateCurrentIntoSet(setId: String) {
+        Log.d(TAG, "updateCurrentIntoSet setId=$setId")
+        val entity = dao.getById(setId) ?: return
+        val profiles = EditorState.penProfiles.map { it.value }
+        val updated = profilesToEntity(setId, entity.name, profiles)
+        dao.update(updated)
+        // If this is the active set, mark it clean
+        if (EditorState.activeSetId.value == setId) {
+            EditorState.setActiveSet(setId, entity.name)
+        }
+    }
+
     /** Delete a set. If it was active, clears the active set. */
     suspend fun deleteSet(setId: String) {
         Log.d(TAG, "deleteSet setId=$setId")

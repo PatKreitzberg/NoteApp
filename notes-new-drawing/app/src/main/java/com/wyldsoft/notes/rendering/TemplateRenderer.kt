@@ -78,7 +78,7 @@ class TemplateRenderer {
             val noteTop = viewportManager.viewportToNoteY(0f)
             val noteRight = viewportManager.viewportToNoteX(canvasWidth.toFloat())
             val noteBottom = viewportManager.viewportToNoteY(canvasHeight.toFloat())
-            val pageWidth = noteRight - noteLeft  // note-space width = "full paper width"
+            val pageWidth = canvasWidth.toFloat()  // fixed note-space reference so lines spread apart on zoom-in
             val infinitePage = RectF(noteLeft, noteTop, noteRight, noteBottom)
             drawTemplateInRect(canvas, template, viewportManager, canvasWidth, canvasHeight, infinitePage, pageWidth, clipToRect = false)
         } else {

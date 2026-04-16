@@ -22,7 +22,6 @@ import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,7 +36,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.wyldsoft.notes.data.database.entities.PenProfileSetEntity
 import com.wyldsoft.notes.gestures.GestureAction
 import com.wyldsoft.notes.gestures.GestureBindings
 
@@ -51,17 +49,12 @@ fun HomeSettingsDialog(
     onScribbleToEraseToggle: (Boolean) -> Unit,
     circleToSelectEnabled: Boolean,
     onCircleToSelectToggle: (Boolean) -> Unit,
-    penProfileSets: List<PenProfileSetEntity> = emptyList(),
-    onSaveCurrentAsNewSet: (name: String) -> Unit = {},
-    onRenameSet: (id: String, newName: String) -> Unit = { _, _ -> },
-    onDeleteSet: (id: String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var pagination by remember { mutableStateOf(defaultPaginationEnabled) }
     var mappings by remember(gestureMappings) { mutableStateOf(gestureMappings) }
     var scribbleToErase by remember { mutableStateOf(scribbleToEraseEnabled) }
     var circleToSelect by remember { mutableStateOf(circleToSelectEnabled) }
-    var showPenSetsDialog by remember { mutableStateOf(false) }
 
     // Swallows any scroll that the inner gesture list doesn't consume,
     // preventing it from propagating to any outer scroll container.
@@ -209,27 +202,6 @@ fun HomeSettingsDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-                Divider(color = Color.Black)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Pen Profile Sets",
-                    style = MaterialTheme.typography.subtitle1,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Text(
-                    text = "${penProfileSets.size} set(s) saved. Switch sets from the toolbar tab.",
-                    style = MaterialTheme.typography.body2,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                OutlinedButton(
-                    onClick = { showPenSetsDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Manage Pen Profile Sets")
-                }
-
                 // Buttons
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
@@ -254,15 +226,6 @@ fun HomeSettingsDialog(
         }
     }
 
-    if (showPenSetsDialog) {
-        PenProfileSetsDialog(
-            sets = penProfileSets,
-            onSaveCurrentAsNewSet = onSaveCurrentAsNewSet,
-            onRenameSet = onRenameSet,
-            onDeleteSet = onDeleteSet,
-            onDismiss = { showPenSetsDialog = false }
-        )
-    }
 }
 
 @Composable

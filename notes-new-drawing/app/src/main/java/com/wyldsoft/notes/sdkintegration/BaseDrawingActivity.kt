@@ -64,6 +64,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
     protected var surfaceView: SurfaceView? = null
     protected var isDrawingInProgress = false
     protected var isErasingInProgress = false
+    protected var isPanningGesture = false
     protected var currentPenProfile = PenProfile.getDefaultProfile(PenType.BALLPEN)
     protected var gestureHandler: GestureHandler? = null
     val gestureLabel = mutableStateOf("")
@@ -492,18 +493,21 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         when (event) {
             is GestureEvent.PanStart -> {
                 if (event.fingerCount == 1) {
+                    isPanningGesture = true
                     onGestureStart()
                     viewportManager.saveSnapshot()
                 }
             }
             is GestureEvent.PanMove -> {
                 if (event.fingerCount == 1) {
+                    isPanningGesture = true
                     viewportManager.handlePanMove(event.deltaX, event.deltaY)
                     renderBitmapWithGestureTransform()
                 }
             }
             is GestureEvent.PanEnd -> {
                 if (event.fingerCount == 1) {
+                    isPanningGesture = false
                     Log.d(TAG, "Pan ended, refreshing")
                     viewportManager.clearSnapshot()
                     forceScreenRefresh()

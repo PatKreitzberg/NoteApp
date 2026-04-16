@@ -12,11 +12,9 @@ import android.provider.OpenableColumns
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.FileProvider
@@ -27,8 +25,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.wyldsoft.notes.MainActivity
 import com.wyldsoft.notes.ScrotesApp
-import com.wyldsoft.notes.data.database.entities.PenProfileSetEntity
-import com.wyldsoft.notes.editor.EditorState
 import com.wyldsoft.notes.sync.GoogleDriveManager
 import com.wyldsoft.notes.sync.SyncViewModel
 import com.wyldsoft.notes.ui.theme.MinimaleditorTheme
@@ -92,13 +88,10 @@ class HomeActivity : ComponentActivity() {
                 ) {
                     val app = application as ScrotesApp
                     val appSettings = app.appSettings
-                    val penSetRepository = app.penProfileSetRepository
                     var defaultPagination by remember { mutableStateOf(appSettings.defaultPaginationEnabled) }
                     var gestureMappings by remember { mutableStateOf(appSettings.getAllGestureMappings()) }
                     var scribbleToErase by remember { mutableStateOf(appSettings.scribbleToEraseEnabled) }
                     var circleToSelect by remember { mutableStateOf(appSettings.circleToSelectEnabled) }
-                    val penProfileSets by EditorState.penProfileSets.collectAsState()
-                    val coroutineScope = rememberCoroutineScope()
                     HomeView(
                         viewModel = viewModel,
                         syncViewModel = syncViewModel,
@@ -142,22 +135,6 @@ class HomeActivity : ComponentActivity() {
                         onCircleToSelectToggle = { enabled ->
                             appSettings.circleToSelectEnabled = enabled
                             circleToSelect = enabled
-                        },
-                        penProfileSets = penProfileSets,
-                        onSaveCurrentAsNewSet = { name ->
-                            coroutineScope.launch {
-                                penSetRepository.saveCurrentAsNewSet(name)
-                            }
-                        },
-                        onRenameSet = { id, newName ->
-                            coroutineScope.launch {
-                                penSetRepository.renameSet(id, newName)
-                            }
-                        },
-                        onDeleteSet = { id ->
-                            coroutineScope.launch {
-                                penSetRepository.deleteSet(id)
-                            }
                         }
                     )
                 }

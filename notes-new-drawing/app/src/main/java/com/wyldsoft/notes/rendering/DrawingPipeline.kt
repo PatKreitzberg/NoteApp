@@ -184,7 +184,8 @@ class DrawingPipeline(
         currentBitmap: Bitmap?,
         width: Int,
         height: Int,
-        shapesToRender: List<Shape> = drawnShapes
+        shapesToRender: List<Shape> = drawnShapes,
+        skipTemplate: Boolean = false
     ): BitmapState {
         Log.d(TAG, "recreateBitmapFromShapes scale=${viewportManager.scale} scrollX=${viewportManager.scrollX} scrollY=${viewportManager.scrollY}")
 
@@ -207,7 +208,9 @@ class DrawingPipeline(
                 android.graphics.RectF(0f, pm.pageTopY(i), pm.pageWidth, pm.pageBottomY(i))
             }
         }
-        templateRenderer.drawTemplate(canvas, currentTemplate, viewportManager, width, height, pageRects)
+        if (!skipTemplate) {
+            templateRenderer.drawTemplate(canvas, currentTemplate, viewportManager, width, height, pageRects)
+        }
 
         // Draw PDF page backgrounds on top of the template (PDF-backed notes only)
         pdfPageRenderer?.let { renderer ->
