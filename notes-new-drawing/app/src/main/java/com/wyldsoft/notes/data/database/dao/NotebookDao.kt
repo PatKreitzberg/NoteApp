@@ -13,8 +13,11 @@ interface NotebookDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(notebook: NotebookEntity)
 
-    @Query("SELECT * FROM notebooks WHERE folderId = :folderId ORDER BY name")
+    @Query("SELECT * FROM notebooks WHERE folderId = :folderId ORDER BY sortOrder, name")
     suspend fun getByFolder(folderId: String): List<NotebookEntity>
+
+    @Query("UPDATE notebooks SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun updateSortOrder(id: String, sortOrder: Int)
 
     @Query("SELECT * FROM notebooks WHERE id = :id")
     suspend fun getById(id: String): NotebookEntity?

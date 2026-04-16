@@ -27,7 +27,8 @@ data class FolderEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val modifiedAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "trashedFromId")
-    val trashedFromId: String? = null
+    val trashedFromId: String? = null,
+    val sortOrder: Int = 0
 ) {
     companion object {
         const val ROOT_ID = "root"

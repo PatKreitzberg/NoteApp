@@ -72,6 +72,34 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         loadAllFolders()
     }
 
+    fun navigateUp() {
+        Log.d(TAG, "navigateUp")
+        val breadcrumbs = _uiState.value.breadcrumbs
+        val parentId = if (breadcrumbs.size >= 2) breadcrumbs[breadcrumbs.size - 2].id
+                       else FolderEntity.ROOT_ID
+        navigateToFolder(parentId)
+    }
+
+    fun reorderFolders(orderedFolders: List<FolderEntity>) {
+        Log.d(TAG, "reorderFolders count=${orderedFolders.size}")
+        viewModelScope.launch(Dispatchers.IO) {
+            orderedFolders.forEachIndexed { index, folder ->
+                db.folderDao().updateSortOrder(folder.id, index)
+            }
+            refreshCurrentFolder()
+        }
+    }
+
+    fun reorderNotebooks(orderedNotebooks: List<NotebookEntity>) {
+        Log.d(TAG, "reorderNotebooks count=${orderedNotebooks.size}")
+        viewModelScope.launch(Dispatchers.IO) {
+            orderedNotebooks.forEachIndexed { index, notebook ->
+                db.notebookDao().updateSortOrder(notebook.id, index)
+            }
+            refreshCurrentFolder()
+        }
+    }
+
     fun navigateToFolder(folderId: String) {
         Log.d(TAG, "navigateToFolder folderId=$folderId")
         viewModelScope.launch(Dispatchers.IO) {

@@ -1,5 +1,6 @@
 package com.wyldsoft.notes.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,7 +28,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
@@ -56,6 +59,7 @@ import com.wyldsoft.notes.home.components.HomeSettingsDialog
 import com.wyldsoft.notes.home.components.MoveItemDialog
 import com.wyldsoft.notes.home.components.NotebookCard
 import com.wyldsoft.notes.home.components.RenameDialog
+import com.wyldsoft.notes.home.components.ReorderDialog
 import com.wyldsoft.notes.home.components.SyncBar
 import com.wyldsoft.notes.sync.SyncUiState
 import com.wyldsoft.notes.sync.SyncViewModel
@@ -85,11 +89,14 @@ fun HomeView(
     val syncUiState by syncViewModel.syncUiState.collectAsState()
     val allFolders by viewModel.allFolders.collectAsState()
     val isInTrash = uiState.currentFolderId == FolderEntity.TRASH_ID
+    val isAtRoot = uiState.currentFolderId == FolderEntity.ROOT_ID
     val searchResults by viewModel.searchResults.collectAsState()
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showCreateNotebookDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showReorderFoldersDialog by remember { mutableStateOf(false) }
+    var showReorderNotebooksDialog by remember { mutableStateOf(false) }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
@@ -102,6 +109,11 @@ fun HomeView(
     var moveNotebookTarget by remember { mutableStateOf<NotebookEntity?>(null) }
 
     val notebookExportState by viewModel.notebookExportState.collectAsState()
+
+    // Navigate up a folder on back press when not at root
+    BackHandler(enabled = !isAtRoot) {
+        viewModel.navigateUp()
+    }
 
     if (uiState.isLoading) {
         Column(
@@ -217,19 +229,25 @@ fun HomeView(
                 text = "Folders",
                 style = MaterialTheme.typography.h6
             )
-            if (!isInTrash) {
-                IconButton(onClick = { showCreateFolderDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Create folder"
-                    )
+            Row {
+                if (isAtRoot) {
+                    IconButton(onClick = { viewModel.navigateToFolder(FolderEntity.TRASH_ID) }) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Open trash")
+                    }
+                }
+                if (!isInTrash) {
+                    IconButton(onClick = { showReorderFoldersDialog = true }) {
+                        Icon(imageVector = Icons.Default.Reorder, contentDescription = "Reorder folders")
+                    }
+                    IconButton(onClick = { showCreateFolderDialog = true }) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Create folder")
+                    }
                 }
             }
         }
 
         // Folders row
-        val hasTrash = uiState.currentFolderId == FolderEntity.ROOT_ID
-        val hasFolders = uiState.folders.isNotEmpty() || hasTrash
+        val hasFolders = uiState.folders.isNotEmpty()
         if (!hasFolders) {
             Text(
                 text = if (isInTrash) "Trash is empty" else "No folders",
@@ -242,21 +260,6 @@ fun HomeView(
                 contentPadding = PaddingValues(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Trash folder shown first at root level
-                if (hasTrash) {
-                    item {
-                        val trashFolder = FolderEntity(
-                            id = FolderEntity.TRASH_ID,
-                            name = "Trash",
-                            parentFolderId = FolderEntity.ROOT_ID
-                        )
-                        FolderCard(
-                            folder = trashFolder,
-                            onClick = { viewModel.navigateToFolder(FolderEntity.TRASH_ID) },
-                            isTrashFolder = true
-                        )
-                    }
-                }
                 items(uiState.folders) { folder ->
                     FolderCard(
                         folder = folder,
@@ -284,12 +287,15 @@ fun HomeView(
                 style = MaterialTheme.typography.h6
             )
             if (!isInTrash) {
-                Row() {
+                Row {
                     IconButton(onClick = { onImportPdf() }) {
                         Icon(
                             imageVector = Icons.Default.Description,
                             contentDescription = "Import PDF"
                         )
+                    }
+                    IconButton(onClick = { showReorderNotebooksDialog = true }) {
+                        Icon(imageVector = Icons.Default.Reorder, contentDescription = "Reorder notebooks")
                     }
                     IconButton(onClick = { showCreateNotebookDialog = true }) {
                         Icon(
@@ -367,6 +373,32 @@ fun HomeView(
             circleToSelectEnabled = circleToSelectEnabled,
             onCircleToSelectToggle = onCircleToSelectToggle,
             onDismiss = { showSettingsDialog = false }
+        )
+    }
+
+    if (showReorderFoldersDialog) {
+        ReorderDialog(
+            title = "Reorder Folders",
+            items = uiState.folders,
+            itemName = { it.name },
+            onConfirm = { ordered ->
+                viewModel.reorderFolders(ordered)
+                showReorderFoldersDialog = false
+            },
+            onDismiss = { showReorderFoldersDialog = false }
+        )
+    }
+
+    if (showReorderNotebooksDialog) {
+        ReorderDialog(
+            title = "Reorder Notebooks",
+            items = uiState.notebooks,
+            itemName = { it.name },
+            onConfirm = { ordered ->
+                viewModel.reorderNotebooks(ordered)
+                showReorderNotebooksDialog = false
+            },
+            onDismiss = { showReorderNotebooksDialog = false }
         )
     }
 

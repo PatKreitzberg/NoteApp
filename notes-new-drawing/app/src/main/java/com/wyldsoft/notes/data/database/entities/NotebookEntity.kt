@@ -30,5 +30,6 @@ data class NotebookEntity(
     val trashedFromId: String? = null,
     val template: String = "BLANK",
     val isPaginationEnabled: Boolean = false,
-    val drawOutsideBounds: Boolean = false
+    val drawOutsideBounds: Boolean = false,
+    val sortOrder: Int = 0
 )

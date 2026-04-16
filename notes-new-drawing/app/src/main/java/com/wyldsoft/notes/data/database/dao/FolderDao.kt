@@ -13,8 +13,11 @@ interface FolderDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(folder: FolderEntity)
 
-    @Query("SELECT * FROM folders WHERE parentFolderId = :parentId ORDER BY name")
+    @Query("SELECT * FROM folders WHERE parentFolderId = :parentId ORDER BY sortOrder, name")
     suspend fun getChildFolders(parentId: String): List<FolderEntity>
+
+    @Query("UPDATE folders SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun updateSortOrder(id: String, sortOrder: Int)
 
     @Query("SELECT * FROM folders WHERE id = :id")
     suspend fun getById(id: String): FolderEntity?
