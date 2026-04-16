@@ -379,7 +379,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         }
     }
 
-    private fun updatePaginationExclusions() {
+    fun updatePaginationExclusions() {
         paginationManager?.let { pm ->
             surfaceView?.let { sv ->
                 val allExclusions = EditorState.getCurrentExclusionRects().toMutableList()

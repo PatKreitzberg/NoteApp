@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,8 +69,15 @@ fun VerticalScrollbar(
                 .background(Color(0x18000000), RoundedCornerShape(4.dp))
         )
 
-        // Thumb
+        // Thumb — pointerInput keyed on Unit so it never restarts mid-drag.
+        // rememberUpdatedState lets the drag lambda always read the latest values
+        // without restarting the gesture handler when they change.
         var isDragging by remember { mutableStateOf(false) }
+        val currentScrollY by rememberUpdatedState(scrollY)
+        val currentMaxScrollable by rememberUpdatedState(maxScrollable)
+        val currentThumbHeightPx by rememberUpdatedState(thumbHeightPx)
+        val currentTrackHeightPx by rememberUpdatedState(trackHeightPx)
+        val currentOnScrollRequested by rememberUpdatedState(onScrollRequested)
 
         Box(
             modifier = Modifier
@@ -81,7 +89,7 @@ fun VerticalScrollbar(
                     if (isDragging) Color(0xCC333333) else Color(0x99555555),
                     RoundedCornerShape(7.dp)
                 )
-                .pointerInput(maxScrollable, thumbHeightPx, trackHeightPx) {
+                .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = {
                             Log.d(TAG, "drag start")
@@ -94,12 +102,12 @@ fun VerticalScrollbar(
                         onDragCancel = { isDragging = false },
                         onDrag = { change, dragAmount ->
                             change.consume()
-                            val availableTrack = trackHeightPx - thumbHeightPx
+                            val availableTrack = currentTrackHeightPx - currentThumbHeightPx
                             if (availableTrack > 0f) {
                                 val deltaFraction = dragAmount.y / availableTrack
-                                val newScrollY = (scrollY + deltaFraction * maxScrollable)
-                                    .coerceIn(0f, maxScrollable)
-                                onScrollRequested(newScrollY)
+                                val newScrollY = (currentScrollY + deltaFraction * currentMaxScrollable)
+                                    .coerceIn(0f, currentMaxScrollable)
+                                currentOnScrollRequested(newScrollY)
                             }
                         }
                     )
