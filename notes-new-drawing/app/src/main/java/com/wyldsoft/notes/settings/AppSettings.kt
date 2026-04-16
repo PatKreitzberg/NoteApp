@@ -20,6 +20,8 @@ class AppSettings(context: Context) {
         private const val KEY_CIRCLE_TO_SELECT = "circle_to_select"
         private const val KEY_PEN_ACTIVE_SLOT = "pen_active_slot"
         private const val KEY_PEN_SLOT_PREFIX = "pen_slot_"
+        private const val KEY_ACTIVE_SET_ID = "active_pen_set_id"
+        private const val KEY_ACTIVE_SET_NAME = "active_pen_set_name"
         val DEFAULT_PEN_PROFILES = listOf(
             PenProfile(strokeWidth = 5f, penType = PenType.BALLPEN, strokeColor = Color(0xFF000000), strokeAlpha = 1.0f, profileId = 1),
             PenProfile(strokeWidth = 5f, penType = PenType.BALLPEN, strokeColor = Color(0xFF0033CC), strokeAlpha = 1.0f, profileId = 2),
@@ -85,6 +87,21 @@ class AppSettings(context: Context) {
             editor.putFloat("${prefix}_alpha", profile.strokeAlpha)
         }
         editor.apply()
+    }
+
+    fun saveActiveSet(id: String?, name: String) {
+        Log.d(TAG, "saveActiveSet id=$id name=$name")
+        prefs.edit()
+            .putString(KEY_ACTIVE_SET_ID, id)
+            .putString(KEY_ACTIVE_SET_NAME, name)
+            .apply()
+    }
+
+    /** Returns (id, name). id is null if no active set is stored. */
+    fun loadActiveSet(): Pair<String?, String> {
+        val id = prefs.getString(KEY_ACTIVE_SET_ID, null)
+        val name = prefs.getString(KEY_ACTIVE_SET_NAME, "") ?: ""
+        return Pair(id, name)
     }
 
     fun loadPenProfiles(): Pair<List<PenProfile>, Int> {

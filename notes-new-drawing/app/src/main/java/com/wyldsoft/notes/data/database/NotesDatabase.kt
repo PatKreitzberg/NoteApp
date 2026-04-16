@@ -15,6 +15,7 @@ import com.wyldsoft.notes.data.database.dao.HtrResultDao
 import com.wyldsoft.notes.data.database.dao.LayerDao
 import com.wyldsoft.notes.data.database.dao.NotebookDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
+import com.wyldsoft.notes.data.database.dao.PenProfileSetDao
 import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.dao.SyncStateDao
 import com.wyldsoft.notes.data.database.dao.UndoHistoryDao
@@ -25,6 +26,7 @@ import com.wyldsoft.notes.data.database.entities.LayerEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRefEntity
+import com.wyldsoft.notes.data.database.entities.PenProfileSetEntity
 import com.wyldsoft.notes.data.database.entities.ShapeEntity
 import com.wyldsoft.notes.data.database.entities.SyncStateEntity
 import com.wyldsoft.notes.data.database.entities.UndoHistoryEntity
@@ -35,6 +37,7 @@ import com.wyldsoft.notes.data.database.migrations.MIGRATION_5_6
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_6_7
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_7_8
 import com.wyldsoft.notes.data.database.migrations.MIGRATION_8_9
+import com.wyldsoft.notes.data.database.migrations.MIGRATION_9_10
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -50,9 +53,10 @@ import kotlinx.coroutines.launch
         DeletedItemEntity::class,
         UndoHistoryEntity::class,
         LayerEntity::class,
-        HtrResultEntity::class
+        HtrResultEntity::class,
+        PenProfileSetEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -66,6 +70,7 @@ abstract class NotesDatabase : RoomDatabase() {
     abstract fun undoHistoryDao(): UndoHistoryDao
     abstract fun layerDao(): LayerDao
     abstract fun htrResultDao(): HtrResultDao
+    abstract fun penProfileSetDao(): PenProfileSetDao
 
     companion object {
         private const val TAG = "NotesDatabase"
@@ -106,7 +111,7 @@ abstract class NotesDatabase : RoomDatabase() {
                 NotesDatabase::class.java,
                 "notes_database"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                 .addCallback(SeedCallback())
                 .build()
         }

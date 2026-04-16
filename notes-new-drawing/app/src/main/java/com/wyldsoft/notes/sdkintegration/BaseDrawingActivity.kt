@@ -144,6 +144,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
         val (savedProfiles, savedSlot) = appSettings.loadPenProfiles()
         EditorState.initializePenProfiles(savedProfiles, savedSlot)
+        val app = application as ScrotesApp
+        app.penProfileSetRepository.restoreActiveSetFromPrefs()
 
         initializeSDK()
         initializePaint()

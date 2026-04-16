@@ -118,6 +118,10 @@ fun Toolbar(
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        PenSetTab()
+
+        Spacer(modifier = Modifier.width(4.dp))
+
         penProfiles.forEachIndexed { index, profile ->
             val slot = index + 1
             PenSlotButton(

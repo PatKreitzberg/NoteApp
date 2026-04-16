@@ -7,12 +7,15 @@ import com.wyldsoft.notes.data.database.dao.DeletedItemDao
 import com.wyldsoft.notes.data.database.dao.FolderDao
 import com.wyldsoft.notes.data.database.dao.NoteDao
 import com.wyldsoft.notes.data.database.dao.NotebookDao
+import com.wyldsoft.notes.data.database.dao.PenProfileSetDao
 import com.wyldsoft.notes.data.database.dao.ShapeDao
 import com.wyldsoft.notes.data.database.dao.SyncStateDao
 import com.wyldsoft.notes.data.database.entities.DeletedItemEntity
 import com.wyldsoft.notes.data.database.entities.SyncStateEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -36,6 +39,7 @@ class SyncRepository(
     private val shapeDao: ShapeDao,
     private val deletedItemDao: DeletedItemDao,
     private val syncStateDao: SyncStateDao,
+    private val penProfileSetDao: PenProfileSetDao,
     private val context: Context
 ) {
     private val isRunning = AtomicBoolean(false)
@@ -82,12 +86,14 @@ class SyncRepository(
             val foldersDir = client.getOrCreateSubfolder(appFolder, "folders")
             val notebooksDir = client.getOrCreateSubfolder(appFolder, "notebooks")
             val notesDir = client.getOrCreateSubfolder(appFolder, "notes")
+            val penSetsDir = client.getOrCreateSubfolder(appFolder, "penProfileSets")
 
             val errors = mutableListOf<String>()
 
             uploader.uploadFolders(client, foldersDir, lastSync, isFirstSync, errors)
             uploader.uploadNotebooks(client, notebooksDir, lastSync, isFirstSync, errors)
             uploader.uploadNotes(client, notesDir, lastSync, isFirstSync, errors)
+            syncPenProfileSets(client, penSetsDir, lastSync, isFirstSync, errors)
 
             downloader.downloadFolders(client, foldersDir, lastSync, errors)
             downloader.downloadNotebooks(client, notebooksDir, lastSync, errors)
@@ -112,6 +118,49 @@ class SyncRepository(
             SyncResult.Failure(e)
         } finally {
             isRunning.set(false)
+        }
+    }
+
+    private suspend fun syncPenProfileSets(
+        client: DriveApiClient,
+        penSetsDir: String,
+        lastSync: Long,
+        isFirstSync: Boolean,
+        errors: MutableList<String>
+    ) {
+        Log.d(TAG, "syncPenProfileSets isFirstSync=$isFirstSync")
+        try {
+            val existingFiles = client.listFilesWithNames(penSetsDir).toMap()
+            // Upload local sets modified since last sync
+            val toUpload = if (isFirstSync) penProfileSetDao.getAll()
+            else penProfileSetDao.getModifiedAfter(lastSync)
+            for (set in toUpload) {
+                try {
+                    val content = json.encodeToString(set.toSyncJson())
+                    val fileName = "${set.id}.json"
+                    client.uploadJsonFile(penSetsDir, fileName, content, existingFiles[fileName]?.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to upload pen set ${set.id}", e)
+                    errors.add("pen_set_upload:${set.id}")
+                }
+            }
+            // Download sets from Drive that are newer than local
+            for ((_, ref) in existingFiles) {
+                try {
+                    val content = client.downloadJsonFile(ref.id)
+                    val syncJson = json.decodeFromString<PenProfileSetSyncJson>(content)
+                    val existing = penProfileSetDao.getById(syncJson.id)
+                    if (existing == null || existing.updatedAt < syncJson.updatedAt) {
+                        penProfileSetDao.insert(syncJson.toEntity())
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to download pen set ${ref.id}", e)
+                    errors.add("pen_set_download:${ref.id}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "syncPenProfileSets failed", e)
+            errors.add("pen_sets_sync")
         }
     }
 

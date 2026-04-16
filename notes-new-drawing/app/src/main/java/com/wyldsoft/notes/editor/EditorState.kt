@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.util.Log
 import com.wyldsoft.notes.data.database.entities.LayerEntity
+import com.wyldsoft.notes.data.database.entities.PenProfileSetEntity
 import com.wyldsoft.notes.geometry.GeometryShapeType
 import com.wyldsoft.notes.models.PaperTemplate
 import com.wyldsoft.notes.pen.PenProfile
@@ -98,6 +99,57 @@ class EditorState {
 
         private val _activePenSlot = MutableStateFlow(1)
         val activePenSlot: StateFlow<Int> = _activePenSlot.asStateFlow()
+
+        // ── Pen profile set state ───────────────────────────────────────────
+        private val _penProfileSets = MutableStateFlow<List<PenProfileSetEntity>>(emptyList())
+        val penProfileSets: StateFlow<List<PenProfileSetEntity>> = _penProfileSets.asStateFlow()
+
+        private val _activeSetId = MutableStateFlow<String?>(null)
+        val activeSetId: StateFlow<String?> = _activeSetId.asStateFlow()
+
+        private val _activeSetName = MutableStateFlow("")
+        val activeSetName: StateFlow<String> = _activeSetName.asStateFlow()
+
+        private val _isSetDirty = MutableStateFlow(false)
+        val isSetDirty: StateFlow<Boolean> = _isSetDirty.asStateFlow()
+
+        fun setPenProfileSets(sets: List<PenProfileSetEntity>) {
+            _penProfileSets.value = sets
+        }
+
+        /** Called by PenProfileSetRepository when a set is loaded. */
+        fun loadPenProfileSet(profiles: List<PenProfile>, setId: String, setName: String) {
+            Log.d(TAG, "loadPenProfileSet setId=$setId setName=$setName")
+            profiles.forEachIndexed { i, profile ->
+                _penProfiles.getOrNull(i)?.value = profile
+            }
+            _currentPenProfile.value = penProfileForSlot(_activePenSlot.value)
+            _activeSetId.value = setId
+            _activeSetName.value = setName
+            _isSetDirty.value = false
+        }
+
+        /** Called when the active set name changes (e.g. after rename). */
+        fun setActiveSetName(name: String) {
+            Log.d(TAG, "setActiveSetName name=$name")
+            _activeSetName.value = name
+        }
+
+        /** Called by PenProfileSetRepository after saving current profiles as a new set. */
+        fun setActiveSet(id: String?, name: String) {
+            Log.d(TAG, "setActiveSet id=$id name=$name")
+            _activeSetId.value = id
+            _activeSetName.value = name
+            _isSetDirty.value = false
+        }
+
+        /** Called by PenProfileSetRepository when the active set is deleted. */
+        fun clearActiveSet() {
+            Log.d(TAG, "clearActiveSet")
+            _activeSetId.value = null
+            _activeSetName.value = ""
+            _isSetDirty.value = false
+        }
 
         private fun penProfileForSlot(slot: Int) =
             _penProfiles.getOrElse(slot - 1) { _penProfiles[0] }.value
@@ -344,6 +396,7 @@ class EditorState {
             Log.d(TAG, "setPenProfile: ${profile.penType.displayName}, width=${profile.strokeWidth}")
             _currentPenProfile.value = profile
             _penProfiles.getOrNull(_activePenSlot.value - 1)?.value = profile
+            _isSetDirty.value = true
         }
 
         fun initializePenProfiles(profiles: List<PenProfile>, activePenSlot: Int) {

@@ -4,6 +4,7 @@ import com.wyldsoft.notes.data.database.entities.FolderEntity
 import com.wyldsoft.notes.data.database.entities.NoteEntity
 import com.wyldsoft.notes.data.database.entities.NoteNotebookCrossRefEntity
 import com.wyldsoft.notes.data.database.entities.NotebookEntity
+import com.wyldsoft.notes.data.database.entities.PenProfileSetEntity
 import com.wyldsoft.notes.data.database.entities.ShapeEntity
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -198,4 +199,49 @@ fun FolderJson.toEntity() = FolderEntity(
     createdAt = createdAt,
     modifiedAt = modifiedAt,
     trashedFromId = trashedFromId
+)
+
+@Serializable
+data class PenProfileSetSyncJson(
+    val id: String,
+    val name: String,
+    val updatedAt: Long,
+    val slot1Width: Float,
+    val slot1PenType: String,
+    val slot1ColorArgb: Int,
+    val slot1Alpha: Float,
+    val slot2Width: Float,
+    val slot2PenType: String,
+    val slot2ColorArgb: Int,
+    val slot2Alpha: Float,
+    val slot3Width: Float,
+    val slot3PenType: String,
+    val slot3ColorArgb: Int,
+    val slot3Alpha: Float,
+    val slot4Width: Float,
+    val slot4PenType: String,
+    val slot4ColorArgb: Int,
+    val slot4Alpha: Float,
+    val slot5Width: Float,
+    val slot5PenType: String,
+    val slot5ColorArgb: Int,
+    val slot5Alpha: Float,
+)
+
+fun PenProfileSetEntity.toSyncJson() = PenProfileSetSyncJson(
+    id = id, name = name, updatedAt = updatedAt,
+    slot1Width = slot1Width, slot1PenType = slot1PenType, slot1ColorArgb = slot1ColorArgb, slot1Alpha = slot1Alpha,
+    slot2Width = slot2Width, slot2PenType = slot2PenType, slot2ColorArgb = slot2ColorArgb, slot2Alpha = slot2Alpha,
+    slot3Width = slot3Width, slot3PenType = slot3PenType, slot3ColorArgb = slot3ColorArgb, slot3Alpha = slot3Alpha,
+    slot4Width = slot4Width, slot4PenType = slot4PenType, slot4ColorArgb = slot4ColorArgb, slot4Alpha = slot4Alpha,
+    slot5Width = slot5Width, slot5PenType = slot5PenType, slot5ColorArgb = slot5ColorArgb, slot5Alpha = slot5Alpha,
+)
+
+fun PenProfileSetSyncJson.toEntity() = PenProfileSetEntity(
+    id = id, name = name, updatedAt = updatedAt,
+    slot1Width = slot1Width, slot1PenType = slot1PenType, slot1ColorArgb = slot1ColorArgb, slot1Alpha = slot1Alpha,
+    slot2Width = slot2Width, slot2PenType = slot2PenType, slot2ColorArgb = slot2ColorArgb, slot2Alpha = slot2Alpha,
+    slot3Width = slot3Width, slot3PenType = slot3PenType, slot3ColorArgb = slot3ColorArgb, slot3Alpha = slot3Alpha,
+    slot4Width = slot4Width, slot4PenType = slot4PenType, slot4ColorArgb = slot4ColorArgb, slot4Alpha = slot4Alpha,
+    slot5Width = slot5Width, slot5PenType = slot5PenType, slot5ColorArgb = slot5ColorArgb, slot5Alpha = slot5Alpha,
 )

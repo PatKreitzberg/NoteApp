@@ -5,6 +5,7 @@ import android.os.Build
 import com.onyx.android.sdk.rx.RxBaseAction
 import com.onyx.android.sdk.utils.ResManager
 import com.wyldsoft.notes.data.database.NotesDatabase
+import com.wyldsoft.notes.pen.PenProfileSetRepository
 import com.wyldsoft.notes.settings.AppSettings
 import com.wyldsoft.notes.sync.SyncRepository
 import com.wyldsoft.notes.sync.SyncWorker
@@ -25,6 +26,9 @@ class ScrotesApp : Application() {
     lateinit var appSettings: AppSettings
         private set
 
+    lateinit var penProfileSetRepository: PenProfileSetRepository
+        private set
+
     override fun onCreate() {
         super.onCreate()
         ResManager.init(this)
@@ -37,9 +41,14 @@ class ScrotesApp : Application() {
             shapeDao = database.shapeDao(),
             deletedItemDao = database.deletedItemDao(),
             syncStateDao = database.syncStateDao(),
+            penProfileSetDao = database.penProfileSetDao(),
             context = this
         )
         appSettings = AppSettings(this)
+        penProfileSetRepository = PenProfileSetRepository(
+            dao = database.penProfileSetDao(),
+            appSettings = appSettings
+        )
         SyncWorker.schedule(this)
         checkHiddenApiBypass()
     }
