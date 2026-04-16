@@ -224,6 +224,11 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private var geometryStartPoint: com.onyx.android.sdk.data.note.TouchPoint? = null
     private var geometrySnapshotBitmap: Bitmap? = null
     private var lastGeometryRenderTime = 0L
+
+    // ── Scrollbar drag state ──────────────────────────────────────────────────
+    private var isScrollbarDragging = false
+    private var scrollbarDragStartY = 0f
+    private var scrollbarDragStartScrollY = 0f
     // ─────────────────────────────────────────────────────────────────────────
 
     override fun initializeSDK() {
@@ -262,6 +267,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             noteId = noteId
         )
         Log.d(TAG, "setupPipelineForNote 1")
+        drawingPipeline.currentTemplate = EditorState.currentTemplate.value
         drawingPipeline.paginationManager = paginationManager
         actionManager = ActionManager(
             undoHistoryRepository = undoHistoryRepo,
@@ -815,6 +821,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     fun updateTouchHelper(helper: TouchHelper, excludeRects: List<Rect>) {
         val limit = Rect()
         surfaceView?.getLocalVisibleRect(limit)
+        limit.right = (limit.right - scrollbarWidthPx).coerceAtLeast(limit.left)
 
         helper.setRawDrawingEnabled(false)
         helper.closeRawDrawing()
@@ -862,6 +869,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             EpdController.enablePost(sv, 1)
             bitmap?.let { renderToScreen(sv, it) }
         }
+        notifyViewportChanged()
     }
 
     override fun recreateBitmapAtCurrentViewport() {
@@ -870,6 +878,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             bitmap = state.bitmap
             bitmapCanvas = state.canvas
         }
+        notifyViewportChanged()
     }
 
     /** Enables only the Onyx ink rendering layer. Input capture is unaffected. */
@@ -900,6 +909,34 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         return rxManager!!
     }
 
+    // ── Scrollbar helpers ─────────────────────────────────────────────────────
+
+    private val scrollbarWidthPx: Int
+        get() = (24f * resources.displayMetrics.density).toInt()
+
+    private fun isTouchInScrollbar(x: Float): Boolean {
+        val sv = surfaceView ?: return false
+        return x >= sv.width - scrollbarWidthPx
+    }
+
+    private fun applyScrollbarDrag(currentY: Float) {
+        val sv = surfaceView ?: return
+        val totalContent = EditorState.totalContentHeight.value
+        val viewportH = sv.height / viewportManager.scale
+        val maxScrollable = (totalContent - viewportH).coerceAtLeast(0f)
+        if (maxScrollable <= 0f) return
+        val thumbRatio = (viewportH / totalContent).coerceIn(0.04f, 0.95f)
+        val trackH = sv.height.toFloat()
+        val thumbH = (thumbRatio * trackH).coerceAtLeast(40f)
+        val availableTrack = trackH - thumbH
+        if (availableTrack <= 0f) return
+        val deltaFraction = (currentY - scrollbarDragStartY) / availableTrack
+        val newScrollY = (scrollbarDragStartScrollY + deltaFraction * maxScrollable).coerceIn(0f, maxScrollable)
+        viewportManager.scrollToY(newScrollY)
+        updatePaginationExclusions()
+        forceScreenRefresh()
+    }
+
     // ── Stroke suppression ────────────────────────────────────────────────────
 
     /**
@@ -923,6 +960,16 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             // Safety net: clear any stale suppression state from a previous stroke
             strokeDataSuppressed = false
             strokeEndAction = null
+            if (touchPoint != null && isTouchInScrollbar(touchPoint.x)) {
+                isScrollbarDragging = true
+                scrollbarDragStartY = touchPoint.y
+                scrollbarDragStartScrollY = viewportManager.scrollY
+                strokeDataSuppressed = true
+                disableInkRendering()
+                isDrawingInProgress = true
+                disableFingerTouch()
+                return
+            }
             if (EditorState.currentMode.value == AppMode.SELECTION) {
                 val tp = touchPoint ?: run {
                     isDrawingInProgress = true
@@ -977,6 +1024,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
         override fun onEndRawDrawing(b: Boolean, touchPoint: TouchPoint?) {
             Log.d(TAG, "createOnyxCallback.onEndRawDrawing")
+            if (isScrollbarDragging) {
+                isScrollbarDragging = false
+                isDrawingInProgress = false
+                enableFingerTouch()
+                return
+            }
             strokeEndAction?.let { action ->
                 strokeEndAction = null
                 // Pen has lifted — safe to run the deferred action now.
@@ -989,6 +1042,10 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         }
 
         override fun onRawDrawingTouchPointMoveReceived(touchPoint: TouchPoint?) {
+            if (isScrollbarDragging) {
+                touchPoint?.let { applyScrollbarDrag(it.y) }
+                return
+            }
             if (EditorState.currentMode.value == AppMode.SELECTION
                 && selectionSubState == SelectionSubState.MOVING
             ) {
