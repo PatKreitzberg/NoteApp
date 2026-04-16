@@ -162,10 +162,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                             handleSurfaceViewCreated(sv)
                         },
                         gestureLabel = gestureLabel,
-                        resetViewport = {
-                            viewportManager.resetViewport()
-                            forceScreenRefresh()
-                        },
+                        resetViewport = { resetViewport() },
                         onSearchQueryChanged = { query ->
                             onSearchQueryChanged(query)
                         }
@@ -182,6 +179,13 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         observeTemplate()
         loadNotesForNotebook()
         observeNoteNavigation()
+    }
+
+    private fun resetViewport() {
+        /* Resets viewport and updates exclusionRects to account for this */
+        viewportManager.resetViewport()
+        updatePaginationExclusions()
+        forceScreenRefresh()
     }
 
     private fun loadNotesForNotebook() {
@@ -472,10 +476,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
         val key = event.toKey() ?: return
         when (appSettings.getGestureAction(key)) {
             GestureAction.NONE -> Unit
-            GestureAction.RESET_VIEWPORT -> {
-                viewportManager.resetViewport()
-                forceScreenRefresh()
-            }
+            GestureAction.RESET_VIEWPORT -> { resetViewport() }
             GestureAction.UNDO -> EditorState.requestUndo()
             GestureAction.REDO -> EditorState.requestRedo()
             GestureAction.ENTER_SELECTION_MODE -> EditorState.setMode(AppMode.SELECTION)
