@@ -111,9 +111,9 @@ class TemplateRenderer {
         }
 
         when (template) {
-            PaperTemplate.GRID -> drawGrid(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth)
-            PaperTemplate.COLLEGE_RULED -> drawRuled(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth, COLLEGE_RULED_FRACTION)
-            PaperTemplate.WIDE_RULED -> drawRuled(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth, WIDE_RULED_FRACTION)
+            PaperTemplate.GRID -> drawGrid(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth, clipToRect)
+            PaperTemplate.COLLEGE_RULED -> drawRuled(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth, COLLEGE_RULED_FRACTION, clipToRect)
+            PaperTemplate.WIDE_RULED -> drawRuled(canvas, vm, canvasWidth, canvasHeight, pageNoteRect, pageWidth, WIDE_RULED_FRACTION, clipToRect)
             PaperTemplate.BLANK -> { /* nothing */ }
         }
 
@@ -128,12 +128,13 @@ class TemplateRenderer {
         canvasWidth: Int,
         canvasHeight: Int,
         pageNoteRect: RectF,
-        pageWidth: Float
+        pageWidth: Float,
+        restartAtPageBoundary: Boolean = false
     ) {
         val spacingNote = pageWidth * GRID_FRACTION
 
         // Horizontal lines
-        val firstY = ceil(pageNoteRect.top / spacingNote) * spacingNote
+        val firstY = if (restartAtPageBoundary) pageNoteRect.top else ceil(pageNoteRect.top / spacingNote) * spacingNote
         var y = firstY
         while (y <= pageNoteRect.bottom) {
             val vy = vm.noteToViewportY(y)
@@ -144,7 +145,7 @@ class TemplateRenderer {
         }
 
         // Vertical lines
-        val firstX = ceil(pageNoteRect.left / spacingNote) * spacingNote
+        val firstX = if (restartAtPageBoundary) pageNoteRect.left else ceil(pageNoteRect.left / spacingNote) * spacingNote
         var x = firstX
         while (x <= pageNoteRect.right) {
             val vx = vm.noteToViewportX(x)
@@ -162,12 +163,13 @@ class TemplateRenderer {
         canvasHeight: Int,
         pageNoteRect: RectF,
         pageWidth: Float,
-        spacingFraction: Float
+        spacingFraction: Float,
+        restartAtPageBoundary: Boolean = false
     ) {
         val spacingNote = pageWidth * spacingFraction
 
         // Horizontal ruled lines
-        val firstY = ceil(pageNoteRect.top / spacingNote) * spacingNote
+        val firstY = if (restartAtPageBoundary) pageNoteRect.top else ceil(pageNoteRect.top / spacingNote) * spacingNote
         var y = firstY
         while (y <= pageNoteRect.bottom) {
             val vy = vm.noteToViewportY(y)
