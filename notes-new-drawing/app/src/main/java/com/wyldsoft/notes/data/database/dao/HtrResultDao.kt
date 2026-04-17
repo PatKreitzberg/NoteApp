@@ -45,4 +45,7 @@ interface HtrResultDao {
           AND n.folderId != 'trash'
     """)
     suspend fun searchAcrossNotes(query: String): List<HtrSearchRow>
+
+    @Query("UPDATE htr_results SET boundingLeft=:l, boundingTop=:t, boundingRight=:r, boundingBottom=:b WHERE id=:id")
+    suspend fun updateBoundingBox(id: String, l: Float, t: Float, r: Float, b: Float)
 }

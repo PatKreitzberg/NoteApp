@@ -108,7 +108,7 @@ class HTRManager {
             val text = topCandidate?.text ?: continue
             val score = topCandidate.score?.toFloat() ?: 0f
 
-            Log.d(TAG, "Recognition result for note $noteId: $text (score: $score)")
+            Log.d(TAG, "Recognition result: $text (score: $score)")
 
             results.add(
                 RecognitionResult(

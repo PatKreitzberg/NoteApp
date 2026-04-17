@@ -3,6 +3,7 @@ package com.wyldsoft.notes.undoredo
 import android.util.Log
 import com.wyldsoft.notes.data.database.entities.ShapeEntity
 import com.wyldsoft.notes.data.database.entities.UndoHistoryEntity
+import com.wyldsoft.notes.data.database.repository.HtrResultRepository
 import com.wyldsoft.notes.data.database.repository.UndoHistoryRepository
 import com.wyldsoft.notes.data.mappers.ShapeMapper
 import com.wyldsoft.notes.editor.EditorState
@@ -33,7 +34,8 @@ class ActionManager(
     private val noteId: String? = null,
     private val scope: CoroutineScope? = null,
     private val selectionManager: SelectionManager? = null,
-    private val paginationManager: PaginationManager? = null
+    private val paginationManager: PaginationManager? = null,
+    private val htrResultRepository: HtrResultRepository? = null
 ) {
     private val TAG = "ActionManager"
     private val json = Json { ignoreUnknownKeys = true }
@@ -294,6 +296,8 @@ class ActionManager(
                         dNoteY = entry.dNoteY,
                         pipeline = pipeline,
                         selectionManager = sm,
+                        htrResultRepository = htrResultRepository,
+                        noteId = nId,
                         id = entry.id
                     )
                 }

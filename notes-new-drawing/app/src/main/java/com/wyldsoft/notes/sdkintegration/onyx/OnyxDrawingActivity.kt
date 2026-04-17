@@ -100,6 +100,7 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
     private lateinit var shapeRepo: ShapeRepository
     private lateinit var undoHistoryRepo: UndoHistoryRepository
     private lateinit var htrRunManager: HTRRunManager
+    private lateinit var htrResultRepo: com.wyldsoft.notes.data.database.repository.HtrResultRepository
     private var currentPdfPageRenderer: com.wyldsoft.notes.pdf.PdfPageRenderer? = null
     private lateinit var layerRepo: LayerRepository
     private lateinit var layerManager: LayerManager
@@ -238,7 +239,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
         undoHistoryRepo = UndoHistoryRepository(db.undoHistoryDao())
         layerRepo = LayerRepository(db.layerDao())
         layerManager = LayerManager(layerRepo, shapeRepo)
-        htrRunManager = HTRRunManager(htrResultRepository = HtrResultRepository(db.htrResultDao()))
+        htrResultRepo = HtrResultRepository(db.htrResultDao())
+        htrRunManager = HTRRunManager(htrResultRepository = htrResultRepo)
         val noteId = intent.getStringExtra("noteId")
         if (noteId != null) setupPipelineForNote(noteId)
         observeUndoRedo()
@@ -274,7 +276,8 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             noteId = noteId,
             scope = lifecycleScope,
             selectionManager = selectionManager,
-            paginationManager = paginationManager
+            paginationManager = paginationManager,
+            htrResultRepository = htrResultRepo
         )
         Log.d(TAG, "setupPipelineForNote 2")
         shapesLoaded = false
@@ -1471,12 +1474,21 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
             selectionManager.translateShape(shape, dNoteX, dNoteY)
             drawingPipeline.updateShape(shape)
         }
+        val movedShapes = selectedShapes.toList()
+        val currentNoteId = drawingPipeline.noteId
+        if (currentNoteId != null) {
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                htrResultRepo.updateBoundingBoxForShapes(currentNoteId, movedShapes)
+            }
+        }
         actionManager.recordAction(MoveAction(
             shapeIds = shapesBeforeMove.mapNotNull { it.entityId },
             dNoteX = dNoteX,
             dNoteY = dNoteY,
             pipeline = drawingPipeline,
-            selectionManager = selectionManager
+            selectionManager = selectionManager,
+            htrResultRepository = htrResultRepo,
+            noteId = currentNoteId
         ))
         selectionBoundingRectNote = selectionManager.computeBoundingRect(selectedShapes)
 
