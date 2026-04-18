@@ -54,6 +54,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = (application as ScrotesApp).database
     private val appSettings = (application as ScrotesApp).appSettings
+    private val recentNotebooksTracker = (application as ScrotesApp).recentNotebooksTracker
     private val folderRepository = FolderRepository(db.folderDao(), db.deletedItemDao())
     private val notebookRepository = NotebookRepository(db.notebookDao(), db.noteDao(), db.deletedItemDao())
 
@@ -67,9 +68,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _notebookExportState = MutableStateFlow<NotebookExportState>(NotebookExportState.Idle)
     val notebookExportState: StateFlow<NotebookExportState> = _notebookExportState.asStateFlow()
 
+    private val _recentNotebooks = MutableStateFlow<List<Pair<NotebookEntity, FolderEntity?>>>(emptyList())
+    val recentNotebooks: StateFlow<List<Pair<NotebookEntity, FolderEntity?>>> = _recentNotebooks.asStateFlow()
+
     init {
         navigateToFolder(FolderEntity.ROOT_ID)
         loadAllFolders()
+        refreshRecent()
+    }
+
+    fun refreshRecent() {
+        Log.d(TAG, "refreshRecent")
+        viewModelScope.launch(Dispatchers.IO) {
+            val ids = recentNotebooksTracker.getRecentIds()
+            val result = ids.mapNotNull { id ->
+                val notebook = notebookRepository.getById(id) ?: return@mapNotNull null
+                if (notebook.folderId == FolderEntity.TRASH_ID) return@mapNotNull null
+                val folder = if (notebook.folderId == FolderEntity.ROOT_ID) null
+                             else folderRepository.getById(notebook.folderId)
+                Pair(notebook, folder)
+            }
+            _recentNotebooks.value = result
+        }
     }
 
     fun navigateUp() {

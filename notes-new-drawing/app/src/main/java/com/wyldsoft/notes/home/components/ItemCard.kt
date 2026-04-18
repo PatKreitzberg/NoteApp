@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 fun ItemCard(
     name: String,
     icon: ImageVector,
+    subtitle: String? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     longPressEnabled: Boolean = true,
@@ -74,6 +75,17 @@ fun ItemCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.overline,
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.55f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
             }
         }
 

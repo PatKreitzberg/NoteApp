@@ -37,6 +37,8 @@ class HomeActivity : ComponentActivity() {
 
     private val viewModel: HomeViewModel by viewModels()
 
+    private val recentNotebooksTracker by lazy { (application as ScrotesApp).recentNotebooksTracker }
+
     private val syncViewModel: SyncViewModel by viewModels {
         val app = application as ScrotesApp
         object : ViewModelProvider.Factory {
@@ -174,8 +176,14 @@ class HomeActivity : ComponentActivity() {
         startActivity(Intent.createChooser(intent, "Share Notebook PDF"))
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshRecent()
+    }
+
     private fun openNotebook(notebookId: String) {
         Log.d(TAG, "openNotebook notebookId=$notebookId")
+        recentNotebooksTracker.recordOpen(notebookId)
         viewModel.getMostRecentNoteIdForNotebook(notebookId) { noteId ->
             if (noteId != null) {
                 val intent = Intent(this, MainActivity::class.java).apply {
@@ -191,6 +199,7 @@ class HomeActivity : ComponentActivity() {
 
     private fun openNotebookAtNote(notebookId: String, noteId: String, scrollY: Float) {
         Log.d(TAG, "openNotebookAtNote notebookId=$notebookId noteId=$noteId scrollY=$scrollY")
+        recentNotebooksTracker.recordOpen(notebookId)
         val intent = Intent(this, MainActivity::class.java).apply {
             putExtra("noteId", noteId)
             putExtra("notebookId", notebookId)

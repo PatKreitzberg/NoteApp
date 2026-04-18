@@ -88,6 +88,7 @@ fun HomeView(
     val uiState by viewModel.uiState.collectAsState()
     val syncUiState by syncViewModel.syncUiState.collectAsState()
     val allFolders by viewModel.allFolders.collectAsState()
+    val recentNotebooks by viewModel.recentNotebooks.collectAsState()
     val isInTrash = uiState.currentFolderId == FolderEntity.TRASH_ID
     val isAtRoot = uiState.currentFolderId == FolderEntity.ROOT_ID
     val searchResults by viewModel.searchResults.collectAsState()
@@ -332,6 +333,27 @@ fun HomeView(
                         onMove = { moveNotebookTarget = notebook },
                         onRestore = { viewModel.restoreNotebookFromTrash(notebook.id) },
                         onShare = if (!isInTrash) {{ onShareNotebook(notebook.id) }} else null
+                    )
+                }
+            }
+        }
+        // Recent Notebooks section
+        if (recentNotebooks.isNotEmpty() && !isInTrash) {
+            Text(
+                text = "Recent",
+                style = MaterialTheme.typography.h6,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+            LazyRow(
+                contentPadding = PaddingValues(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(recentNotebooks) { (notebook, folder) ->
+                    val folderLabel = folder?.name ?: "My Notebooks"
+                    NotebookCard(
+                        notebook = notebook,
+                        subtitle = folderLabel,
+                        onClick = { onOpenNotebook(notebook.id) }
                     )
                 }
             }

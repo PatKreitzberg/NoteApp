@@ -7,6 +7,7 @@ import com.onyx.android.sdk.utils.ResManager
 import com.wyldsoft.notes.data.database.NotesDatabase
 import com.wyldsoft.notes.pen.PenProfileSetRepository
 import com.wyldsoft.notes.settings.AppSettings
+import com.wyldsoft.notes.settings.RecentNotebooksTracker
 import com.wyldsoft.notes.sync.SyncRepository
 import com.wyldsoft.notes.sync.SyncWorker
 import org.lsposed.hiddenapibypass.HiddenApiBypass
@@ -24,6 +25,9 @@ class ScrotesApp : Application() {
         private set
 
     lateinit var appSettings: AppSettings
+        private set
+
+    lateinit var recentNotebooksTracker: RecentNotebooksTracker
         private set
 
     lateinit var penProfileSetRepository: PenProfileSetRepository
@@ -45,6 +49,7 @@ class ScrotesApp : Application() {
             context = this
         )
         appSettings = AppSettings(this)
+        recentNotebooksTracker = RecentNotebooksTracker(this)
         penProfileSetRepository = PenProfileSetRepository(
             dao = database.penProfileSetDao(),
             appSettings = appSettings

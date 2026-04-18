@@ -11,6 +11,7 @@ fun NotebookCard(
     notebook: NotebookEntity,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     isInTrash: Boolean = false,
     onRename: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
@@ -19,6 +20,7 @@ fun NotebookCard(
     onShare: (() -> Unit)? = null
 ) = ItemCard(
     name = notebook.name,
+    subtitle = subtitle,
     icon = Icons.AutoMirrored.Filled.MenuBook,
     onClick = onClick,
     modifier = modifier,
