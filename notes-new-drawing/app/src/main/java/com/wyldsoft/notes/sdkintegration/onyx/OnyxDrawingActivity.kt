@@ -1251,6 +1251,17 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
                         bitmapCanvas = state.canvas
                         EpdController.enablePost(sv, 1)
                         renderBitmapWithSelectionOverlay()
+                        val capturedNoteId = noteId
+                        val capturedShapes = selectedShapes.toList()
+                        if (capturedNoteId != null && capturedShapes.isNotEmpty()) {
+                            gestureLabel.value = "Recognizing..."
+                            lifecycleScope.launch(Dispatchers.Default) {
+                                val text = htrRunManager.recognizeSelectedShapes(capturedNoteId, capturedShapes)
+                                withContext(Dispatchers.Main) {
+                                    if (text != null) gestureLabel.value = text
+                                }
+                            }
+                        }
                     }
                     return@launch
                 }

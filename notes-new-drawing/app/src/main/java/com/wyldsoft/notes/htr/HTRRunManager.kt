@@ -120,6 +120,14 @@ class HTRRunManager(
         return gesture?.uppercase() == "CIRCLE"
     }
 
+    suspend fun recognizeSelectedShapes(noteId: String, shapes: List<Shape>): String? {
+        Log.d(TAG, "recognizeSelectedShapes noteId=$noteId shapes=${shapes.size}")
+        if (!htrManager.isReady()) return null
+        val map = mutableMapOf(noteId to shapes.toMutableList())
+        val results = htrManager.recognizeShapes(map)
+        return results.firstOrNull()?.text
+    }
+
     fun close() {
         Log.d(TAG, "close")
         debounceJob?.cancel()
