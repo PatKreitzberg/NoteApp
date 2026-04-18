@@ -1207,8 +1207,12 @@ open class OnyxDrawingActivity : BaseDrawingActivity() {
 
             // Check circle-to-select
             if (appSettings.circleToSelectEnabled && htrRunManager.isCircleGesture(shape)) {
-                val encircled = ShapeGeometryUtils.findShapesEncircledBy(
-                    shape, drawingPipeline.getShapes()
+                val shapesWithoutCircle = drawingPipeline.getShapes()
+                    .filter { it !== shape && it.entityId != shape.entityId }
+                val encircled = selectionManager.findShapesInsideLasso(
+                    shapesWithoutCircle,
+                    shape.touchPointList ?: return@launch,
+                    EditorState.activeLayer.value
                 )
                 if (encircled.isNotEmpty()) {
                     Log.d(TAG, "Circle-to-select: selecting ${encircled.size} shape(s)")
