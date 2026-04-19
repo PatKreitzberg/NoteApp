@@ -372,8 +372,6 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                 val viewportHeightInNote = sv.height / viewportManager.scale
                 if (pm.maybeAddPage(viewportManager.scrollY, viewportHeightInNote)) {
                     Log.d(TAG, "Lazy page created, now ${pm.pageCount} pages")
-                    forceScreenRefresh()
-                    updatePaginationExclusions()
                 }
             }
         }
@@ -533,8 +531,8 @@ abstract class BaseDrawingActivity : ComponentActivity() {
                     isPanningGesture = false
                     Log.d(TAG, "Pan ended, refreshing")
                     viewportManager.clearSnapshot()
-                    forceScreenRefresh()
                     checkLazyPageCreation()
+                    forceScreenRefresh()
                     updatePaginationExclusions()
                 }
             }
@@ -549,9 +547,9 @@ abstract class BaseDrawingActivity : ComponentActivity() {
             is GestureEvent.PinchEnd -> {
                 Log.d(TAG, "Pinch ended, refreshing at scale ${viewportManager.scale}")
                 viewportManager.clearSnapshot()
+                checkLazyPageCreation()
                 forceScreenRefresh()
                 updateTouchHelperWithProfile()
-                checkLazyPageCreation()
                 updatePaginationExclusions()
             }
             else -> { /* other gestures don't affect viewport */ }
