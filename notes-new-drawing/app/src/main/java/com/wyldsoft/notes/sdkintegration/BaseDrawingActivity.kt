@@ -570,14 +570,7 @@ abstract class BaseDrawingActivity : ComponentActivity() {
 
         recreateBitmapAtCurrentViewport()
 
-        val bmp = bitmap ?: return
-        val canvas = sv.holder.lockCanvas() ?: return
-        try {
-            canvas.drawColor(Color.WHITE)
-            canvas.drawBitmap(bmp, 0f, 0f, null)
-        } finally {
-            sv.holder.unlockCanvasAndPost(canvas)
-        }
+        renderToScreen(sv, bitmap)
     }
 
     /**
