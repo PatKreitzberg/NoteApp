@@ -22,7 +22,9 @@ import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Manages the drawing pipeline: shape creation, rendering to bitmap, and erasing.
@@ -114,15 +116,19 @@ class DrawingPipeline(
         val nId = noteId ?: return
         val entity = ShapeMapper.toEntity(shape, nId)
         scope?.launch(Dispatchers.IO) {
-            repo.saveShape(entity)
+            withContext(NonCancellable) {
+                repo.saveShape(entity)
+            }
         }
     }
 
     private fun deleteErasedShapes(shapes: List<Shape>) {
         val repo = shapeRepository ?: return
         scope?.launch(Dispatchers.IO) {
-            for (shape in shapes) {
-                shape.entityId?.let { repo.deleteShape(it) }
+            withContext(NonCancellable) {
+                for (shape in shapes) {
+                    shape.entityId?.let { repo.deleteShape(it) }
+                }
             }
         }
     }

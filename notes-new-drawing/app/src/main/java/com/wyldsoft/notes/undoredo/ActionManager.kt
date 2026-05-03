@@ -13,6 +13,7 @@ import com.wyldsoft.notes.selection.SelectionManager
 import com.wyldsoft.notes.shapemanagement.shapes.Shape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,7 +66,7 @@ class ActionManager(
             action.undo()
             redoStack.addLast(action)
             updateState()
-            persistMoveToRedo(action.id)
+            withContext(NonCancellable) { persistMoveToRedo(action.id) }
             withContext(Dispatchers.Main) { onComplete() }
         }
     }
@@ -78,7 +79,7 @@ class ActionManager(
             action.redo()
             undoStack.addLast(action)
             updateState()
-            persistMoveToUndo(action.id)
+            withContext(NonCancellable) { persistMoveToUndo(action.id) }
             withContext(Dispatchers.Main) { onComplete() }
         }
     }
@@ -132,9 +133,11 @@ class ActionManager(
         val nId = noteId ?: return
         val sc = scope ?: return
         sc.launch(Dispatchers.IO) {
-            repo.clearRedoStack(nId)
-            val entity = serializeAction(action, nId, isUndoStack = true) ?: return@launch
-            repo.saveAction(entity)
+            withContext(NonCancellable) {
+                repo.clearRedoStack(nId)
+                val entity = serializeAction(action, nId, isUndoStack = true) ?: return@withContext
+                repo.saveAction(entity)
+            }
         }
     }
 
